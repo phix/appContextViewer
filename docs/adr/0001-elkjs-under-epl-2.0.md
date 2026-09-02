@@ -13,7 +13,7 @@ Every other dependency is MIT, but the [layout research](../research/cytoscape-l
 1. Ship `THIRD-PARTY-NOTICES.md` with the site and in the repo, listing elkjs with the full EPL-2.0 text, its copyright line, and the statement that its source is available at https://github.com/kieler/elkjs. Link it from the viewer's about or footer.
 2. Keep the licence comment in the built elkjs chunk (esbuild's legal-comments setting) or point from the chunk to the notices file. A single-file disk build inlines the chunk, so the notice must survive inlining.
 3. Never fork or patch elkjs in-tree. A local modification would itself be a Modified Work to publish under EPL-2.0; fixes go upstream.
-4. A licence allowlist check in CI (MIT, ISC, BSD-2/3, Apache-2.0, plus EPL-2.0 for elkjs alone) so the next non-MIT dependency is a decision, not an accident.
+4. A licence allowlist check in CI over the runtime dependency tree (MIT, ISC, BSD-2/3, Apache-2.0, 0BSD, CC0-1.0, Unlicense, plus EPL-2.0 for elkjs alone; see `docs/licensing.md`) so the next non-MIT dependency that ships is a decision, not an accident.
 
 **Rejected**
 

@@ -77,7 +77,7 @@ appContextViewer/
 ├── package.json                    npm scripts: dev, build, preview, test, test:e2e, lint, check
 ├── vite.config.ts                  base './', preact preset, '@/' alias, worker format 'es'
 ├── vitest.config.ts                projects: node (catalog, graph, layout, state), jsdom (view)
-├── playwright.config.ts            webServer: vite preview; BUDGET_FACTOR=2 on CI
+├── playwright.config.ts            webServer: vite build then e2e/server.mjs; BUDGET_FACTOR=2 on CI
 ├── biome.json                      lint + format, import restrictions
 ├── tsconfig.json
 ├── THIRD-PARTY-NOTICES.md          elkjs under EPL-2.0 and every bundled licence
@@ -89,7 +89,7 @@ appContextViewer/
 │   ├── state/          index.ts, store.ts, derived.ts, url.ts, *.test.ts
 │   └── view/           Header.tsx, Picker.tsx, RankedTable.tsx, ImpactBoard.tsx, NeighborhoodPane.tsx,
 │                       Overview.tsx, Report.tsx, canvas/{Canvas.tsx, OverviewCanvas.tsx, style.ts}, *.test.tsx
-├── e2e/                load.spec.ts, budgets.spec.ts, canvas.spec.ts, file-guard.spec.ts
+├── e2e/                server.mjs, budget.ts, smoke.spec.ts, file-guard.spec.ts, then one <slice>.spec.ts per slice
 ├── samples/            existing Catalogs and scripts, plus invalid/ (one fixture per code)
 ├── schema/             catalog.v1.schema.json (producer contract, used by the agreement test)
 └── docs/               this page, ADRs, budgets, validation surface, research
@@ -102,7 +102,7 @@ appContextViewer/
 | `catalog`, `graph`, `layout` (dagre, elk direct), `state` | Vitest, Node | every rule and query through the module index; budgets 1 and 7 as `*.perf.test.ts` with `BUDGET_FACTOR` | `samples/*.json`, `samples/invalid/*.json` |
 | schema agreement | Vitest, Node | ajv (dev dependency) and `validateCatalog` accept and reject the same fixtures, with the three documented downgrades as the only differences | all of `samples/` |
 | `view` except canvas | Vitest, jsdom, Testing Library for Preact | components render fixed view models and dispatch actions; the report renders the 1,000-row cap | view models built from the demo Catalog |
-| canvas, load path, budgets 2 to 11, file:// guard | Playwright against `vite preview` | real Cytoscape and Worker; timings from `performance.mark` read through `page.evaluate`; the guard renders from disk | `samples/catalog-1000.json` served statically, `samples/catalog.demo.json` for behaviour |
+| canvas, load path, budgets 2 to 11, file:// guard | Playwright against `e2e/server.mjs`, a static server over `dist/` that also mounts `samples/` at `/samples/` and generated fixtures at `/fixtures/` | real Cytoscape and Worker; timings from `performance.mark` read through `page.evaluate`; the guard renders from disk | `samples/catalog-1000.json` served statically, `samples/catalog.demo.json` for behaviour |
 
 Rules: tests cross the same seam callers do (no imports past a module's index); every schema code has a fixture and a test; every budget row has exactly one assertion, in the runner the budgets doc names; CI runs both runners with `BUDGET_FACTOR=2`.
 
