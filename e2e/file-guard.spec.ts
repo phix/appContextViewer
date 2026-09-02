@@ -31,3 +31,25 @@ test('dist/index.html opened through file:// shows only the guard message', asyn
   expect(await page.evaluate(() => document.readyState)).toBe('complete');
   expect(finished).toEqual([]);
 });
+
+test('the guard still shows only the message when a browser keeps parsing after window.stop()', async ({
+  page,
+}) => {
+  // Chromium aborts the parser on window.stop(). A browser that did not would go on to parse the
+  // <body> and the module tag (whose fetch fails from file://) and then fire DOMContentLoaded, so
+  // the guard's repaint has to rebuild the document. Neutralising stop() walks that path for real.
+  await page.addInitScript(() => {
+    window.stop = () => {};
+  });
+
+  await page.goto(builtIndex);
+
+  // The parser did keep going: the module tag entered the document this time.
+  await expect(page.locator('script[type="module"]')).toHaveCount(1);
+  // One body, holding the message and nothing else.
+  await expect(page.locator('body')).toHaveCount(1);
+  await expect(page.locator('body')).toHaveText(GUARD_MESSAGE);
+  await expect(page.locator('body p')).toHaveCount(1);
+  await expect(page.locator('h1')).toHaveCount(0);
+  await expect(page.locator('[data-rendered-by]')).toHaveCount(0);
+});

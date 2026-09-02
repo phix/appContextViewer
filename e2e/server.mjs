@@ -6,7 +6,8 @@
  *
  * Mounts, first match wins:
  *   /samples/   the repository's samples/ (fixtures loadable by URL, e.g. ?src=/samples/catalog.demo.json)
- *   /fixtures/  test-results/fixtures/ (gitignored; a spec may write generated Catalogs there at run time)
+ *   /fixtures/  e2e/.fixtures/ (gitignored, and outside Playwright's outputDir so a run never wipes it;
+ *               issue #27 generates its Catalogs there from a beforeAll and loads them by URL)
  *   /           dist/ (the built site)
  *
  * Every response is sent with `Access-Control-Allow-Origin: *` and `Cache-Control: no-store`; a spec
@@ -39,7 +40,7 @@ const CONTENT_TYPES = {
 
 export const defaultMounts = [
   { prefix: '/samples/', dir: path.join(repoRoot, 'samples') },
-  { prefix: '/fixtures/', dir: path.join(repoRoot, 'test-results', 'fixtures') },
+  { prefix: '/fixtures/', dir: path.join(repoRoot, 'e2e', '.fixtures') },
   { prefix: '/', dir: path.join(repoRoot, 'dist') },
 ];
 
