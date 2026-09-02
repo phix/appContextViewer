@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { layoutWithBreadthfirst } from './breadthfirst';
-import { expectComplete, expectMembersInsideGroups, expectNoOverlaps } from './check-positions';
+import {
+  expectComplete,
+  expectMembersInsideGroups,
+  expectNoOverlaps,
+  HEAVY_TEST_TIMEOUT,
+} from './check-positions';
 import { type LayoutSpec, LayoutSpecError } from './index';
 import { expandedOverviewSpec, NODE_HEIGHT, NODE_WIDTH, paneSpec } from './sample-specs';
 
@@ -61,11 +66,15 @@ describe('layoutWithBreadthfirst', () => {
     ).toThrow(LayoutSpecError);
   });
 
-  it('handles the 150-node pane Neighborhood and the 1,000-node Overview', () => {
-    for (const spec of [paneSpec(150, { compound: true }), expandedOverviewSpec()]) {
-      const positions = layoutWithBreadthfirst(spec);
-      expectComplete(positions, spec);
-      expectMembersInsideGroups(positions, spec);
-    }
-  });
+  it(
+    'handles the 150-node pane Neighborhood and the 1,000-node Overview',
+    () => {
+      for (const spec of [paneSpec(150, { compound: true }), expandedOverviewSpec()]) {
+        const positions = layoutWithBreadthfirst(spec);
+        expectComplete(positions, spec);
+        expectMembersInsideGroups(positions, spec);
+      }
+    },
+    HEAVY_TEST_TIMEOUT,
+  );
 });

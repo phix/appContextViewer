@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { expectComplete, expectMembersInsideGroups, expectNoOverlaps } from './check-positions';
+import {
+  expectComplete,
+  expectMembersInsideGroups,
+  expectNoOverlaps,
+  HEAVY_TEST_TIMEOUT,
+} from './check-positions';
 import { type LayoutSpec, layoutNeighborhood } from './index';
 import { NODE_HEIGHT, NODE_WIDTH, paneSpec } from './sample-specs';
 
@@ -36,12 +41,16 @@ describe('layoutNeighborhood (dagre)', () => {
     expectNoOverlaps(positions, spec);
   });
 
-  it('places nodes without overlap on a real 150-node Neighborhood, flat (the pane cap)', () => {
-    const spec = paneSpec(150);
-    const positions = layoutNeighborhood(spec);
-    expectComplete(positions, spec);
-    expectNoOverlaps(positions, spec);
-  });
+  it(
+    'places nodes without overlap on a real 150-node Neighborhood, flat (the pane cap)',
+    () => {
+      const spec = paneSpec(150);
+      const positions = layoutNeighborhood(spec);
+      expectComplete(positions, spec);
+      expectNoOverlaps(positions, spec);
+    },
+    HEAVY_TEST_TIMEOUT,
+  );
 
   it('keeps every member inside its Repository box at 30 compound nodes', () => {
     const spec = paneSpec(30, { compound: true });
@@ -51,13 +60,17 @@ describe('layoutNeighborhood (dagre)', () => {
     expectNoOverlaps(positions, spec);
   });
 
-  it('keeps every member inside its Repository box at 150 compound nodes', () => {
-    const spec = paneSpec(150, { compound: true });
-    const positions = layoutNeighborhood(spec);
-    expectComplete(positions, spec);
-    expectMembersInsideGroups(positions, spec);
-    expectNoOverlaps(positions, spec);
-  });
+  it(
+    'keeps every member inside its Repository box at 150 compound nodes',
+    () => {
+      const spec = paneSpec(150, { compound: true });
+      const positions = layoutNeighborhood(spec);
+      expectComplete(positions, spec);
+      expectMembersInsideGroups(positions, spec);
+      expectNoOverlaps(positions, spec);
+    },
+    HEAVY_TEST_TIMEOUT,
+  );
 
   it('sizes a Group of several members as a cluster and a Group of one from its member', () => {
     const spec: LayoutSpec = {
@@ -105,32 +118,40 @@ describe('layoutNeighborhood (dagre)', () => {
     expectMembersInsideGroups(positions, spec);
   });
 
-  it('finishes the 150-node flat Neighborhood inside the Node sanity budget', () => {
-    // Sanity, not budget 3 (that is browser-measured, paint included). What this catches is a
-    // regression in how the spec is fed to dagre, not dagre's own speed. The fixture is a real pane
-    // Neighborhood at the cap: Depth 2, about 4.5 Dependencies per node, denser than the research
-    // bench's 3 per node.
-    layoutNeighborhood(paneSpec(30)); // warm the JIT the way a pane would
-    const spec = paneSpec(150);
-    const started = performance.now();
-    layoutNeighborhood(spec);
-    const elapsed = performance.now() - started;
-    expect(elapsed, `${spec.center}: ${spec.edges.length} edges`).toBeLessThan(budget(500));
-  });
+  it(
+    'finishes the 150-node flat Neighborhood inside the Node sanity budget',
+    () => {
+      // Sanity, not budget 3 (that is browser-measured, paint included). What this catches is a
+      // regression in how the spec is fed to dagre, not dagre's own speed. The fixture is a real pane
+      // Neighborhood at the cap: Depth 2, about 4.5 Dependencies per node, denser than the research
+      // bench's 3 per node.
+      layoutNeighborhood(paneSpec(30)); // warm the JIT the way a pane would
+      const spec = paneSpec(150);
+      const started = performance.now();
+      layoutNeighborhood(spec);
+      const elapsed = performance.now() - started;
+      expect(elapsed, `${spec.center}: ${spec.edges.length} edges`).toBeLessThan(budget(500));
+    },
+    HEAVY_TEST_TIMEOUT,
+  );
 
-  it('finishes the 150-node compound Neighborhood inside the Node sanity budget', () => {
-    // Issue #22 asked for 500 ms here. Measured on this fixture (acme/checkout-services/invoice,
-    // 684 edges, 52 Repositories) dagre takes 650 to 770 ms on an M-series laptop, and 400 to 950
-    // across the twelve densest at-cap Neighborhoods; the research's 696 ms for 200 compound nodes
-    // was at 3 edges per node. Dagre's time follows edge count and cluster count, and single-member
-    // Repositories are already flattened (dagre.ts). The ceiling below is the measured one with a
-    // margin, so a regression still fails; the gap to 500 ms is reported in the PR for issue #22
-    // and matters to budget 3 if the pane draws compound Groups at the cap.
-    layoutNeighborhood(paneSpec(30, { compound: true }));
-    const spec = paneSpec(150, { compound: true });
-    const started = performance.now();
-    layoutNeighborhood(spec);
-    const elapsed = performance.now() - started;
-    expect(elapsed, `${spec.center}: ${spec.edges.length} edges`).toBeLessThan(budget(1000));
-  });
+  it(
+    'finishes the 150-node compound Neighborhood inside the Node sanity budget',
+    () => {
+      // Issue #22 asked for 500 ms here. Measured on this fixture (acme/checkout-services/invoice,
+      // 684 edges, 52 Repositories) dagre takes 650 to 770 ms on an M-series laptop, and 400 to 950
+      // across the twelve densest at-cap Neighborhoods; the research's 696 ms for 200 compound nodes
+      // was at 3 edges per node. Dagre's time follows edge count and cluster count, and single-member
+      // Repositories are already flattened (dagre.ts). The ceiling below is the measured one with a
+      // margin, so a regression still fails; the gap to 500 ms is reported in the PR for issue #22
+      // and matters to budget 3 if the pane draws compound Groups at the cap.
+      layoutNeighborhood(paneSpec(30, { compound: true }));
+      const spec = paneSpec(150, { compound: true });
+      const started = performance.now();
+      layoutNeighborhood(spec);
+      const elapsed = performance.now() - started;
+      expect(elapsed, `${spec.center}: ${spec.edges.length} edges`).toBeLessThan(budget(1000));
+    },
+    HEAVY_TEST_TIMEOUT,
+  );
 });

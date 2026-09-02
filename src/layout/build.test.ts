@@ -12,6 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { HEAVY_TEST_TIMEOUT } from './check-positions';
 
 /**
  * Proves two build properties of this module with the repository's own vite.config.ts (ADR 0001,
@@ -64,7 +65,7 @@ beforeAll(async () => {
   });
   manifest = JSON.parse(read('.vite/manifest.json'));
   entry = Object.values(manifest).find((chunk) => chunk.isEntry) as Chunk;
-}, 120_000);
+}, HEAVY_TEST_TIMEOUT);
 
 afterAll(() => {
   rmSync(scratch, { recursive: true, force: true });

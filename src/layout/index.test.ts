@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { expectComplete, expectMembersInsideGroups } from './check-positions';
+import { expectComplete, expectMembersInsideGroups, HEAVY_TEST_TIMEOUT } from './check-positions';
 import {
   type LayoutSpec,
   LayoutSpecError,
@@ -120,18 +120,22 @@ describe('layoutWithFallback', () => {
     ).rejects.toThrow('breadthfirst');
   });
 
-  it('really reaches elk when dagre is made to fail, and elk lays the spec out', async () => {
-    const result = await layoutWithFallback(spec, {
-      engines: {
-        dagre: () => {
-          throw new Error('dagre');
+  it(
+    'really reaches elk when dagre is made to fail, and elk lays the spec out',
+    async () => {
+      const result = await layoutWithFallback(spec, {
+        engines: {
+          dagre: () => {
+            throw new Error('dagre');
+          },
         },
-      },
-    });
-    expect(result.engine).toBe('elk');
-    expectComplete(result.positions, spec);
-    expectMembersInsideGroups(result.positions, spec);
-  });
+      });
+      expect(result.engine).toBe('elk');
+      expectComplete(result.positions, spec);
+      expectMembersInsideGroups(result.positions, spec);
+    },
+    HEAVY_TEST_TIMEOUT,
+  );
 
   it('rejects with the abort reason instead of running any engine', async () => {
     const controller = new AbortController();
