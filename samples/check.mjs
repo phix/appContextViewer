@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Checks a Catalog against the schema v1 rules the viewer enforces (docs/schema-v1.md)
+// Checks a Catalog against the schema v1 rules the viewer enforces (docs/schema-v1.md;
+// duplicate entries and display-only formats are warnings per docs/validation-surfacing.md)
 // and prints row counts. Exit code 1 when any error is found.
 //
 //   node samples/check.mjs samples/catalog.demo.json [--json]
@@ -34,6 +35,7 @@ const APP_KEYS = new Set(['repository', 'project', 'kind', 'team', 'description'
 const EXT_KEYS = new Set(['id', 'kind', 'name', 'description', 'url', 'attributes']);
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isScalar = (v) => ['string', 'number', 'boolean'].includes(typeof v);
+const isUri = (v) => { try { new URL(v); return true; } catch { return false; } };
 
 // ---------------------------------------------------------------- envelope
 if (!isObject(catalog)) { error('E_INVALID', '$', 'Catalog is not an object'); finish(); }
@@ -41,6 +43,7 @@ if (catalog.schemaVersion !== 1) error('E_SCHEMA_VERSION', '$.schemaVersion', `e
 if (!Array.isArray(catalog.applications)) error('E_INVALID', '$.applications', 'missing or not an array');
 if (catalog.externals !== undefined && !Array.isArray(catalog.externals)) error('E_INVALID', '$.externals', 'not an array');
 if (catalog.generatedAt !== undefined && typeof catalog.generatedAt !== 'string') error('E_INVALID', '$.generatedAt', 'not a string');
+else if (typeof catalog.generatedAt === 'string' && Number.isNaN(Date.parse(catalog.generatedAt))) warn('W_INVALID_FORMAT', '$.generatedAt', `not RFC 3339: ${JSON.stringify(catalog.generatedAt)}`);
 if (catalog.source !== undefined && typeof catalog.source !== 'string') error('E_INVALID', '$.source', 'not a string');
 for (const key of Object.keys(catalog)) if (!ENVELOPE_KEYS.has(key)) warn('W_UNKNOWN_KEY', `$.${key}`, 'unknown envelope key');
 if (errors.length) finish();
@@ -53,6 +56,7 @@ const externals = new Map();
   if (typeof ext.id !== 'string' || !RE.externalId.test(ext.id)) error('E_INVALID', `${path}.id`, `missing or invalid id ${JSON.stringify(ext.id)}`);
   if (typeof ext.kind !== 'string' || !ext.kind) error('E_INVALID', `${path}.kind`, 'missing kind');
   for (const key of ['name', 'description', 'url']) if (ext[key] !== undefined && typeof ext[key] !== 'string') error('E_INVALID', `${path}.${key}`, 'not a string');
+  if (typeof ext.url === 'string' && !isUri(ext.url)) warn('W_INVALID_FORMAT', `${path}.url`, `not a URI: ${JSON.stringify(ext.url)}`);
   if (ext.attributes !== undefined && !isObject(ext.attributes)) error('E_INVALID', `${path}.attributes`, 'not an object');
   for (const key of Object.keys(ext)) if (!EXT_KEYS.has(key)) warn('W_UNKNOWN_KEY', `${path}.${key}`, 'unknown External key');
   if (typeof ext.id === 'string') {
@@ -70,6 +74,7 @@ catalog.applications.forEach((app, i) => {
   if (typeof app.repository !== 'string' || !RE.repository.test(app.repository)) error('E_INVALID', `${path}.repository`, `missing or invalid repository ${JSON.stringify(app.repository)}`);
   if (typeof app.project !== 'string' || !RE.project.test(app.project)) error('E_INVALID', `${path}.project`, `missing or invalid project ${JSON.stringify(app.project)}`);
   for (const key of ['kind', 'description', 'url']) if (app[key] !== undefined && typeof app[key] !== 'string') error('E_INVALID', `${path}.${key}`, 'not a string');
+  if (typeof app.url === 'string' && !isUri(app.url)) warn('W_INVALID_FORMAT', `${path}.url`, `not a URI: ${JSON.stringify(app.url)}`);
   if (app.team !== undefined && (typeof app.team !== 'string' || !app.team)) error('E_INVALID', `${path}.team`, 'not a non-empty string');
   if (app.attributes !== undefined && !isObject(app.attributes)) error('E_INVALID', `${path}.attributes`, 'not an object');
   for (const [key, re] of [['dependsOn', null], ['publishes', RE.channel], ['subscribes', RE.channel]]) {
@@ -80,7 +85,7 @@ catalog.applications.forEach((app, i) => {
       const ok = typeof item === 'string' && (re ? re.test(item) : RE.applicationRef.test(item) || RE.externalRef.test(item));
       if (!ok) error('E_INVALID', `${path}.${key}[${j}]`, `invalid entry ${JSON.stringify(item)}`);
     });
-    if (new Set(list).size !== list.length) error('E_INVALID', `${path}.${key}`, 'duplicate entries (uniqueItems)');
+    if (new Set(list).size !== list.length) warn('W_DUPLICATE_ENTRY', `${path}.${key}`, 'duplicate entries; the viewer keeps the first');
   }
   for (const key of Object.keys(app)) if (!APP_KEYS.has(key)) warn('W_UNKNOWN_KEY', `${path}.${key}`, 'unknown Application key');
   if (typeof app.repository === 'string' && typeof app.project === 'string') {

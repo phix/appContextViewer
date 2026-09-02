@@ -58,7 +58,19 @@ Errors stop the load. Warnings are listed but the Catalog still loads.
 | `E_UNRESOLVED_REF` | error | A `dependsOn` entry names no Application and no declared External. Never silently becomes a node. |
 | `E_SELF_DEPENDENCY` | error | An Application lists its own id in `dependsOn`. |
 | `W_UNKNOWN_KEY` | warning | A key outside `attributes` that the schema does not define. The producer should fix it; the viewer ignores it. |
+| `W_DUPLICATE_ENTRY` | warning | The same entry twice in `dependsOn`, `publishes` or `subscribes` (`uniqueItems` in the JSON Schema). The viewer keeps the first occurrence. |
+| `W_INVALID_FORMAT` | warning | A display-only field fails its format: `url` not a URI, `generatedAt` not RFC 3339. The viewer shows the raw value. |
 | `W_EMPTY_CHANNEL` | warning | A Channel with publishers but no subscribers, or the reverse. Informational. |
+
+Before any of these run, the viewer can fail to obtain a document at all. These codes are exclusive of everything above:
+
+| code | level | rule |
+|---|---|---|
+| `E_FETCH` | error | A `?src=` URL could not be fetched: network failure, non-2xx status, or a cross-origin refusal, which the message names as CORS. |
+| `E_TOO_LARGE` | error | The file exceeds 50 MB. Refused before parsing. |
+| `E_PARSE` | error | The document is not valid JSON. Reports the line and column when the engine gives them. |
+
+How these are shown, and that any error rejects the whole Catalog while warnings never block, is decided in [`validation-surfacing.md`](./validation-surfacing.md).
 
 Dependency cycles are **allowed** and are not a warning; the viewer must handle them.
 
@@ -73,4 +85,4 @@ Dependency cycles are **allowed** and are not a warning; the viewer must handle 
 
 - `schemaVersion` is an integer major. v1 readers refuse any other value with `E_SCHEMA_VERSION`.
 - Additive changes (new optional keys, new `kind` conventions) stay in v1. Changing the meaning or shape of an existing key bumps the major.
-- Producers validating with the JSON Schema get strict rejection of unknown keys. The viewer downgrades that specific violation to `W_UNKNOWN_KEY` so a slightly ahead producer still loads.
+- Producers validating with the JSON Schema get strict rejection of unknown keys, duplicate entries and bad formats. The viewer downgrades those three violations to `W_UNKNOWN_KEY`, `W_DUPLICATE_ENTRY` and `W_INVALID_FORMAT` so a slightly ahead or slightly sloppy producer still loads.
