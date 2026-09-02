@@ -1,0 +1,178 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "src/**",
+      "e2e/**",
+      "scripts/**",
+      "*.ts",
+      "*.json",
+      "!package.json",
+      "!package-lock.json"
+    ],
+    "ignoreUnknown": true
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "cytoscape": "cytoscape is imported only under src/view/canvas/ (docs/architecture.md, import rules).",
+              "cytoscape-dagre": "cytoscape-dagre is imported only under src/view/canvas/ (docs/architecture.md, import rules)."
+            },
+            "patterns": [
+              {
+                "group": ["cytoscape/**", "cytoscape-dagre/**"],
+                "message": "cytoscape is imported only under src/view/canvas/, subpaths included (docs/architecture.md, import rules)."
+              },
+              {
+                "group": [
+                  "**/catalog/**",
+                  "**/graph/**",
+                  "**/layout/**",
+                  "**/state/**",
+                  "**/view/**"
+                ],
+                "message": "Import a module through its index ('@/graph'), never a file inside it (docs/architecture.md, import rules). Inside a module, import siblings relatively."
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/catalog/**", "src/graph/**", "src/state/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "cytoscape": "catalog, graph and state import nothing from cytoscape (docs/architecture.md, import rules).",
+                  "cytoscape-dagre": "catalog, graph and state import nothing from cytoscape (docs/architecture.md, import rules).",
+                  "preact": "catalog, graph and state import nothing from preact; they run in Node (docs/architecture.md, import rules)."
+                },
+                "patterns": [
+                  {
+                    "group": ["cytoscape/**", "cytoscape-dagre/**"],
+                    "message": "catalog, graph and state import nothing from cytoscape, subpaths included (docs/architecture.md, import rules)."
+                  },
+                  {
+                    "group": [
+                      "**/catalog/**",
+                      "**/graph/**",
+                      "**/layout/**",
+                      "**/state/**",
+                      "**/view/**"
+                    ],
+                    "message": "Import a module through its index ('@/graph'), never a file inside it (docs/architecture.md, import rules). Inside a module, import siblings relatively."
+                  },
+                  {
+                    "group": ["**/view", "**/layout", "preact/**"],
+                    "message": "catalog, graph and state import nothing from view, layout or preact (docs/architecture.md, import rules)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/layout/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "cytoscape": "layout imports nothing from cytoscape; it returns plain positions (docs/architecture.md, import rules).",
+                  "cytoscape-dagre": "layout imports nothing from cytoscape; it returns plain positions (docs/architecture.md, import rules)."
+                },
+                "patterns": [
+                  {
+                    "group": ["cytoscape/**", "cytoscape-dagre/**"],
+                    "message": "layout imports nothing from cytoscape, subpaths included (docs/architecture.md, import rules)."
+                  },
+                  {
+                    "group": [
+                      "**/catalog/**",
+                      "**/graph/**",
+                      "**/layout/**",
+                      "**/state/**",
+                      "**/view/**"
+                    ],
+                    "message": "Import a module through its index ('@/graph'), never a file inside it (docs/architecture.md, import rules). Inside a module, import siblings relatively."
+                  },
+                  {
+                    "group": ["**/view"],
+                    "message": "layout imports nothing from view (docs/architecture.md, import rules)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/view/canvas/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/catalog/**",
+                      "**/graph/**",
+                      "**/layout/**",
+                      "**/state/**",
+                      "**/view/**"
+                    ],
+                    "message": "Import a module through its index ('@/graph'), never a file inside it (docs/architecture.md, import rules). Inside a module, import siblings relatively."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

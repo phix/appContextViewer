@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>App Context Viewer</title>
+    <script>
+      // file:// guard (issue #14, docs/architecture.md). The hosted URL is the only supported
+      // target: from disk, Chromium blocks module scripts and fetch(), so the viewer cannot run.
+      // This classic inline script still runs on file:, so it renders the one-line message and
+      // stops the parser, which means the module bundle below is never requested. A browser that
+      // keeps parsing anyway adds its own body and the module tag; DOMContentLoaded then rebuilds
+      // the document to the message alone (e2e/file-guard.spec.ts covers both paths).
+      if (location.protocol === 'file:') {
+        var renderGuard = function () {
+          var root = document.documentElement;
+          Array.prototype.slice.call(root.children).forEach(function (child) {
+            if (child !== document.head) {
+              root.removeChild(child);
+            }
+          });
+          var body = document.createElement('body');
+          var line = document.createElement('p');
+          line.textContent = 'This viewer runs from its hosted URL';
+          body.appendChild(line);
+          root.appendChild(body);
+        };
+        window.stop();
+        renderGuard();
+        document.addEventListener('DOMContentLoaded', renderGuard);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/app/main.tsx"></script>
+  </body>
+</html>

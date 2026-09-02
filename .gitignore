@@ -2,3 +2,7 @@ node_modules/
 .DS_Store
 .scratch/
 .claude/
+dist/
+playwright-report/
+test-results/
+e2e/.fixtures/
