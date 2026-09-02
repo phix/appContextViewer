@@ -1,17 +1,131 @@
-/** The slice of a Catalog the placeholder needs; the real types arrive with the catalog module. */
-export type PlaceholderCatalog = {
-  readonly applications: readonly unknown[];
-};
+/**
+ * The app shell: header, picker, the ranked Blast-radius table, the minimal Center panel, the
+ * missing-Center notice and the report (dialog or side sheet). It wires `@/view` components to the
+ * store's signals and actions and owns nothing else — the derived models decide what is on screen.
+ *
+ * Budget 2 (docs/performance-budgets.md): `markLoadStart` stamps the moment a Catalog source is
+ * chosen — picker, drop or `?src=` — and the ranked table's post-paint callback stamps the moment
+ * its rows are on screen, producing the `LOAD_MEASURE` measure `e2e/load.spec.ts` reads.
+ */
 
-/** Scaffold placeholder; the app shell slice replaces it. */
-export function App({ catalog }: { catalog: PlaceholderCatalog }) {
+import { useComputed } from '@preact/signals';
+import { useRef } from 'preact/hooks';
+import type { Center, Store } from '@/state';
+import { CenterPanel, Header, Picker, RankedTable, Report } from '@/view';
+
+export const LOAD_MARK = 'acv:load-start';
+export const TABLE_MARK = 'acv:table-painted';
+export const LOAD_MEASURE = 'acv:load-to-table';
+
+// Module state on purpose: there is one shell per page, the load path is what it measures, and the
+// alternative is threading a stopwatch through every callback. `pending` keeps the measure to
+// loads the user asked for, so the first paint of the bundled sample never produces one.
+let pending = false;
+
+/** Call immediately before handing a File or URL to `actions.load` (budget 2's start). */
+export function markLoadStart(): void {
+  pending = true;
+  performance.mark(LOAD_MARK);
+}
+
+/** Called by the ranked table once the browser has painted its rows (budget 2's end). */
+export function markTablePainted(): void {
+  if (!pending) {
+    return;
+  }
+  pending = false;
+  performance.mark(TABLE_MARK);
+  performance.measure(LOAD_MEASURE, LOAD_MARK, TABLE_MARK);
+}
+
+export interface AppProps {
+  readonly store: Store;
+}
+
+export function App({ store }: AppProps) {
+  // The report's "Choose another file" reopens the picker through this input.
+  const pickerInput = useRef<HTMLInputElement>(null);
+
+  /**
+   * External id to kind, for the ranked table's "External · database" chip. `RankedModel` carries
+   * kind, id and size only, so the chip's kind is read here from the Graph's own record — a map
+   * lookup, not a traversal (docs/architecture.md, "view").
+   */
+  const externalKinds = useComputed(() => {
+    const kinds = new Map<string, string>();
+    for (const [id, external] of store.graph.value.externals) {
+      kinds.set(id, external.kind);
+    }
+    return kinds;
+  });
+
+  const load = (source: File | string) => {
+    markLoadStart();
+    void store.actions.load(source);
+  };
+
+  const select = (center: Center) => {
+    store.actions.select(center);
+  };
+
+  const chooseAnother = () => {
+    store.actions.closeReport();
+    const input = pickerInput.current;
+    if (input !== null) {
+      input.focus();
+      input.click();
+    }
+  };
+
+  const report = store.report.value;
+  const notice = store.notice.value;
+  const center = store.center.value;
+
   return (
-    <main>
-      <h1>App Context Viewer</h1>
-      <p>
-        Scaffold placeholder. The bundled sample Catalog holds {catalog.applications.length}{' '}
-        Applications.
-      </p>
-    </main>
+    <div class="shell" data-testid="shell">
+      <Header
+        source={store.source.value}
+        applications={store.graph.value.applications.size}
+        externals={store.graph.value.externals.size}
+        warnings={store.derived.warningsCount.value}
+        depth={store.depth.value}
+        onDepthChange={store.actions.setDepth}
+        onOpenWarnings={store.actions.openWarnings}
+      />
+
+      <Picker onPick={load} inputRef={pickerInput} />
+
+      {notice === null ? null : (
+        <p class="notice" role="status" data-testid="notice">
+          {notice.text}{' '}
+          <button type="button" data-testid="notice-dismiss" onClick={store.actions.dismissNotice}>
+            Dismiss
+          </button>
+        </p>
+      )}
+
+      <main class="shell__main">
+        {center === null ? null : (
+          <CenterPanel center={center} onClear={() => store.actions.select(null)} />
+        )}
+        <RankedTable
+          model={store.derived.ranked.value}
+          onSelect={select}
+          onFilterChange={store.actions.filterApplicationsOnly}
+          externalKinds={externalKinds.value}
+          onPainted={markTablePainted}
+        />
+      </main>
+
+      {report === null ? null : (
+        <Report
+          report={report}
+          onClose={store.actions.closeReport}
+          onChooseAnother={chooseAnother}
+          onSelectApplication={(id) => select({ kind: 'application', id })}
+          onOpenChannel={store.actions.openChannel}
+        />
+      )}
+    </div>
   );
 }
