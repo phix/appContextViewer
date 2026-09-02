@@ -1,0 +1,41 @@
+{
+  "name": "app-context-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dependency and relationship graph viewer for hundreds of applications, fed by a sparse JSON catalog.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "lint": "biome check .",
+    "check": "npm run lint && tsc --noEmit && vitest run && vite build && node scripts/check-bundle.mjs && node scripts/check-licences.mjs && node scripts/third-party-notices.mjs --check"
+  },
+  "dependencies": {
+    "@dagrejs/dagre": "^3.1.1",
+    "@preact/signals": "^2.11.1",
+    "cytoscape": "^3.34.2",
+    "cytoscape-dagre": "^4.0.1",
+    "elkjs": "^0.12.0",
+    "preact": "^10.29.8"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.11",
+    "@playwright/test": "^1.62.1",
+    "@preact/preset-vite": "^2.10.6",
+    "@testing-library/preact": "^3.2.4",
+    "@types/node": "^26.4.1",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "jsdom": "^30.0.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  }
+}
