@@ -125,12 +125,17 @@ describe('layoutNeighborhood (dagre)', () => {
       // regression in how the spec is fed to dagre, not dagre's own speed. The fixture is a real pane
       // Neighborhood at the cap: Depth 2, about 4.5 Dependencies per node, denser than the research
       // bench's 3 per node.
+      // The bound is the measured reference-laptop time (about 400 ms flat, 700 ms compound) with
+      // room for a slower machine: a GitHub runner measures roughly 2.5x the laptop, which BUDGET_FACTOR
+      // 2 does not fully cover, and at budget(500) this assertion flaked at 1,059 ms of a 1,000 ms
+      // ceiling. Budget 3, the browser pane at the cap with paint included, is asserted by the pane
+      // slice, not here.
       layoutNeighborhood(paneSpec(30)); // warm the JIT the way a pane would
       const spec = paneSpec(150);
       const started = performance.now();
       layoutNeighborhood(spec);
       const elapsed = performance.now() - started;
-      expect(elapsed, `${spec.center}: ${spec.edges.length} edges`).toBeLessThan(budget(500));
+      expect(elapsed, `${spec.center}: ${spec.edges.length} edges`).toBeLessThan(budget(750));
     },
     HEAVY_TEST_TIMEOUT,
   );
@@ -144,7 +149,8 @@ describe('layoutNeighborhood (dagre)', () => {
       // was at 3 edges per node. Dagre's time follows edge count and cluster count, and single-member
       // Repositories are already flattened (dagre.ts). The ceiling below is the measured one with a
       // margin, so a regression still fails; the gap to 500 ms is reported in the PR for issue #22
-      // and matters to budget 3 if the pane draws compound Groups at the cap.
+      // and matters to budget 3 if the pane draws compound Groups at the cap. Same reference-laptop
+      // versus runner caveat as the flat case above; budget 3 belongs to the pane slice.
       layoutNeighborhood(paneSpec(30, { compound: true }));
       const spec = paneSpec(150, { compound: true });
       const started = performance.now();
