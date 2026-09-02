@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-02T20:00:00Z",
+  "source": "hand-written demo Catalog (samples/README.md)",
+  "applications": [
+    {
+      "repository": "acme/platform-core",
+      "project": "api-gateway",
+      "kind": "service",
+      "team": "platform",
+      "description": "Public edge. Terminates TLS, authenticates, routes to internal services.",
+      "url": "https://gw.example.com",
+      "dependsOn": [
+        "acme/platform-core/auth-service",
+        "acme/platform-core/user-service",
+        "acme/platform-infra/feature-flags",
+        "acme/commerce/order-service",
+        "acme/commerce/product-service",
+        "acme/commerce/cart-service",
+        "acme/payments/payment-service",
+        "acme/search/search-api",
+        "external:cloudflare",
+        "external:redis"
+      ],
+      "attributes": {
+        "language": "go",
+        "tier": 1,
+        "runtime": "k8s",
+        "oncall": "#platform-oncall",
+        "links": { "dashboard": "https://grafana.example.com/d/gateway", "runbook": "https://runbooks.example.com/gateway" }
+      }
+    },
+    {
+      "repository": "acme/platform-core",
+      "project": "auth-service",
+      "kind": "service",
+      "team": "platform",
+      "description": "Issues and verifies sessions and service tokens.",
+      "dependsOn": ["acme/platform-infra/config-service", "external:postgres-main", "external:redis", "external:okta"],
+      "publishes": ["sessions.created"],
+      "attributes": { "language": "go", "tier": 1, "runtime": "k8s", "pci": false }
+    },
+    {
+      "repository": "acme/platform-core",
+      "project": "user-service",
+      "kind": "service",
+      "team": "platform",
+      "dependsOn": ["external:postgres-main", "external:redis"],
+      "publishes": ["users.updated"],
+      "attributes": { "language": "java", "tier": 1, "runtime": "k8s" }
+    },
+    {
+      "repository": "acme/platform-core",
+      "project": "notification-service",
+      "kind": "service",
+      "team": "growth",
+      "description": "Email, SMS and push fan-out. Owned by growth although it lives in platform-core.",
+      "dependsOn": ["acme/platform-core/user-service", "external:sendgrid", "external:twilio", "external:kafka"],
+      "subscribes": ["users.updated", "orders.placed", "orders.confirmed", "orders.shipped", "payments.captured"],
+      "attributes": { "language": "node", "tier": 2, "runtime": "k8s", "sla": "99.5%" }
+    },
+    {
+      "repository": "acme/platform-core",
+      "project": "session-reaper",
+      "kind": "job",
+      "team": "platform",
+      "description": "Nightly cleanup of expired sessions.",
+      "dependsOn": ["external:redis"],
+      "attributes": { "language": "go", "runtime": "k8s", "schedule": "0 3 * * *" }
+    },
+    {
+      "repository": "acme/platform-infra",
+      "project": "feature-flags",
+      "kind": "service",
+      "team": "platform",
+      "dependsOn": ["external:redis", "external:postgres-main"],
+      "attributes": { "language": "go", "tier": 2, "runtime": "k8s" }
+    },
+    {
+      "repository": "acme/platform-infra",
+      "project": "config-service",
+      "kind": "service",
+      "team": "platform",
+      "description": "Serves per-environment configuration. Part of a Dependency cycle with auth-service and secrets-broker.",
+      "dependsOn": ["acme/platform-infra/secrets-broker", "external:postgres-main"],
+      "attributes": { "language": "go", "tier": 1, "runtime": "k8s" }
+    },
+    {
+      "repository": "acme/platform-infra",
+      "project": "secrets-broker",
+      "kind": "service",
+      "team": "platform",
+      "dependsOn": ["acme/platform-core/auth-service", "external:vault"],
+      "attributes": { "language": "go", "tier": 1, "runtime": "k8s" }
+    },
+    {
+      "repository": "acme/platform-infra",
+      "project": "rate-limiter",
+      "kind": "library",
+      "team": "platform",
+      "description": "Client library embedded in services. Cataloged for lookup; nothing depends on it at runtime.",
+      "attributes": { "language": "go" }
+    },
+    {
+      "repository": "acme/commerce",
+      "project": "product-service",
+      "kind": "service",
+      "team": "commerce",
+      "dependsOn": ["external:postgres-commerce", "external:s3-assets"],
+      "publishes": ["products.changed"],
+      "attributes": { "language": "java", "tier": 1, "runtime": "k8s" }
+    },
+    {
+      "repository": "acme/commerce",
+      "project": "pricing-service",
+      "kind": "service",
+      "team": "commerce",
+      "dependsOn": ["acme/commerce/product-service", "acme/platform-infra/feature-flags", "external:redis"],
+      "publishes": ["prices.changed"],
+      "attributes": { "language": "kotlin", "tier": 2, "runtime": "k8s" }
+    },
+    {
+      "repository": "acme/commerce",
+      "project": "inventory-service",
+      "kind": "service",
+      "team": "commerce",
+      "dependsOn": ["external:postgres-commerce", "external:kafka"],
+      "publishes": ["inventory.changed"],
+      "subscribes": ["orders.placed", "orders.shipped"],
+      "attributes": { "language": "java", "tier": 1, "runtime": "k8s" }
+    },
+    {
+      "repository": "acme/commerce",
+      "project": "cart-service",
+      "kind": "service",
+      "team": "commerce",
+      "dependsOn": ["acme/commerce/product-service", "acme/commerce/pricing-service", "acme/platform-core/user-service", "external:redis"],
+      "attributes": { "language": "node", "tier": 1, "runtime": "k8s" }
+    },
+    {
+      "repository": "acme/commerce",
+      "project": "order-service",
+      "kind": "service",
+      "team": "commerce",
+      "url": "https://github.com/acme/commerce/tree/main/order-service",
+      "dependsOn": [
+        "acme/commerce/cart-service",
+        "acme/commerce/inventory-service",
+        "acme/commerce/pricing-service",
+        "acme/platform-core/user-service",
+        "acme/payments/payment-service",
+        "external:postgres-commerce",
+        "external:kafka"
+      ],
+      "publishes": ["orders.placed"],
+      "subscribes": ["payments.captured"],
+      "attributes": { "language": "java", "tier": 1, "runtime": "k8s", "oncall": "#commerce-oncall", "sla": "99.9%" }
+    },
+    {
+      "repository": "acme/commerce",
+      "project": "checkout-worker",
+      "kind": "job",
+      "team": "commerce",
+      "description": "Confirms orders once payment settles.",
+      "dependsOn": ["acme/commerce/order-service", "acme/payments/payment-service", "external:rabbitmq"],
+      "publishes": ["orders.confirmed"],
+      "subscribes": ["orders.placed"],
+      "attributes": { "language": "java", "tier": 2, "runtime": "k8s" }
+    },
+    {
+      "repository": "acme/commerce",
+      "project": "shared-models",
+      "kind": "library",
+      "description": "Shared DTOs. No Team claims it."
+    },
+    {
+      "repository": "acme/commerce",
+      "project": "promotions",
+      "kind": "service",
+      "team": "growth",
+      "description": "Coupon engine. Scheduled for removal.",
+      "dependsOn": ["acme/commerce/pricing-service", "external:redis"],
+      "subscribes": ["users.updated"],
+      "attributes": { "language": "node", "tier": 3, "runtime": "lambda", "deprecated": true }
+    },
+    {
+      "repository": "acme/payments",
+      "project": "payment-service",
+      "kind": "service",
+      "team": "payments",
+      "dependsOn": ["acme/payments/ledger-service", "acme/payments/fraud-scorer", "external:stripe", "external:postgres-payments"],
+      "publishes": ["payments.captured"],
+      "attributes": { "language": "kotlin", "tier": 1, "runtime": "k8s", "pci": true, "sla": "99.95%" }
+    },
+    {
+      "repository": "acme/payments",
+      "project": "ledger-service",
+      "kind": "service",
+      "team": "payments",
+      "dependsOn": ["external:postgres-payments"],
+      "attributes": { "language": "kotlin", "tier": 1, "runtime": "k8s", "pci": true }
+    },
+    {
+      "repository": "acme/payments",
+      "project": "fraud-scorer",
+      "kind": "service",
+      "team": "payments",
+      "description": "Scores payments in real time. Its alerts Channel has no subscriber yet.",
+      "dependsOn": ["external:redis", "external:bigquery"],
+      "publishes": ["fraud.alerts"],
+      "attributes": { "language": "python", "tier": 2, "runtime": "k8s", "pci": true }
+    },
+    {
+      "repository": "acme/web",
+      "project": "storefront",
+      "kind": "web-app",
+      "team": "web",
+      "url": "https://shop.example.com",
+      "dependsOn": ["acme/platform-core/api-gateway", "external:contentful"],
+      "attributes": { "language": "typescript", "framework": "nextjs", "tier": 1, "runtime": "vercel" }
+    },
+    {
+      "repository": "acme/web",
+      "project": "admin-console",
+      "kind": "web-app",
+      "team": "web",
+      "url": "https://admin.example.com",
+      "dependsOn": ["acme/platform-core/api-gateway", "acme/data/reporting-api"],
+      "attributes": { "language": "typescript", "framework": "react", "tier": 2, "runtime": "vercel" }
+    },
+    {
+      "repository": "acme/mobile",
+      "project": "ios-app",
+      "kind": "mobile-app",
+      "team": "mobile",
+      "dependsOn": ["acme/platform-core/api-gateway", "external:firebase"],
+      "attributes": { "language": "swift", "tier": 1, "minOs": "iOS 17" }
+    },
+    {
+      "repository": "acme/mobile",
+      "project": "android-app",
+      "kind": "mobile-app",
+      "team": "mobile",
+      "dependsOn": ["acme/platform-core/api-gateway", "external:firebase"],
+      "attributes": { "language": "kotlin", "tier": 1, "minOs": "Android 12" }
+    },
+    {
+      "repository": "acme/data",
+      "project": "events-pipeline",
+      "kind": "pipeline",
+      "team": "data",
+      "description": "Lands every business event in S3. Subscribes to almost everything; no tier.",
+      "dependsOn": ["external:kafka", "external:s3-events"],
+      "subscribes": [
+        "sessions.created",
+        "users.updated",
+        "products.changed",
+        "prices.changed",
+        "inventory.changed",
+        "orders.placed",
+        "orders.confirmed",
+        "payments.captured",
+        "legacy.events"
+      ],
+      "attributes": { "language": "python", "runtime": "airflow" }
+    },
+    {
+      "repository": "acme/data",
+      "project": "warehouse-loader",
+      "kind": "pipeline",
+      "team": "data",
+      "dependsOn": ["acme/data/events-pipeline", "external:s3-events", "external:bigquery"],
+      "attributes": { "language": "python", "runtime": "airflow", "schedule": "hourly" }
+    },
+    {
+      "repository": "acme/data",
+      "project": "reporting-api",
+      "kind": "service",
+      "team": "data",
+      "dependsOn": ["acme/platform-core/auth-service", "external:bigquery"],
+      "attributes": { "language": "python", "tier": 3, "runtime": "k8s" }
+    },
+    {
+      "repository": "acme/data",
+      "project": "ml-recommender",
+      "kind": "service",
+      "team": "data-science",
+      "dependsOn": ["acme/commerce/product-service", "external:bigquery", "external:redis"],
+      "attributes": { "language": "python", "tier": 3, "runtime": "k8s", "gpu": true }
+    },
+    {
+      "repository": "acme/search",
+      "project": "search-indexer",
+      "kind": "job",
+      "team": "search",
+      "dependsOn": ["acme/commerce/product-service", "external:elasticsearch"],
+      "subscribes": ["products.changed", "prices.changed"],
+      "attributes": { "language": "go", "tier": 2, "runtime": "k8s" }
+    },
+    {
+      "repository": "acme/search",
+      "project": "search-api",
+      "kind": "service",
+      "team": "search",
+      "dependsOn": ["external:elasticsearch"],
+      "attributes": { "language": "go", "tier": 1, "runtime": "k8s" }
+    },
+    {
+      "repository": "legacy-monolith",
+      "project": "monolith",
+      "description": "Original PHP application, being strangled. Repository has no org prefix; no kind, no Team.",
+      "dependsOn": ["acme/platform-core/auth-service", "external:mysql-legacy"],
+      "publishes": ["legacy.events"],
+      "attributes": { "language": "php", "tier": 2, "runtime": "vm", "deprecated": true, "tags": ["strangler", "php"] }
+    },
+    {
+      "repository": "legacy-monolith",
+      "project": "reports-cron",
+      "kind": "job",
+      "dependsOn": ["legacy-monolith/monolith", "external:mysql-legacy"],
+      "attributes": { "schedule": "0 6 * * 1" }
+    },
+    {
+      "repository": "acme/tools",
+      "project": "cli",
+      "kind": "cli",
+      "team": "platform",
+      "description": "Developer CLI. Non-convention kind, no Dependencies, no attributes."
+    },
+    {
+      "repository": "acme/tools",
+      "project": "doc-site"
+    }
+  ],
+  "externals": [
+    { "id": "postgres-main", "kind": "database", "name": "Postgres (main cluster)", "attributes": { "engine": "postgres", "version": 16, "region": "us-east-1" } },
+    { "id": "postgres-commerce", "kind": "database", "name": "Postgres (commerce)", "attributes": { "engine": "postgres", "version": 16, "region": "us-east-1" } },
+    { "id": "postgres-payments", "kind": "database", "name": "Postgres (payments, PCI zone)", "attributes": { "engine": "postgres", "version": 15, "region": "us-east-1", "pci": true } },
+    { "id": "mysql-legacy", "kind": "database", "name": "MySQL 5.7 (legacy)", "description": "Decommission planned.", "attributes": { "engine": "mysql", "deprecated": true } },
+    { "id": "bigquery", "kind": "database", "name": "BigQuery warehouse", "url": "https://console.cloud.google.com/bigquery" },
+    { "id": "redis", "kind": "cache", "name": "Redis (shared cluster)" },
+    { "id": "kafka", "kind": "queue", "name": "Kafka (MSK)", "attributes": { "region": "us-east-1" } },
+    { "id": "rabbitmq", "kind": "queue" },
+    { "id": "s3-events", "kind": "storage", "name": "S3 events bucket", "attributes": { "region": "us-east-1" } },
+    { "id": "s3-assets", "kind": "storage", "name": "S3 product assets" },
+    { "id": "elasticsearch", "kind": "search", "name": "Elasticsearch 8", "description": "Non-convention External kind." },
+    { "id": "okta", "kind": "identity", "url": "https://acme.okta.com" },
+    { "id": "vault", "kind": "secrets", "name": "HashiCorp Vault" },
+    { "id": "stripe", "kind": "saas", "url": "https://dashboard.stripe.com" },
+    { "id": "sendgrid", "kind": "saas" },
+    { "id": "twilio", "kind": "saas" },
+    { "id": "contentful", "kind": "saas", "name": "Contentful CMS" },
+    { "id": "firebase", "kind": "saas", "name": "Firebase (push, crash reporting)" },
+    { "id": "cloudflare", "kind": "network", "name": "Cloudflare (WAF, DNS)" }
+  ]
+}
