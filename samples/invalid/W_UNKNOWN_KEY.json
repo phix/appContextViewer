@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "generator": "catalog-tool 2.3",
+  "applications": [
+    {
+      "repository": "acme/platform-core",
+      "project": "auth-service",
+      "owner": "platform",
+      "tier": 1,
+      "attributes": { "owner": "platform" }
+    },
+    {
+      "repository": "acme/platform-core",
+      "project": "user-service",
+      "dependsOn": ["external:redis"]
+    }
+  ],
+  "externals": [{ "id": "redis", "kind": "cache", "vendor": "elasticache" }]
+}

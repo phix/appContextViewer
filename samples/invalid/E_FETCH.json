@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "source": "E_FETCH fixture: a valid Catalog that the load tests serve through an injected fetch which fails (network error, non-2xx status, cross-origin refusal), so this document never arrives",
+  "applications": [{ "repository": "acme/platform-core", "project": "api-gateway" }]
+}

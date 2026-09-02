@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "applications": [
+    { "repository": "acme/platform-core", "project": "auth-service", "kind": "service" },
+    {
+      "repository": "acme/platform-core",
+      "project": "user-service",
+      "dependsOn": ["acme/platform-core/auth-service"]
+    },
+    { "repository": "acme/platform-core", "project": "auth-service", "kind": "library" }
+  ]
+}

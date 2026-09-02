@@ -75,3 +75,23 @@ None blocked the work. Recorded for the tickets they touch.
 Smaller notes: the Catalog envelope has no display name, only free-text `source`; the `kind` conventions could list `cli` and `function`, both used here and loading fine as open strings.
 
 These scripts have no `package.json` on purpose. The repository has no build yet; when the Vite project lands they can move under its tooling and the fixtures can feed its tests.
+
+## Invalid fixtures
+
+`invalid/` holds one fixture per code in [`docs/schema-v1.md`](../docs/schema-v1.md), named `<CODE>.json`, plus one that mixes errors and warnings. They feed the tests of `src/catalog`: one test per code, and an agreement test that runs ajv (draft 2020-12, strict mode, `ajv-formats`) and `validateCatalog` over every `.json` file in this directory and in `invalid/`, asserting the same accept or reject verdict from both, with the three downgrades and the four rules the JSON Schema cannot express as the only permitted differences.
+
+| file | what it carries | ajv | viewer |
+|---|---|---|---|
+| `E_SCHEMA_VERSION.json` | `schemaVersion: 2`, plus an unknown key, a bad `generatedAt` and an unresolved ref that must stay unreported: this code ends checking. | rejects | rejects, one row |
+| `E_INVALID.json` | Fourteen schema violations and nothing else: a non-string `source`, an empty `team`, a bare project name and a whitespace-bearing External ref in `dependsOn`, a Channel name with a space, a `repository` with a leading slash, a `project` with a space, an array `attributes`, a missing `repository`, a numeric `kind`, an Application that is a string, an External `id` with a slash, an External without `kind`, a numeric `url`. | rejects | rejects |
+| `E_DUPLICATE_APPLICATION.json` | The same `repository` and `project` twice. | accepts | rejects |
+| `E_DUPLICATE_EXTERNAL.json` | Two Externals with the id `redis`. | accepts | rejects |
+| `E_UNRESOLVED_REF.json` | A ref to an Application not in the Catalog and one to an undeclared External. | accepts | rejects |
+| `E_SELF_DEPENDENCY.json` | An Application listing its own id in `dependsOn`. | accepts | rejects |
+| `W_UNKNOWN_KEY.json` | An unknown key on the Catalog, two on an Application and one on an External; the returned Catalog drops them. | rejects | loads, 4 warnings |
+| `W_DUPLICATE_ENTRY.json` | Duplicates in `dependsOn`, `publishes` and `subscribes`; the returned Catalog keeps the first occurrence of each. | rejects | loads, 3 warnings |
+| `W_INVALID_FORMAT.json` | A `generatedAt` that is not RFC 3339 and two `url` values that are not URIs, beside one that is. | rejects | loads, 3 warnings |
+| `W_EMPTY_CHANNEL.json` | A Channel with a publisher and no subscriber, and one with two subscribers and no publisher. | accepts | loads, 2 warnings |
+| `E_FETCH.json`, `E_TOO_LARGE.json` | Valid Catalogs. The load tests serve them through an injected `fetch` that fails (network error, non-2xx status, cross-origin refusal, an oversize `Content-Length`) and open them as a `File` with `maxBytes` below their size, so the document is refused before it is parsed. | accepts | loads |
+| `E_PARSE.json` | Not JSON: a trailing comma on line 4. The only file here that does not parse; the loader reports the line and column. | cannot parse | rejects |
+| `mixed.json` | Five errors across four codes (a duplicate Application, a duplicate External, two unresolved refs, a self-dependency) and six warnings across four codes (two unknown keys, a duplicate entry, two bad formats, a one-sided Channel), so a report shows both lists at once. | rejects | rejects |

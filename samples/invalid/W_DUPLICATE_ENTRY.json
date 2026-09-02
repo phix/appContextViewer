@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "applications": [
+    {
+      "repository": "acme/platform-core",
+      "project": "api-gateway",
+      "dependsOn": [
+        "acme/platform-core/auth-service",
+        "external:redis",
+        "acme/platform-core/auth-service"
+      ],
+      "publishes": ["requests.logged", "requests.logged"],
+      "subscribes": ["config.changed"]
+    },
+    {
+      "repository": "acme/platform-core",
+      "project": "auth-service",
+      "publishes": ["config.changed"],
+      "subscribes": ["requests.logged", "config.changed", "requests.logged"]
+    }
+  ],
+  "externals": [{ "id": "redis", "kind": "cache" }]
+}

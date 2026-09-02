@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "not a date",
+  "bogus": true,
+  "applications": [
+    {
+      "repository": "acme/platform-core",
+      "project": "api-gateway",
+      "dependsOn": ["acme/platform-core/nope"]
+    }
+  ]
+}

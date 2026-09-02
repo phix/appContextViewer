@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "applications": [
+    { "repository": "acme/platform-core", "project": "api-gateway", }
+  ]
+}

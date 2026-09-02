@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "applications": [
+    {
+      "repository": "acme/commerce",
+      "project": "order-service",
+      "publishes": ["orders.placed", "orders.audited"]
+    },
+    {
+      "repository": "acme/commerce",
+      "project": "shipping-service",
+      "subscribes": ["orders.placed", "orders.shipped"]
+    },
+    {
+      "repository": "acme/commerce",
+      "project": "billing-service",
+      "subscribes": ["orders.shipped"]
+    }
+  ]
+}
