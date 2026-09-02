@@ -51,6 +51,10 @@
             },
             "patterns": [
               {
+                "group": ["cytoscape/**", "cytoscape-dagre/**"],
+                "message": "cytoscape is imported only under src/view/canvas/, subpaths included (docs/architecture.md, import rules)."
+              },
+              {
                 "group": [
                   "**/catalog/**",
                   "**/graph/**",
@@ -81,6 +85,10 @@
                   "preact": "catalog, graph and state import nothing from preact; they run in Node (docs/architecture.md, import rules)."
                 },
                 "patterns": [
+                  {
+                    "group": ["cytoscape/**", "cytoscape-dagre/**"],
+                    "message": "catalog, graph and state import nothing from cytoscape, subpaths included (docs/architecture.md, import rules)."
+                  },
                   {
                     "group": [
                       "**/catalog/**",
@@ -115,6 +123,10 @@
                   "cytoscape-dagre": "layout imports nothing from cytoscape; it returns plain positions (docs/architecture.md, import rules)."
                 },
                 "patterns": [
+                  {
+                    "group": ["cytoscape/**", "cytoscape-dagre/**"],
+                    "message": "layout imports nothing from cytoscape, subpaths included (docs/architecture.md, import rules)."
+                  },
                   {
                     "group": [
                       "**/catalog/**",
