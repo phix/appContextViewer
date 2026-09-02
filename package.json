@@ -15,7 +15,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "lint": "biome check .",
-    "check": "npm run lint && tsc --noEmit && vitest run && vite build && node scripts/check-bundle.mjs && node scripts/check-licences.mjs && node scripts/third-party-notices.mjs --check"
+    "check": "npm run lint && tsc --noEmit && node scripts/check-test-files.mjs && vitest run && vite build && node scripts/check-bundle.mjs && node scripts/check-licences.mjs && node scripts/third-party-notices.mjs --check"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.1.1",
@@ -30,7 +30,7 @@
     "@playwright/test": "^1.62.1",
     "@preact/preset-vite": "^2.10.6",
     "@testing-library/preact": "^3.2.4",
-    "@types/node": "^26.4.1",
+    "@types/node": "^24.13.3",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "jsdom": "^30.0.1",
