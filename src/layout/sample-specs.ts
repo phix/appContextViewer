@@ -1,0 +1,114 @@
+/**
+ * Test fixtures only: layout specs cut from samples/catalog-1000.json (1,000 Applications, 123
+ * Repositories, 4,395 Dependencies between Applications; samples/README.md). Not exported from the
+ * module index and never bundled. Every node is 120 x 30, the size the layout research measured with.
+ *
+ * The pane specs follow the pane policy in docs/performance-budgets.md: a Neighborhood is the
+ * Center plus everything within Depth 1 or 2 in both directions, and the pane shows the largest
+ * Depth that fits its cap. `paneSpec(size)` takes the first Application in Catalog order whose
+ * Depth-1 or Depth-2 Neighborhood has exactly `size` members, so a fixture is deterministic and its
+ * density is the real one, not a synthetic 3-edges-per-node graph.
+ */
+import catalog1000 from '../../samples/catalog-1000.json';
+import type { Id, LayoutEdge, LayoutNode, LayoutSpec } from './spec';
+
+export const NODE_WIDTH = 120;
+export const NODE_HEIGHT = 30;
+
+type Application = { repository: string; project: string; dependsOn?: string[] };
+const applications = (catalog1000 as { applications: Application[] }).applications;
+
+const idOf = (application: Application): Id => `${application.repository}/${application.project}`;
+const repositoryOf = new Map<Id, string>();
+const dependencies = new Map<Id, Id[]>();
+const dependents = new Map<Id, Id[]>();
+for (const application of applications) {
+  const id = idOf(application);
+  repositoryOf.set(id, application.repository);
+  dependencies.set(id, []);
+  dependents.set(id, []);
+}
+for (const application of applications) {
+  const id = idOf(application);
+  for (const target of application.dependsOn ?? []) {
+    if (!repositoryOf.has(target)) {
+      continue; // an External: the Overview omits them and the pane spec tests do not need them
+    }
+    dependencies.get(id)?.push(target);
+    dependents.get(target)?.push(id);
+  }
+}
+
+const node = (id: Id): LayoutNode => ({ id, width: NODE_WIDTH, height: NODE_HEIGHT });
+
+function neighborhood(center: Id, depth: number): Id[] {
+  const seen = new Set<Id>([center]);
+  let frontier = [center];
+  for (let d = 0; d < depth && frontier.length > 0; d++) {
+    const next: Id[] = [];
+    for (const id of frontier) {
+      for (const other of [...(dependencies.get(id) ?? []), ...(dependents.get(id) ?? [])]) {
+        if (!seen.has(other)) {
+          seen.add(other);
+          next.push(other);
+        }
+      }
+    }
+    frontier = next;
+  }
+  return [...seen];
+}
+
+function specOf(ids: readonly Id[], compound: boolean): LayoutSpec {
+  const members = new Set(ids);
+  const edges: LayoutEdge[] = [];
+  for (const id of ids) {
+    for (const target of dependencies.get(id) ?? []) {
+      if (members.has(target)) {
+        edges.push({ source: id, target });
+      }
+    }
+  }
+  const parents = compound
+    ? new Map(ids.map((id) => [id, repositoryOf.get(id) as string]))
+    : undefined;
+  return { nodes: ids.map(node), edges, parents };
+}
+
+/** A real pane Neighborhood with exactly `size` members; `compound` groups them by Repository. */
+export function paneSpec(size: number, { compound = false } = {}): LayoutSpec & { center: Id } {
+  for (const application of applications) {
+    const center = idOf(application);
+    for (const depth of [1, 2]) {
+      const ids = neighborhood(center, depth);
+      if (ids.length === size) {
+        return { center, ...specOf(ids, compound) };
+      }
+    }
+  }
+  throw new Error(`no Application in catalog-1000 has a Neighborhood of exactly ${size} members`);
+}
+
+/** The collapsed Overview: one node per Repository (123), one edge per Group Dependency. */
+export function collapsedOverviewSpec(): LayoutSpec {
+  const repositories = [...new Set(repositoryOf.values())];
+  const seen = new Set<string>();
+  const edges: LayoutEdge[] = [];
+  for (const [id, targets] of dependencies) {
+    const source = repositoryOf.get(id) as string;
+    for (const target of targets) {
+      const targetRepository = repositoryOf.get(target) as string;
+      const key = `${source}\0${targetRepository}`;
+      if (source !== targetRepository && !seen.has(key)) {
+        seen.add(key);
+        edges.push({ source, target: targetRepository });
+      }
+    }
+  }
+  return { nodes: repositories.map(node), edges };
+}
+
+/** Expand all: every Application inside its Repository, every Application Dependency (4,395). */
+export function expandedOverviewSpec(): LayoutSpec {
+  return specOf([...repositoryOf.keys()], true);
+}
