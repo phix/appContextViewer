@@ -26,6 +26,8 @@ type Outcome = {
   positions?: [string, number, number, number?, number?][];
   aborted?: string;
   recovered?: number;
+  abortedEarly?: string;
+  recoveredAfterEarly?: number;
   error?: string;
 };
 
@@ -53,17 +55,44 @@ const spec = {
   ],
   parents: new Map([['a', 'left'], ['b', 'left'], ['d', 'right'], ['e', 'right']]),
 };
+// 400 Applications in 40 Groups: seconds of work for elk, so an abort lands mid-layout.
+const heavySpec = (() => {
+  const nodes = [];
+  const edges = [];
+  const parents = new Map();
+  for (let i = 0; i < 400; i++) {
+    nodes.push(node('n' + i));
+    parents.set('n' + i, 'g' + (i % 40));
+    if (i > 0) {
+      edges.push({ source: 'n' + (i - 1), target: 'n' + i });
+      edges.push({ source: 'n' + Math.floor(i / 2), target: 'n' + i });
+    }
+  }
+  return { nodes, edges, parents };
+})();
+
 const outcome = { adapter: typeof Worker === 'function' ? 'worker' : 'direct' };
 try {
   const { createOverviewLayout } = await import('@/layout');
   const layout = createOverviewLayout();
   const positions = await layout.run(spec);
   outcome.positions = [...positions].map(([id, p]) => [id, p.x, p.y, p.width, p.height]);
-  const controller = new AbortController();
-  const aborted = layout.run(spec, controller.signal);
-  controller.abort();
-  outcome.aborted = await aborted.then(() => 'resolved', (error) => error.name);
+  // The terminate-and-recreate path: abort once the request has reached the worker but before its
+  // answer can come back, or the adapter takes its early-abort branch instead and the same worker
+  // answers the next run. The request is posted in a microtask, so one macro-task is enough to be
+  // past it; the spec is big enough that elk is still working when the abort lands.
+  const posted = new AbortController();
+  const inFlight = layout.run(heavySpec, posted.signal);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  posted.abort();
+  outcome.aborted = await inFlight.then(() => 'resolved', (error) => error.name);
   outcome.recovered = (await layout.run(spec)).size;
+  // The early-abort branch: aborted before the run reaches the worker at all.
+  const early = new AbortController();
+  const immediate = layout.run(spec, early.signal);
+  early.abort();
+  outcome.abortedEarly = await immediate.then(() => 'resolved', (error) => error.name);
+  outcome.recoveredAfterEarly = (await layout.run(spec)).size;
   layout.dispose();
 } catch (error) {
   outcome.error = String(error && error.stack ? error.stack : error);
@@ -151,13 +180,18 @@ test('the Overview layout runs elkjs in a real Web Worker, loaded only when aske
       expect(Number.isFinite(width) && Number.isFinite(height), id).toBe(true);
     }
   }
-  // The abort terminated the worker and rejected with AbortError; the recreated worker answered.
+  // Aborted after the request reached the worker: that worker was terminated, the run rejected with
+  // AbortError, and the run after it was answered by the worker the adapter put in its place.
   expect(outcome.aborted).toBe('AbortError');
   expect(outcome.recovered).toBe(7);
+  // Aborted before the run reached the worker: same rejection, and the worker is kept.
+  expect(outcome.abortedEarly).toBe('AbortError');
+  expect(outcome.recoveredAfterEarly).toBe(7);
 
-  // The worker file was fetched by the page (a real Worker, not the in-process adapter), and the
-  // on-thread elk chunk, the fallback chain's, never was.
+  // The worker file was fetched by the page (a real Worker, not the in-process adapter), twice:
+  // once for the first worker, once for the one that replaced the terminated one. The on-thread elk
+  // chunk, the fallback chain's, was never fetched.
   const worker = workerFile();
-  expect(requested.filter((p) => p.endsWith(`/${worker}`)).length).toBeGreaterThanOrEqual(1);
+  expect(requested.filter((p) => p.endsWith(`/${worker}`)).length).toBeGreaterThanOrEqual(2);
   expect(requested.some((p) => /elk-worker\.min-[\w-]+\.js$/.test(p))).toBe(false);
 });
