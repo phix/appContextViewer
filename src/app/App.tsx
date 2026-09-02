@@ -28,6 +28,11 @@ export function markLoadStart(): void {
   performance.mark(LOAD_MARK);
 }
 
+/** Call when a load settles without a Catalog: budget 2 measures loads that reached the table. */
+export function markLoadRejected(): void {
+  pending = false;
+}
+
 /** Called by the ranked table once the browser has painted its rows (budget 2's end). */
 export function markTablePainted(): void {
   if (!pending) {
@@ -61,7 +66,13 @@ export function App({ store }: AppProps) {
 
   const load = (source: File | string) => {
     markLoadStart();
-    void store.actions.load(source);
+    void store.actions.load(source).then((result) => {
+      // A rejected Catalog never repaints the table, so without this the stopwatch stays running
+      // and the next unrelated row change (a filter tick) would measure from the failed load.
+      if (result.catalog === undefined) {
+        markLoadRejected();
+      }
+    });
   };
 
   const select = (center: Center) => {

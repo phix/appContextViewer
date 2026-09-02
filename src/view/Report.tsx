@@ -365,7 +365,13 @@ function UnknownKey({
   const where =
     ids.length === rows.length && ids.every(isApplicationId) ? 'Applications' : 'record';
   const label =
-    where === 'Applications' ? 'Applications' : rows.length === 1 ? 'record' : 'records';
+    where === 'Applications'
+      ? rows.length === 1
+        ? 'Application'
+        : 'Applications'
+      : rows.length === 1
+        ? 'record'
+        : 'records';
   return (
     <li class="report__key" data-testid="report-unknown-key" data-key={name}>
       <span class="report__key-name">

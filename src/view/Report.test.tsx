@@ -156,7 +156,8 @@ describe('Report', () => {
     }));
     renderReport(reportOf({ errors }));
 
-    expect(screen.getAllByTestId('report-row')).toHaveLength(GROUP_FOLD);
+    expect(GROUP_FOLD).toBe(50); // docs/validation-surfacing.md decision 7 names the number
+    expect(screen.getAllByTestId('report-row')).toHaveLength(50);
     fireEvent.click(screen.getByRole('button', { name: 'Show all 137' }));
     expect(screen.getAllByTestId('report-row')).toHaveLength(137);
   });
@@ -174,7 +175,8 @@ describe('Report', () => {
     const key = screen.getByTestId('report-unknown-key');
     expect(key.getAttribute('data-key')).toBe('owner');
     expect(key.querySelector('.report__key-name')?.textContent).toBe('owner on 12 Applications');
-    expect(key.querySelectorAll('.report__key-ids li')).toHaveLength(UNKNOWN_KEY_IDS);
+    expect(UNKNOWN_KEY_IDS).toBe(5); // decision 8 names the number
+    expect(key.querySelectorAll('.report__key-ids li')).toHaveLength(5);
 
     fireEvent.click(screen.getByRole('button', { name: 'Show all 12' }));
     expect(key.querySelectorAll('.report__key-ids li')).toHaveLength(12);
