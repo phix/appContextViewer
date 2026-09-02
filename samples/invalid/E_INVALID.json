@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "source": 42,
+  "applications": [
+    {
+      "repository": "acme/platform-core",
+      "project": "api-gateway",
+      "team": "",
+      "dependsOn": ["auth-service", "external:postgres main"],
+      "publishes": ["orders placed"]
+    },
+    {
+      "repository": "/acme/platform-core",
+      "project": "auth service",
+      "attributes": ["tier"]
+    },
+    {
+      "project": "orphan",
+      "kind": 7
+    },
+    "not-an-object"
+  ],
+  "externals": [
+    { "id": "postgres/main", "kind": "database" },
+    { "id": "redis" },
+    { "id": "okta", "kind": "identity", "url": 12 }
+  ]
+}
