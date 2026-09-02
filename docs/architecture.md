@@ -27,12 +27,12 @@ Invariants: `catalog` is present exactly when `errors` is empty; every rule runs
 
 ```ts
 buildGraph(catalog: Catalog): Graph                       // immutable; ids, adjacency both ways, Channels, Teams
-blastRadius(graph, center: Id | ExternalId, maxDepth?: number): Id[][]   // Dependents banded by Depth, cycles handled; an External works the same
+blastRadius(graph, center: CenterRef, maxDepth?: number): Id[][]   // CenterRef = { kind: 'application' | 'external', id } or a bare Application id; Dependents banded by Depth, cycles handled
 rankedByBlastRadius(graph): { kind: 'application' | 'external'; id: Id; size: number }[]   // the default screen's rows, both kinds
 neighborhood(graph, id, opts: { depth: number; direction: 'dependencies' | 'dependents' | 'both' }): Neighborhood
-paneNeighborhood(graph, id, depth: number, cap?: number): Neighborhood & { depthShown: number; hidden: number }
+paneNeighborhood(graph, center: CenterRef, depth: number, cap?: number): Neighborhood & { depthShown: number; hidden: number; hiddenApplications: number; hiddenExternals: number }
 groupableAttributes(graph): string[]                        // Repository, Team, Kind, then scalar attribute keys
-groupBy(graph, attribute: string): Group[]                  // includes the synthetic "No <Attribute>" Group, last
+groupBy(graph, attribute: string): Group[]                  // includes the synthetic "No <Attribute>" Group, last; throws on a key that is neither built-in nor groupable (state maps bad URL values to the default first)
 groupDependencies(graph, groups: Group[], open: ReadonlySet<GroupId>): GroupEdge[]
 buildSearchIndex(graph): SearchIndex
 search(index: SearchIndex, text: string, limit?: number): Hit[]

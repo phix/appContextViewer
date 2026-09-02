@@ -75,7 +75,7 @@ How many relation hops a Neighborhood or Blast radius extends from the selected 
 _Avoid_: level, radius, hops (in prose)
 
 **Group**:
-A set of Applications sharing one value of the current grouping Attribute. Repository is the default grouping. Applications lacking that Attribute form the Group "No <Attribute>". In the Overview a Group is either open, showing its members, or collapsed, standing in for them as one unit.
+A set of Applications sharing one value of the current grouping Attribute. Repository is the default grouping. Applications lacking that Attribute form the Group "No <Attribute>". Values are compared by their string form, case-sensitively: `1` and `"1"` are one Group, `platform` and `Platform` are two; numeric-looking values order numerically. In the Overview a Group is either open, showing its members, or collapsed, standing in for them as one unit.
 _Avoid_: cluster, compound, folder, namespace, bucket
 
 **Group Dependency**:
