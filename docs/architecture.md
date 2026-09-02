@@ -45,7 +45,7 @@ Invariants: `Graph` is never mutated after build; `paneNeighborhood` returns the
 ```ts
 layoutNeighborhood(spec: LayoutSpec): Positions                                  // dagre, synchronous; throws on failure
 createOverviewLayout(): { run(spec: OverviewSpec, signal?: AbortSignal): Promise<Positions>; dispose(): void }
-type Positions = Map<Id, { x: number; y: number }>
+type Positions = Map<Id, { x: number; y: number; width?: number; height?: number }>   // width and height on Groups only; coordinates are absolute centres
 ```
 
 Two adapters behind one seam: `dagre` for the pane and `elk` for the Overview, the latter created through Vite's `?worker` import in the browser and called directly in Node tests. The fallback chain (dagre, then elk, then breadthfirst) lives here. Nothing in this module knows about Cytoscape; positions are plain data, which is what keeps it testable in Node. Budgets 3, 4, 9, 10 and 11 are measured through it, in the browser, with the animation constant applied by the view.
@@ -85,9 +85,10 @@ appContextViewer/
 │   ├── app/            main.tsx, App.tsx
 │   ├── catalog/        index.ts, types.ts, load.ts, validate.ts, *.test.ts
 │   ├── graph/          index.ts, model.ts, blast.ts, neighborhood.ts, grouping.ts, search.ts, *.test.ts, *.perf.test.ts
-│   ├── layout/         index.ts, dagre.ts, elk.ts, elk.worker.ts, breadthfirst.ts, *.test.ts
+│   ├── layout/         index.ts, spec.ts, dagre.ts, elk.ts, elk.worker.ts, breadthfirst.ts, *.test.ts
 │   ├── state/          index.ts, store.ts, derived.ts, url.ts, *.test.ts
-│   └── view/           Header.tsx, Picker.tsx, RankedTable.tsx, ImpactBoard.tsx, NeighborhoodPane.tsx,
+│   └── view/           index.ts (the only path app code may import a component through), Header.tsx,
+│                       Picker.tsx, RankedTable.tsx, ImpactBoard.tsx, NeighborhoodPane.tsx,
 │                       Overview.tsx, Report.tsx, canvas/{Canvas.tsx, OverviewCanvas.tsx, style.ts}, *.test.tsx
 ├── e2e/                server.mjs, budget.ts, smoke.spec.ts, file-guard.spec.ts, then one <slice>.spec.ts per slice
 ├── samples/            existing Catalogs and scripts, plus invalid/ (one fixture per code)
