@@ -39,14 +39,16 @@ const isUri = (v) => { try { new URL(v); return true; } catch { return false; } 
 
 // ---------------------------------------------------------------- envelope
 if (!isObject(catalog)) { error('E_INVALID', '$', 'Catalog is not an object'); finish(); }
-if (catalog.schemaVersion !== 1) error('E_SCHEMA_VERSION', '$.schemaVersion', `expected 1, got ${JSON.stringify(catalog.schemaVersion)}`);
+// E_SCHEMA_VERSION short-circuits every later rule, as the viewer does (docs/validation-surfacing.md, decision 7)
+if (catalog.schemaVersion !== 1) { error('E_SCHEMA_VERSION', '$.schemaVersion', `expected 1, got ${JSON.stringify(catalog.schemaVersion)}`); finish(); }
 if (!Array.isArray(catalog.applications)) error('E_INVALID', '$.applications', 'missing or not an array');
 if (catalog.externals !== undefined && !Array.isArray(catalog.externals)) error('E_INVALID', '$.externals', 'not an array');
 if (catalog.generatedAt !== undefined && typeof catalog.generatedAt !== 'string') error('E_INVALID', '$.generatedAt', 'not a string');
 else if (typeof catalog.generatedAt === 'string' && Number.isNaN(Date.parse(catalog.generatedAt))) warn('W_INVALID_FORMAT', '$.generatedAt', `not RFC 3339: ${JSON.stringify(catalog.generatedAt)}`);
 if (catalog.source !== undefined && typeof catalog.source !== 'string') error('E_INVALID', '$.source', 'not a string');
 for (const key of Object.keys(catalog)) if (!ENVELOPE_KEYS.has(key)) warn('W_UNKNOWN_KEY', `$.${key}`, 'unknown envelope key');
-if (errors.length) finish();
+// keep collecting record-level findings unless the arrays themselves are unusable
+if (!Array.isArray(catalog.applications) || (catalog.externals !== undefined && !Array.isArray(catalog.externals))) finish();
 
 // ---------------------------------------------------------------- externals
 const externals = new Map();
