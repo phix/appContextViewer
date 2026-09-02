@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('/ renders the placeholder from the module bundle', async ({ page }) => {
+test('/ renders the app shell from the module bundle', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
 
@@ -9,11 +9,17 @@ test('/ renders the placeholder from the module bundle', async ({ page }) => {
   await expect(page).toHaveTitle('App Context Viewer');
   // The bundle stamps the mount it rendered into (src/app/main.tsx).
   await expect(page.locator('#app')).toHaveAttribute('data-rendered-by', 'bundle');
-  // The scaffold placeholder; the app shell slice replaces it and this assertion with it.
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('App Context Viewer');
+  // The shell's four surfaces from issue #24: header, picker, ranked table, and no report at rest.
+  await expect(page.getByTestId('header')).toBeVisible();
+  await expect(page.getByTestId('picker-input')).toBeAttached();
+  await expect(page.getByTestId('ranked-table')).toBeVisible();
+  await expect(page.getByTestId('report')).toHaveCount(0);
   // 34 Applications is the demo Catalog's row count (samples/README.md), so the number proves the
   // sample is bundled, not fetched.
-  await expect(page.getByText('34 Applications')).toBeVisible();
+  await expect(page.getByTestId('header-counts')).toHaveText('34 Applications, 19 Externals');
+  // main.tsx sets this once `?src=` (absent here) has settled and `bindUrl` is wired.
+  await expect(page.locator('#app')).toHaveAttribute('data-bootstrapped', 'true');
   expect(errors).toEqual([]);
 });
 
