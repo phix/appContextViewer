@@ -160,6 +160,10 @@ export function createOverviewLayout(deps: { createWorker?: WorkerFactory } = {}
       const indexed = indexSpec(spec);
       const graph = toElkGraph(indexed);
       const current = await open();
+      if (signal?.aborted) {
+        // Aborted while the worker was starting: nothing was posted, nothing to terminate.
+        throw signal.reason ?? abortError();
+      }
       const laidOut = await new Promise<ElkNode>((resolve, reject) => {
         const id = nextId++;
         const onAbort = () => {

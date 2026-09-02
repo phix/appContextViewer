@@ -146,6 +146,24 @@ describe('createOverviewLayout with a worker factory (the browser adapter, faked
     await expect(two).rejects.toBe(reason);
   });
 
+  it('a signal aborted right after run, before the request is posted, rejects too', async () => {
+    // Caught by e2e/layout-chunk.spec.ts in Chromium: the abort listener is added after the worker
+    // is awaited, and an already-aborted signal never fires it.
+    const { workers, layout } = harness();
+    const controller = new AbortController();
+    const running = layout.run(spec, controller.signal);
+    controller.abort();
+    await expect(running).rejects.toMatchObject({ name: 'AbortError' });
+    const worker = workers[0] as FakeWorker;
+    expect(worker.posted.map((message) => message.cmd)).toEqual(['register']);
+    expect(worker.terminate).not.toHaveBeenCalled();
+    // The worker is still good: the next run goes through it.
+    const next = layout.run(spec);
+    const request = await worker.layoutRequest();
+    worker.reply({ id: request.id, data: laidOut(request.graph as ElkGraph) });
+    expect((await next).size).toBe(4);
+  });
+
   it('a signal aborted before run rejects without creating a worker', async () => {
     const { createWorker, layout } = harness();
     const controller = new AbortController();

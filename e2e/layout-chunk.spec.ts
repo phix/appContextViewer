@@ -79,8 +79,8 @@ const read = (file: string) => readFileSync(path.join(dist, file), 'utf8');
 
 /** The worker file, found the way the browser finds it: named inside the `?worker` constructor chunk. */
 function workerFile(): string {
-  const constructor = builtJs().find((file) => /new Worker\(/.test(read(file)));
-  const name = constructor ? read(constructor).match(/elk\.worker-[\w-]+\.js/)?.[0] : undefined;
+  const spawner = builtJs().find((file) => /new Worker\(/.test(read(file)));
+  const name = spawner ? read(spawner).match(/elk\.worker-[\w-]+\.js/)?.[0] : undefined;
   if (!name) {
     throw new Error('no chunk constructs the elk worker');
   }
