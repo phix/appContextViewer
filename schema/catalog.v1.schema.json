@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/phix/appContextViewer/main/schema/catalog.v1.schema.json",
+  "title": "App Context Viewer Catalog v1",
+  "description": "A Catalog: the complete set of Applications and their relations at one point in time. See docs/schema-v1.md for the semantic rules the viewer enforces beyond this schema (id uniqueness, reference resolution, warnings).",
+  "type": "object",
+  "required": ["schemaVersion", "applications"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1, "description": "Major version of this contract. The viewer refuses versions it does not support." },
+    "generatedAt": { "type": "string", "format": "date-time", "description": "When the producer emitted this Catalog." },
+    "source": { "type": "string", "description": "Free text naming the producer, for display only." },
+    "applications": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/application" },
+      "description": "Every Application in the Catalog. Order is not significant."
+    },
+    "externals": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/external" },
+      "default": [],
+      "description": "Every External a Dependency may target. A ref to an undeclared External is an error."
+    }
+  },
+  "$defs": {
+    "repository": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\s/](?:[^\\s]*[^\\s/])?$",
+      "description": "Source repository name. May contain slashes (e.g. org/repo) but not whitespace, and may not start or end with a slash."
+    },
+    "project": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\s/]+$",
+      "description": "Name distinguishing an Application within its Repository. No slashes or whitespace, so Application ids split at the last slash."
+    },
+    "applicationRef": {
+      "type": "string",
+      "pattern": "^[^\\s]+/[^\\s/]+$",
+      "description": "An Application id: repository + '/' + project. Resolved by splitting at the last slash."
+    },
+    "externalRef": {
+      "type": "string",
+      "pattern": "^external:[^\\s/]+$",
+      "description": "'external:' + the id of a declared External."
+    },
+    "dependencyRef": {
+      "anyOf": [{ "$ref": "#/$defs/applicationRef" }, { "$ref": "#/$defs/externalRef" }]
+    },
+    "channelName": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^\\S+$",
+      "description": "A Channel name. Channels are implicit: naming one here brings it into existence."
+    },
+    "attributes": {
+      "type": "object",
+      "description": "Free-form producer fields. Scalar values (string, number, boolean) can drive grouping, coloring and filtering; other values are display-only.",
+      "additionalProperties": true
+    },
+    "application": {
+      "type": "object",
+      "required": ["repository", "project"],
+      "additionalProperties": false,
+      "properties": {
+        "repository": { "$ref": "#/$defs/repository" },
+        "project": { "$ref": "#/$defs/project" },
+        "kind": { "type": "string", "examples": ["service", "library", "pipeline", "mobile-app", "web-app", "job"], "description": "What sort of unit this is. Open string; the examples are conventions, not an enum." },
+        "team": { "type": "string", "minLength": 1, "description": "The single Team that owns this Application. Teams are implicit: naming one here brings it into existence." },
+        "description": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "dependsOn": { "type": "array", "items": { "$ref": "#/$defs/dependencyRef" }, "uniqueItems": true, "default": [], "description": "Runtime Dependencies: Applications and Externals this one needs to function." },
+        "publishes": { "type": "array", "items": { "$ref": "#/$defs/channelName" }, "uniqueItems": true, "default": [], "description": "Channels this Application publishes to." },
+        "subscribes": { "type": "array", "items": { "$ref": "#/$defs/channelName" }, "uniqueItems": true, "default": [], "description": "Channels this Application subscribes from." },
+        "attributes": { "$ref": "#/$defs/attributes" }
+      }
+    },
+    "external": {
+      "type": "object",
+      "required": ["id", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[^\\s/]+$", "description": "Referenced from dependsOn as 'external:<id>'. Unique within the Catalog." },
+        "kind": { "type": "string", "examples": ["database", "cache", "queue", "storage", "saas", "identity", "network", "other"], "description": "Open string; the examples are conventions." },
+        "name": { "type": "string", "description": "Display name. Defaults to id." },
+        "description": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "attributes": { "$ref": "#/$defs/attributes" }
+      }
+    }
+  }
+}
