@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PROTOTYPE impact-first UX</title>
+<!-- PROTOTYPE, throwaway. Three variants of the impact-first screen, switchable via ?variant=A|B|C. Resolves wayfinder ticket #6. Open this file directly or serve the repo root. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.4/cytoscape.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
+<style>
+  :root { --bg:#0f1115; --panel:#171a21; --border:#2a2f3a; --fg:#e6e8ee; --muted:#8b93a7; --accent:#f5b642; --input:#1f232d; --danger:#f0625d; --ok:#5ec27a; --link:#4e9af1; }
+  * { box-sizing:border-box; } html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  #app { height:100%; display:flex; flex-direction:column; }
+  input,select,button { background:var(--input); color:var(--fg); border:1px solid var(--border); border-radius:4px; padding:5px 8px; font:inherit; } button { cursor:pointer; } button:hover { border-color:var(--accent); } button.primary { background:var(--accent); color:#111; border-color:var(--accent); font-weight:600; }
+  .bar { display:flex; gap:8px; align-items:center; padding:8px 12px; background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .bar label { color:var(--muted); display:inline-flex; gap:4px; align-items:center; }
+  .muted { color:var(--muted); } .small { font-size:11px; } .mono { font-family:ui-monospace,Menlo,monospace; }
+  .chip { display:inline-block; padding:1px 7px; border-radius:10px; font-size:11px; background:var(--input); border:1px solid var(--border); margin:1px 2px; }
+  .chip.ext { border-style:dashed; font-style:italic; color:#c9cfdc; } .chip.team { border-color:#5fb8a5; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-weight:600; } .badge.danger { background:rgba(240,98,93,.18); color:#ff9a96; } .badge.ok { background:rgba(94,194,122,.18); color:#8fe3a8; }
+  a.app { color:var(--link); cursor:pointer; text-decoration:none; } a.app:hover { text-decoration:underline; }
+  h2 { font-size:15px; margin:0 0 4px; word-break:break-all; } h3 { font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin:14px 0 6px; }
+  table.kv { border-collapse:collapse; width:100%; } table.kv td { padding:3px 4px; border-bottom:1px solid var(--border); vertical-align:top; } table.kv td:first-child { color:var(--muted); width:38%; }
+  table.rank { border-collapse:collapse; width:100%; } table.rank th, table.rank td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--border); } table.rank th { color:var(--muted); font-weight:500; font-size:11px; text-transform:uppercase; } table.rank tr:hover td { background:var(--input); cursor:pointer; }
+  details { margin:2px 0; } summary { cursor:pointer; list-style:none; } summary::-webkit-details-marker { display:none; } summary::before { content:"▸ "; color:var(--muted); } details[open] > summary::before { content:"▾ "; }
+  .tree { padding-left:14px; border-left:1px dashed var(--border); margin-left:5px; }
+  .cy { background:var(--bg); }
+  .overlay { position:absolute; inset:0; background:rgba(15,17,21,.86); display:flex; align-items:center; justify-content:center; z-index:5; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:18px 20px; width:min(560px,92vw); }
+  .card h1 { font-size:18px; margin:0 0 4px; }
+  .list-btn { display:block; width:100%; text-align:left; margin:3px 0; padding:6px 10px; } .list-btn b { color:var(--fg); } .list-btn span { color:var(--muted); float:right; }
+  .depth { border-left:3px solid var(--border); padding-left:10px; margin:8px 0; } .depth.d1 { border-color:var(--danger); } .depth.d2 { border-color:#f08c57; } .depth.d3 { border-color:var(--accent); }
+  .depth h4 { margin:0 0 4px; font-size:12px; color:var(--muted); font-weight:500; }
+  .item { padding:3px 0; } .item .meta { color:var(--muted); font-size:11px; margin-left:6px; }
+  /* switcher */
+  #switcher { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); z-index:50; display:flex; gap:10px; align-items:center; background:#fff; color:#111; border-radius:999px; padding:6px 10px; box-shadow:0 6px 24px rgba(0,0,0,.5); font-weight:600; }
+  #switcher button { background:#111; color:#fff; border:none; border-radius:999px; width:28px; height:28px; }
+  /* variant A */
+  .A main { flex:1; display:flex; min-height:0; position:relative; } .A .cy { flex:1; } .A aside { width:380px; border-left:1px solid var(--border); background:var(--panel); overflow:auto; padding:12px; }
+  /* variant B */
+  .B main { flex:1; display:grid; grid-template-columns:270px 1fr 340px; min-height:0; } .B nav { border-right:1px solid var(--border); background:var(--panel); overflow:auto; padding:10px; } .B section { overflow:auto; padding:14px 18px; } .B aside { border-left:1px solid var(--border); background:var(--panel); display:flex; flex-direction:column; } .B aside .cy { flex:1; } .B aside .cap { padding:8px 10px; border-bottom:1px solid var(--border); color:var(--muted); font-size:11px; }
+  .B .node { padding:2px 0; } .B .node .who { color:var(--muted); font-size:11px; margin-left:6px; }
+  /* variant C */
+  .C main { flex:1; display:grid; grid-template-columns:1fr 360px 1fr; min-height:0; } .C .col { overflow:auto; padding:12px 14px; } .C .col.mid { background:var(--panel); border-left:1px solid var(--border); border-right:1px solid var(--border); } .C .colhead { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; } .C .colhead b { font-size:14px; } .C .drawer { height:0; overflow:hidden; border-top:1px solid var(--border); transition:height .2s; } .C .drawer.open { height:300px; } .C .drawer .cy { height:100%; }
+  .C .stat { display:inline-block; margin-right:14px; } .C .stat b { font-size:22px; display:block; line-height:1; } .C .stat span { color:var(--muted); font-size:11px; }
+</style>
+</head>
+<body><div id="app"></div>
+<div id="switcher"><button id="prev">←</button><span id="vlabel"></span><button id="next">→</button></div>
+<script>
+// ---------------- throwaway catalog generator (schema v1 shape) ----------------
+let seed = 7; const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32; const pick = a => a[Math.floor(rnd() * a.length)];
+const REPOS = { 'acme/platform-core':['api-gateway','auth-service','user-service','session-service','notification-service','audit-log'], 'acme/platform-infra':['feature-flags','secrets-broker','config-service','rate-limiter'], 'acme/commerce':['catalog','inventory','pricing','cart','checkout','order-service','returns','promotions','shared-models'], 'acme/payments':['payments','ledger','payouts','fraud-scoring','invoicing'], 'acme/web':['storefront','admin-portal','mobile-bff','help-center','seo-renderer'], 'acme/mobile':['ios-app','android-app'], 'acme/data':['events-pipeline','warehouse-loader','reporting-api','recommendations','search-indexer','ml-features'], 'acme/logistics':['shipping','warehouse-ops','carrier-gateway','tracking'], 'acme/support':['ticketing','chat-widget','kb-search'], 'acme/legacy':['monolith','batch-jobs'] };
+const TEAMS = { 'acme/platform-core':'platform','acme/platform-infra':'platform','acme/commerce':'commerce','acme/payments':'payments','acme/web':'web','acme/mobile':'mobile','acme/data':'data','acme/logistics':'logistics','acme/support':'support','acme/legacy':'platform' };
+const KINDS = ['service','service','service','service','job','library','web-app']; const LANGS = ['go','java','node','typescript','python','kotlin'];
+const EXTERNALS = [{id:'postgres-main',kind:'database'},{id:'redis',kind:'cache'},{id:'kafka',kind:'queue'},{id:'okta',kind:'identity'},{id:'stripe',kind:'saas'},{id:'sendgrid',kind:'saas'},{id:'s3-events',kind:'storage'},{id:'snowflake',kind:'database'},{id:'elasticsearch',kind:'database'}];
+const CHANNELS = ['orders.placed','orders.shipped','users.updated','payments.settled','inventory.changed','tickets.opened'];
+const apps = [];
+for (const [repo, projects] of Object.entries(REPOS)) for (const project of projects) apps.push({ repository: repo, project, kind: project==='shared-models'?'library':project.endsWith('-app')?'mobile-app':project==='storefront'||project==='admin-portal'?'web-app':pick(KINDS), team: TEAMS[repo], dependsOn: [], publishes: [], subscribes: [], attributes: { language: pick(LANGS), tier: 1 + Math.floor(rnd()*3), oncall: '#'+TEAMS[repo]+'-oncall', ...(rnd()<.3?{sla:'99.9%'}:{}), ...(rnd()<.2?{deprecated:true}:{}) } });
+const id = a => a.repository + '/' + a.project;
+const byId = new Map(apps.map(a => [id(a), a]));
+// dependencies: web -> gateway -> platform; commerce chain; everything -> some externals
+const dep = (a, b) => { if (a && b && a !== b && !a.dependsOn.includes(b)) a.dependsOn.push(b); };
+const A = n => [...byId.values()].find(a => a.project === n); const I = n => id(A(n));
+[['storefront','api-gateway'],['admin-portal','api-gateway'],['mobile-bff','api-gateway'],['ios-app','mobile-bff'],['android-app','mobile-bff'],['help-center','kb-search'],['seo-renderer','catalog'],
+ ['api-gateway','auth-service'],['api-gateway','user-service'],['api-gateway','rate-limiter'],['api-gateway','feature-flags'],['auth-service','session-service'],['auth-service','secrets-broker'],['user-service','audit-log'],['notification-service','user-service'],
+ ['checkout','cart'],['checkout','payments'],['checkout','order-service'],['checkout','promotions'],['cart','catalog'],['cart','inventory'],['cart','pricing'],['pricing','promotions'],['order-service','inventory'],['order-service','shipping'],['returns','order-service'],['returns','payments'],['inventory','warehouse-ops'],
+ ['payments','fraud-scoring'],['payments','ledger'],['payouts','ledger'],['invoicing','ledger'],['fraud-scoring','ml-features'],
+ ['shipping','carrier-gateway'],['tracking','carrier-gateway'],['warehouse-ops','config-service'],
+ ['recommendations','ml-features'],['reporting-api','warehouse-loader'],['warehouse-loader','events-pipeline'],['search-indexer','catalog'],['kb-search','search-indexer'],
+ ['ticketing','user-service'],['chat-widget','ticketing'],['monolith','postgres-main'],['batch-jobs','monolith'],['storefront','monolith'],['admin-portal','reporting-api'],['admin-portal','ticketing']].forEach(([a,b]) => { const t = A(b) ? I(b) : 'external:'+b; dep(A(a), t); });
+for (const a of apps) { if (a.kind !== 'library' && rnd() < .75) dep(a, 'external:' + pick(['postgres-main','postgres-main','redis','elasticsearch','snowflake','s3-events']).replace(/^/,'')); if (['auth-service','api-gateway','admin-portal'].includes(a.project)) dep(a,'external:okta'); if (a.project==='payments') dep(a,'external:stripe'); if (a.project==='notification-service') dep(a,'external:sendgrid'); }
+// flows
+const pub = (n, c) => A(n).publishes.push(c), sub = (n, c) => A(n).subscribes.push(c);
+pub('order-service','orders.placed'); pub('shipping','orders.shipped'); pub('user-service','users.updated'); pub('payments','payments.settled'); pub('inventory','inventory.changed'); pub('ticketing','tickets.opened');
+sub('notification-service','orders.placed'); sub('notification-service','orders.shipped'); sub('notification-service','users.updated'); sub('events-pipeline','orders.placed'); sub('events-pipeline','payments.settled'); sub('events-pipeline','users.updated'); sub('inventory','orders.placed'); sub('search-indexer','inventory.changed'); sub('ledger','payments.settled'); sub('recommendations','orders.placed'); sub('chat-widget','tickets.opened'); sub('tracking','orders.shipped');
+for (const a of apps) if (a.publishes.length || a.subscribes.length) dep(a, 'external:kafka');
+const CATALOG = { schemaVersion: 1, generatedAt: new Date().toISOString(), source: 'PROTOTYPE generator', applications: apps, externals: EXTERNALS };
+
+// ---------------- model ----------------
+const M = (() => {
+  const nodes = new Map(); for (const a of CATALOG.applications) nodes.set(id(a), { id: id(a), app: a, kind: 'app', label: a.project, deps: [], dependents: [] });
+  for (const e of CATALOG.externals) nodes.set('external:' + e.id, { id: 'external:' + e.id, ext: e, kind: 'external', label: e.name || e.id, deps: [], dependents: [] });
+  for (const n of nodes.values()) if (n.app) for (const t of n.app.dependsOn) { const tn = nodes.get(t); if (!tn) continue; n.deps.push(tn); tn.dependents.push(n); }
+  const walk = (start, dir, maxDepth = 99) => { // returns levels: [[nodes at depth 1], [depth 2], ...]
+    const seen = new Set([start.id]); let frontier = [start]; const levels = [];
+    for (let d = 1; d <= maxDepth && frontier.length; d++) { const next = []; for (const n of frontier) for (const m of n[dir]) if (!seen.has(m.id)) { seen.add(m.id); next.push(m); } if (!next.length) break; levels.push(next); frontier = next; }
+    return levels; };
+  const blast = n => walk(n, 'dependents');
+  const blastCount = n => blast(n).flat().filter(x => x.kind === 'app').length;
+  const teamsOf = ns => [...new Set(ns.filter(x => x.app).map(x => x.app.team))];
+  const ranked = [...nodes.values()].filter(n => n.kind === 'app').map(n => ({ n, count: blastCount(n), teams: teamsOf(blast(n).flat()).length })).sort((a, b) => b.count - a.count);
+  const search = q => { q = q.toLowerCase(); return [...nodes.values()].filter(n => n.kind === 'app' && (n.id + ' ' + JSON.stringify(n.app)).toLowerCase().includes(q)); };
+  return { nodes, walk, blast, blastCount, teamsOf, ranked, search };
+})();
+
+// ---------------- shared helpers ----------------
+const $ = s => document.querySelector(s); const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const state = { selected: null, depth: 99, dir: 'dependents', group: 'none', focus: true };
+const params = new URLSearchParams(location.search); const VARIANTS = { A: 'Canvas-first', B: 'Outline-first (incident doc)', C: 'Impact board (three columns)' }; let variant = VARIANTS[params.get('variant')] ? params.get('variant') : 'A';
+if (params.get('app') && M.nodes.has(params.get('app'))) state.selected = params.get('app');
+const appLink = n => `<a class="app" data-sel="${esc(n.id)}">${esc(n.label)}</a>`;
+const teamChip = n => n.app ? `<span class="chip team">${esc(n.app.team)}</span>` : `<span class="chip ext">${esc(n.ext.kind)}</span>`;
+const attrRows = a => Object.entries({ repository: a.repository, kind: a.kind, team: a.team, ...(a.attributes || {}) }).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('');
+function outlineMarkdown(n) { const lines = [`# Blast radius of ${n.id}`, '']; const levels = M.blast(n); levels.forEach((lv, i) => { lines.push(`## Depth ${i + 1} (${lv.length})`); lv.forEach(x => lines.push(`- ${x.id}${x.app ? ' (' + x.app.team + ')' : ''}`)); lines.push(''); }); return lines.join('\n'); }
+function elementsFor(center, depth, dir, group) {
+  const levels = dir === 'both' ? [...M.walk(center, 'dependents', depth).flat(), ...M.walk(center, 'deps', depth).flat()] : M.walk(center, dir, depth).flat();
+  const set = new Map([[center.id, center]]); for (const n of levels) set.set(n.id, n);
+  const els = []; const parents = new Set();
+  for (const n of set.values()) { const g = group !== 'none' && n.app ? (group === 'repository' ? n.app.repository : n.app.team) : null; if (g) parents.add(g); els.push({ data: { id: n.id, label: n.label, kind: n.kind, center: n.id === center.id, parent: g ? 'g:' + g : undefined } }); }
+  for (const g of parents) els.push({ data: { id: 'g:' + g, label: g, kind: 'group' } });
+  for (const n of set.values()) for (const d of n.deps) if (set.has(d.id)) els.push({ data: { id: n.id + '>' + d.id, source: n.id, target: d.id } });
+  return els;
+}
+function drawCanvas(container, els, rankDir = 'TB') {
+  if (window.cytoscapeDagre && !drawCanvas.reg) { cytoscape.use(cytoscapeDagre); drawCanvas.reg = true; }
+  const cy = cytoscape({ container, elements: els, wheelSensitivity: .25, style: [
+    { selector: 'node', style: { label: 'data(label)', shape: 'round-rectangle', 'background-color': '#4e9af1', color: '#fff', 'font-size': 11, 'text-valign': 'center', 'text-halign': 'center', width: 'label', height: 'label', padding: '8px', 'text-outline-color': '#4e9af1', 'text-outline-width': 2 } },
+    { selector: 'node[kind="external"]', style: { shape: 'ellipse', 'background-color': '#2a2f3a', 'border-width': 1, 'border-style': 'dashed', 'border-color': '#8b93a7', color: '#c9cfdc', 'text-outline-width': 0, 'font-style': 'italic' } },
+    { selector: 'node[kind="group"]', style: { shape: 'round-rectangle', 'background-color': '#171a21', 'background-opacity': .6, 'border-color': '#2a2f3a', 'border-width': 1, color: '#8b93a7', 'text-valign': 'top', 'text-halign': 'center', 'font-size': 10, 'text-outline-width': 0, padding: '14px' } },
+    { selector: 'node[?center]', style: { 'background-color': '#f5b642', 'text-outline-color': '#f5b642', color: '#111', 'border-width': 3, 'border-color': '#fff' } },
+    { selector: 'edge', style: { 'curve-style': 'bezier', width: 1.5, 'line-color': '#5b6274', 'target-arrow-shape': 'triangle', 'target-arrow-color': '#5b6274', 'arrow-scale': .9 } },
+  ] });
+  const l = cy.layout({ name: window.cytoscapeDagre ? 'dagre' : 'breadthfirst', rankDir, nodeSep: 30, rankSep: 60, nodeDimensionsIncludeLabels: true, fit: false });
+  l.one('layoutstop', () => cy.fit(undefined, 30)); l.run();
+  cy.on('tap', 'node', e => { const n = e.target; if (n.data('kind') !== 'group') select(n.id()); });
+  return cy;
+}
+function select(idv) { state.selected = idv; const u = new URL(location); u.searchParams.set('app', idv); history.replaceState(null, '', u); render(); }
+function bindCommon(root) {
+  root.querySelectorAll('[data-sel]').forEach(a => a.onclick = () => select(a.dataset.sel));
+  root.querySelectorAll('[data-state]').forEach(el => el.onchange = () => { const k = el.dataset.state; state[k] = el.type === 'checkbox' ? el.checked : (k === 'depth' ? (el.value === 'all' ? 99 : +el.value) : el.value); render(); });
+  const s = root.querySelector('[data-search]'); if (s) { s.oninput = () => { const box = root.querySelector('[data-results]'); const hits = s.value.trim() ? M.search(s.value).slice(0, 8) : []; box.innerHTML = hits.map(n => `<button class="list-btn" data-sel="${esc(n.id)}"><b>${esc(n.label)}</b> <span>${esc(n.app.repository)} · ${esc(n.app.team)}</span></button>`).join(''); box.querySelectorAll('[data-sel]').forEach(a => a.onclick = () => select(a.dataset.sel)); }; }
+  const md = root.querySelector('[data-md]'); if (md) md.onclick = () => { const n = M.nodes.get(state.selected); navigator.clipboard?.writeText(outlineMarkdown(n)); md.textContent = 'Copied'; setTimeout(() => md.textContent = 'Copy as Markdown', 1200); };
+}
+const controls = () => `<label>Direction <select data-state="dir"><option value="dependents" ${state.dir==='dependents'?'selected':''}>Dependents (what breaks)</option><option value="deps" ${state.dir==='deps'?'selected':''}>Dependencies (what it needs)</option><option value="both" ${state.dir==='both'?'selected':''}>Both</option></select></label>
+  <label>Depth <select data-state="depth">${[1,2,3,'all'].map(d => `<option value="${d}" ${(d==='all'?99:d)===state.depth?'selected':''}>${d}</option>`).join('')}</select></label>
+  <label>Group by <select data-state="group"><option value="none">none</option><option value="repository" ${state.group==='repository'?'selected':''}>repository</option><option value="team" ${state.group==='team'?'selected':''}>team</option></select></label>`;
+const pickerCard = title => `<div class="card"><h1>${title}</h1><p class="muted">${CATALOG.applications.length} Applications, ${CATALOG.externals.length} Externals, ${M.ranked.filter(r=>r.count>0).length} with Dependents. Pick one to see what breaks if it dies.</p>
+  <input data-search placeholder="Search applications, teams, attributes…" style="width:100%;margin:8px 0" autofocus><div data-results></div><h3>Largest blast radius</h3>${M.ranked.slice(0, 8).map(r => `<button class="list-btn" data-sel="${esc(r.n.id)}"><b>${esc(r.n.label)}</b> <span>${r.count} apps · ${r.teams} teams</span></button>`).join('')}</div>`;
+const depthBands = (levels, cls) => levels.map((lv, i) => `<div class="depth d${Math.min(i + 1, 3)} ${cls||''}"><h4>Depth ${i + 1} · ${lv.length}</h4>${lv.map(x => `<div class="item">${appLink(x)} ${teamChip(x)}${x.app?.attributes?.tier===1?'<span class="chip">tier 1</span>':''}</div>`).join('')}</div>`).join('') || '<p class="muted">none</p>';
+
+// ---------------- Variant A: canvas-first ----------------
+function renderA(root) {
+  const n = state.selected && M.nodes.get(state.selected);
+  root.className = 'A'; root.innerHTML = `<div class="bar"><b>App Context Viewer</b> <span class="muted small">PROTOTYPE A · canvas-first</span> <input data-search placeholder="Find application…" size="26"><div data-results style="position:absolute;top:44px;left:180px;z-index:6;background:var(--panel);border:1px solid var(--border);border-radius:6px;min-width:320px"></div> ${controls()} <label><input type="checkbox" data-state="focus" ${state.focus?'checked':''}> Focus</label></div>
+    <main><div class="cy" id="cyA"></div><aside id="sideA"></aside>${n ? '' : `<div class="overlay">${pickerCard('What breaks if it dies?')}</div>`}</main>`;
+  if (n) {
+    const blastL = M.blast(n), blastApps = blastL.flat().filter(x => x.kind === 'app'), teams = M.teamsOf(blastApps);
+    $('#sideA').innerHTML = `<h2>${esc(n.id)}</h2><div class="small muted">${esc(n.app.kind)} · owned by <span class="chip team">${esc(n.app.team)}</span></div>
+      <p><span class="badge ${blastApps.length ? 'danger' : 'ok'}">${blastApps.length ? `${blastApps.length} Applications break` : 'Nothing depends on this'}</span> ${teams.length ? `<span class="muted">across ${teams.length} teams: ${teams.map(t => `<span class="chip team">${esc(t)}</span>`).join('')}</span>` : ''}</p>
+      <h3>Blast radius by depth <button data-md style="float:right;font-size:11px">Copy as Markdown</button></h3>${depthBands(blastL)}
+      <h3>Direct Dependencies (${n.deps.length})</h3>${n.deps.map(d => `<div class="item">${d.app ? appLink(d) : `<span class="chip ext">${esc(d.label)}</span>`} ${d.app ? teamChip(d) : ''}</div>`).join('') || '<p class="muted">none</p>'}
+      ${n.app.publishes.length || n.app.subscribes.length ? `<h3>Flows</h3>${n.app.publishes.map(c => `<div class="item">publishes <span class="chip">${esc(c)}</span></div>`).join('')}${n.app.subscribes.map(c => `<div class="item">subscribes <span class="chip">${esc(c)}</span></div>`).join('')}` : ''}
+      <h3>Attributes</h3><table class="kv">${attrRows(n.app)}</table>`;
+    drawCanvas($('#cyA'), elementsFor(n, state.depth, state.dir, state.group), state.dir === 'deps' ? 'TB' : 'BT');
+  } else { drawCanvas($('#cyA'), elementsFor(M.ranked[0].n, 2, 'both', 'none'), 'BT'); }
+  bindCommon(root);
+}
+// ---------------- Variant B: outline-first ----------------
+function renderB(root) {
+  const n = state.selected && M.nodes.get(state.selected);
+  const groups = {}; for (const a of CATALOG.applications) (groups[a.repository] ||= []).push(a);
+  root.className = 'B'; root.innerHTML = `<div class="bar"><b>App Context Viewer</b> <span class="muted small">PROTOTYPE B · outline-first</span> <span style="flex:1"></span> ${controls()}</div>
+    <main><nav><input data-search placeholder="Filter…" style="width:100%;margin-bottom:6px"><div data-results></div>${Object.entries(groups).map(([r, as]) => `<details ${n && n.app.repository === r ? 'open' : ''}><summary><b>${esc(r.split('/')[1])}</b> <span class="muted small">${as.length}</span></summary><div class="tree">${as.map(a => `<div class="node">${appLink(M.nodes.get(id(a)))} <span class="who">${M.blastCount(M.nodes.get(id(a))) || ''}</span></div>`).join('')}</div></details>`).join('')}</nav>
+    <section id="secB"></section><aside><div class="cap">Neighborhood, depth 2, ${state.dir === 'deps' ? 'Dependencies' : state.dir === 'both' ? 'both directions' : 'Dependents'}</div><div class="cy" id="cyB"></div></aside></main>`;
+  if (!n) { $('#secB').innerHTML = `<h2 style="font-size:18px">Largest blast radius</h2><p class="muted">Click a row, or pick from the index on the left.</p><table class="rank"><tr><th>Application</th><th>Team</th><th>Apps affected</th><th>Teams</th><th>Direct dependents</th></tr>${M.ranked.slice(0, 20).map(r => `<tr data-sel="${esc(r.n.id)}"><td>${esc(r.n.id)}</td><td>${esc(r.n.app.team)}</td><td><b>${r.count}</b></td><td>${r.teams}</td><td>${r.n.dependents.length}</td></tr>`).join('')}</table>`; drawCanvas($('#cyB'), elementsFor(M.ranked[0].n, 2, 'both', 'none'), 'BT'); }
+  else {
+    const levels = M.walk(n, state.dir === 'deps' ? 'deps' : 'dependents', state.depth); const apps = levels.flat().filter(x => x.kind === 'app');
+    const tree = (node, dir, depth, seen) => { const kids = node[dir].filter(k => !seen.has(k.id)); kids.forEach(k => seen.add(k.id)); if (!kids.length || depth > state.depth) return ''; return `<div class="tree">${kids.map(k => { const sub = tree(k, dir, depth + 1, seen); return sub ? `<details ${depth <= 1 ? 'open' : ''}><summary>${appLink(k)} ${teamChip(k)} <span class="muted small">depth ${depth}</span></summary>${sub}</details>` : `<div class="node">${k.app ? appLink(k) : `<span class="chip ext">${esc(k.label)}</span>`} ${teamChip(k)} <span class="muted small">depth ${depth}</span></div>`; }).join('')}</div>`; };
+    $('#secB').innerHTML = `<h2 style="font-size:18px">${esc(n.id)}</h2><div class="muted">${esc(n.app.kind)} · <span class="chip team">${esc(n.app.team)}</span> · ${Object.entries(n.app.attributes||{}).map(([k,v])=>`<span class="chip">${esc(k)}: ${esc(v)}</span>`).join('')}</div>
+      <p><span class="badge ${apps.length ? 'danger' : 'ok'}">${state.dir === 'deps' ? `${apps.length} Applications it needs` : `${apps.length} Applications break`}</span> <span class="muted">${M.teamsOf(apps).length} teams</span> <button data-md style="margin-left:10px">Copy as Markdown</button></p>
+      <h3>${state.dir === 'deps' ? 'Dependency tree' : 'Blast radius tree'} (expand to walk the chain)</h3>${tree(n, state.dir === 'deps' ? 'deps' : 'dependents', 1, new Set([n.id])) || '<p class="muted">none</p>'}
+      ${n.app.publishes.length || n.app.subscribes.length ? `<h3>Flows (not part of the blast radius)</h3>${n.app.publishes.map(c => `<span class="chip">→ ${esc(c)}</span>`).join('')}${n.app.subscribes.map(c => `<span class="chip">← ${esc(c)}</span>`).join('')}` : ''}`;
+    drawCanvas($('#cyB'), elementsFor(n, 2, state.dir, state.group), state.dir === 'deps' ? 'TB' : 'BT');
+  }
+  bindCommon(root);
+}
+// ---------------- Variant C: impact board ----------------
+function renderC(root) {
+  const n = state.selected && M.nodes.get(state.selected);
+  root.className = 'C'; root.innerHTML = `<div class="bar"><b>App Context Viewer</b> <span class="muted small">PROTOTYPE C · impact board</span> <input data-search placeholder="Find application…" size="26"><div data-results style="position:absolute;top:44px;left:200px;z-index:6;background:var(--panel);border:1px solid var(--border);border-radius:6px;min-width:320px"></div><span style="flex:1"></span><label>Depth <select data-state="depth">${[1,2,3,'all'].map(d => `<option value="${d}" ${(d==='all'?99:d)===state.depth?'selected':''}>${d}</option>`).join('')}</select></label><button id="toggleDrawer">Show graph</button></div>
+    <main><div class="col" id="left"></div><div class="col mid" id="mid"></div><div class="col" id="right"></div></main><div class="drawer" id="drawer"><div class="cy" id="cyC"></div></div>`;
+  if (!n) { $('#mid').innerHTML = pickerCard('Pick an Application'); $('#left').innerHTML = `<div class="colhead"><b>Catalog</b></div><div class="stat"><b>${CATALOG.applications.length}</b><span>Applications</span></div><div class="stat"><b>${Object.keys(REPOS).length}</b><span>Repositories</span></div><div class="stat"><b>${new Set(CATALOG.applications.map(a=>a.team)).size}</b><span>Teams</span></div><div class="stat"><b>${CATALOG.externals.length}</b><span>Externals</span></div><div class="stat"><b>${CHANNELS.length}</b><span>Channels</span></div>`; $('#right').innerHTML = `<div class="colhead"><b>Most depended-on Externals</b></div>${[...M.nodes.values()].filter(x=>x.kind==='external').sort((a,b)=>b.dependents.length-a.dependents.length).map(x=>`<div class="item"><span class="chip ext">${esc(x.label)}</span> <span class="meta">${x.dependents.length} direct dependents</span></div>`).join('')}`; }
+  else {
+    const depsL = M.walk(n, 'deps', state.depth), blastL = M.walk(n, 'dependents', state.depth); const blastApps = blastL.flat().filter(x => x.kind === 'app');
+    $('#left').innerHTML = `<div class="colhead"><b>Needs</b><span class="muted small">Dependencies, ${depsL.flat().length}</span></div>${depsL.map((lv, i) => `<div class="depth d${Math.min(i+1,3)}"><h4>Depth ${i+1} · ${lv.length}</h4>${lv.map(x => `<div class="item">${x.app ? appLink(x) + ' ' + teamChip(x) : `<span class="chip ext">${esc(x.label)}</span> <span class="meta">${esc(x.ext.kind)}</span>`}</div>`).join('')}</div>`).join('') || '<p class="muted">none</p>'}`;
+    $('#mid').innerHTML = `<div class="colhead"><b>${esc(n.label)}</b><span class="muted small">${esc(n.app.repository)}</span></div><div class="muted small">${esc(n.app.kind)} · <span class="chip team">${esc(n.app.team)}</span></div>
+      <p><span class="badge ${blastApps.length ? 'danger' : 'ok'}">${blastApps.length} break</span> <span class="muted">across ${M.teamsOf(blastApps).length} teams</span></p>
+      <div class="stat"><b>${n.deps.length}</b><span>direct deps</span></div><div class="stat"><b>${n.dependents.length}</b><span>direct dependents</span></div><div class="stat"><b>${blastL.length}</b><span>max depth</span></div>
+      <h3>Attributes</h3><table class="kv">${attrRows(n.app)}</table>
+      ${n.app.publishes.length || n.app.subscribes.length ? `<h3>Flows</h3>${n.app.publishes.map(c => `<div class="item">→ <span class="chip">${esc(c)}</span></div>`).join('')}${n.app.subscribes.map(c => `<div class="item">← <span class="chip">${esc(c)}</span></div>`).join('')}` : ''}
+      <h3>Export</h3><button data-md>Copy as Markdown</button>`;
+    $('#right').innerHTML = `<div class="colhead"><b>Breaks</b><span class="muted small">Dependents, ${blastApps.length}</span></div>${depthBands(blastL)}`;
+    $('#toggleDrawer').onclick = () => { const d = $('#drawer'); d.classList.toggle('open'); if (d.classList.contains('open')) setTimeout(() => drawCanvas($('#cyC'), elementsFor(n, state.depth, 'both', 'none'), 'LR'), 220); };
+  }
+  bindCommon(root);
+}
+// ---------------- switcher + boot ----------------
+const R = { A: renderA, B: renderB, C: renderC };
+function render() { const root = $('#app'); R[variant](root); $('#vlabel').textContent = `${variant} — ${VARIANTS[variant]}`; }
+function go(delta) { const keys = Object.keys(VARIANTS); variant = keys[(keys.indexOf(variant) + delta + keys.length) % keys.length]; const u = new URL(location); u.searchParams.set('variant', variant); history.replaceState(null, '', u); render(); }
+$('#prev').onclick = () => go(-1); $('#next').onclick = () => go(1);
+document.addEventListener('keydown', e => { if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) return; if (e.key === 'ArrowLeft') go(-1); if (e.key === 'ArrowRight') go(1); });
+render();
+</script>
+</body>
+</html>
