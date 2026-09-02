@@ -13,7 +13,7 @@ Each module is a folder with an `index.ts` that is its whole interface. Callers 
 ### `catalog`: from a source to a validated Catalog
 
 ```ts
-loadCatalog(source: File | string, deps?: { fetch?: typeof fetch; maxBytes?: number }): Promise<LoadResult>
+loadCatalog(source: File | string, deps?: { fetch?: typeof fetch; maxBytes?: number; base?: string | URL }): Promise<LoadResult>   // base resolves a relative URL and decides same-origin for the CORS message
 validateCatalog(document: unknown): ValidationResult
 
 type Finding = { code: string; path: string; id?: string; message: string; value?: unknown }
