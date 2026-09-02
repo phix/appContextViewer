@@ -8,6 +8,7 @@ import {
   type IndexedSpec,
   indexSpec,
   type LayoutSpec,
+  LayoutSpecError,
   type Positions,
   positionOfBox,
 } from './spec';
@@ -19,6 +20,8 @@ export const DAGRE_OPTIONS = { rankdir: 'TB', nodesep: 30, ranksep: 60 } as cons
  * dagre, synchronously. Throws on dagre's own failure (`Not possible to find intersection inside
  * of the rectangle` is the one the research hit) and on a non-finite coordinate; the caller decides
  * whether to fall back.
+ *
+ * An edge may end on a Group; dagre ranks it through a member (see representativeOf below).
  *
  * Compound Groups go to dagre as clusters, except a Group with a single member: dagre's nesting
  * graph adds border nodes for every cluster on every rank it spans, and at the pane cap roughly half
@@ -64,8 +67,34 @@ export function layoutWithDagre(spec: LayoutSpec): Positions {
       graph.setParent(id, parent);
     }
   }
+
+  // An edge may end on a Group (the Overview draws Group Dependencies, and elk lays such an edge
+  // out on the Group itself). dagre cannot: ranking an edge on a cluster id throws
+  // `TypeError: Cannot set properties of undefined (setting 'rank')` from its nesting graph, and a
+  // flattened single-member Group is not a dagre node at all. Both endpoints are therefore ranked
+  // through a representative member, the first leaf under the Group in spec order; the Group's box
+  // still contains it, so the drawn relation is the same one, one level down. An edge between two
+  // members of the same Group collapses to a self-loop, which dagre places without complaint.
+  const representatives = new Map<Id, Id>();
+  const representativeOf = (id: Id): Id => {
+    if (indexed.leaves.has(id)) {
+      return id;
+    }
+    const known = representatives.get(id);
+    if (known !== undefined) {
+      return known;
+    }
+    for (const member of indexed.members.get(id) ?? []) {
+      const leaf = representativeOf(member);
+      if (indexed.leaves.has(leaf)) {
+        representatives.set(id, leaf);
+        return leaf;
+      }
+    }
+    throw new LayoutSpecError(`Group "${id}" holds no node to lay out`);
+  };
   indexed.spec.edges.forEach((edge, i) => {
-    graph.setEdge(edge.source, edge.target, {}, `e${i}`);
+    graph.setEdge(representativeOf(edge.source), representativeOf(edge.target), {}, `e${i}`);
   });
 
   dagre.layout(graph);

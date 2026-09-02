@@ -118,6 +118,66 @@ describe('layoutNeighborhood (dagre)', () => {
     expectMembersInsideGroups(positions, spec);
   });
 
+  it('lays out an edge that ends on a Group, ranking it through a member', () => {
+    // The Overview draws Group Dependencies, and elk lays such an edge out on the Group itself
+    // (elk.test.ts). Passed to dagre unchanged, a cluster id throws
+    // `TypeError: Cannot set properties of undefined (setting 'rank')`; dagre.ts ranks the edge
+    // through the Group's first leaf instead.
+    const spec: LayoutSpec = {
+      nodes: [node('a'), node('b'), node('c'), node('d')],
+      edges: [
+        { source: 'a', target: 'b' },
+        { source: 'inner', target: 'c' },
+        { source: 'c', target: 'd' },
+      ],
+      parents: new Map([
+        ['a', 'inner'],
+        ['b', 'inner'],
+        ['inner', 'outer'],
+        ['c', 'outer'],
+      ]),
+    };
+    const positions = layoutNeighborhood(spec);
+    expectComplete(positions, spec);
+    expectMembersInsideGroups(positions, spec);
+    // Ranked through a member of inner, so c lands below that member and d below c.
+    expect(positions.get('a')?.y).toBeLessThan(positions.get('c')?.y ?? Number.NaN);
+    expect(positions.get('c')?.y).toBeLessThan(positions.get('d')?.y ?? Number.NaN);
+  });
+
+  it('lays out an edge onto a single-member Group, which is not a dagre cluster', () => {
+    const spec: LayoutSpec = {
+      nodes: [node('a'), node('b'), node('solo')],
+      edges: [{ source: 'solo', target: 'left' }],
+      parents: new Map([
+        ['a', 'left'],
+        ['b', 'left'],
+        ['solo', 'only'],
+      ]),
+    };
+    const positions = layoutNeighborhood(spec);
+    expectComplete(positions, spec);
+    expectMembersInsideGroups(positions, spec);
+    expect(positions.get('solo')?.y).toBeLessThan(positions.get('left')?.y ?? Number.NaN);
+  });
+
+  it('lays out an edge between two members of one Group as a self-loop on the representative', () => {
+    const spec: LayoutSpec = {
+      nodes: [node('a'), node('b'), node('c')],
+      edges: [
+        { source: 'left', target: 'left' },
+        { source: 'left', target: 'c' },
+      ],
+      parents: new Map([
+        ['a', 'left'],
+        ['b', 'left'],
+      ]),
+    };
+    const positions = layoutNeighborhood(spec);
+    expectComplete(positions, spec);
+    expectMembersInsideGroups(positions, spec);
+  });
+
   it(
     'finishes the 150-node flat Neighborhood inside the Node sanity budget',
     () => {
@@ -125,9 +185,9 @@ describe('layoutNeighborhood (dagre)', () => {
       // regression in how the spec is fed to dagre, not dagre's own speed. The fixture is a real pane
       // Neighborhood at the cap: Depth 2, about 4.5 Dependencies per node, denser than the research
       // bench's 3 per node.
-      // The bound is the measured reference-laptop time (about 400 ms flat, 700 ms compound) with
-      // room for a slower machine: a GitHub runner measures roughly 2.5x the laptop, which BUDGET_FACTOR
-      // 2 does not fully cover, and at budget(500) this assertion flaked at 1,059 ms of a 1,000 ms
+      // The bound is the measured reference-laptop time (396 to 528 ms flat, 650 to 770 ms compound) with
+      // room for a slower machine: a GitHub runner measures roughly 2.5x the laptop (about 1,050 ms
+      // flat), which BUDGET_FACTOR 2 does not fully cover, and at budget(500) this flaked at 1,059 ms of a 1,000 ms
       // ceiling. Budget 3, the browser pane at the cap with paint included, is asserted by the pane
       // slice, not here.
       layoutNeighborhood(paneSpec(30)); // warm the JIT the way a pane would
@@ -150,13 +210,15 @@ describe('layoutNeighborhood (dagre)', () => {
       // Repositories are already flattened (dagre.ts). The ceiling below is the measured one with a
       // margin, so a regression still fails; the gap to 500 ms is reported in the PR for issue #22
       // and matters to budget 3 if the pane draws compound Groups at the cap. Same reference-laptop
-      // versus runner caveat as the flat case above; budget 3 belongs to the pane slice.
+      // versus runner caveat as the flat case above; budget 3 belongs to the pane slice. This is the
+      // case measured closest to its ceiling on CI: at budget(1000) two green runs came in at
+      // 1,830 ms and 1,670 ms of 2,000 ms, 8% and 17% headroom, so the bound is 1,400 here.
       layoutNeighborhood(paneSpec(30, { compound: true }));
       const spec = paneSpec(150, { compound: true });
       const started = performance.now();
       layoutNeighborhood(spec);
       const elapsed = performance.now() - started;
-      expect(elapsed, `${spec.center}: ${spec.edges.length} edges`).toBeLessThan(budget(1000));
+      expect(elapsed, `${spec.center}: ${spec.edges.length} edges`).toBeLessThan(budget(1400));
     },
     HEAVY_TEST_TIMEOUT,
   );
