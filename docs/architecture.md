@@ -27,7 +27,7 @@ Invariants: `catalog` is present exactly when `errors` is empty; every rule runs
 
 ```ts
 buildGraph(catalog: Catalog): Graph                       // immutable; ids, adjacency both ways, Channels, Teams
-blastRadius(graph, id: Id, maxDepth?: number): Id[][]       // Dependents banded by Depth, cycles handled
+blastRadius(graph, center: Id | ExternalId, maxDepth?: number): Id[][]   // Dependents banded by Depth, cycles handled; an External works the same
 rankedByBlastRadius(graph): { id: Id; size: number }[]      // the default screen's rows
 neighborhood(graph, id, opts: { depth: number; direction: 'dependencies' | 'dependents' | 'both' }): Neighborhood
 paneNeighborhood(graph, id, depth: number, cap?: number): Neighborhood & { depthShown: number; hidden: number }
@@ -117,5 +117,5 @@ Rules: tests cross the same seam callers do (no imports past a module's index); 
 ## Seams left open on purpose
 
 - `state/url.ts`: contents decided by [Decide URL state and deep links](https://github.com/phix/appContextViewer/issues/16).
-- The selection type: today an Application id; [Decide whether an External or Channel can be the selected center](https://github.com/phix/appContextViewer/issues/17) may widen it, which touches `graph` (Blast radius of an External) and `state` only.
+- The selection type is decided: a `Center` of `{ kind: 'application' | 'external', id }` (see [`center.md`](./center.md)); `graph` queries accept either kind, `rankedByBlastRadius` returns both, the search index covers Applications, Externals and Channels, and the Channel card is transient view state.
 - Private Catalog loading: `loadCatalog` takes `fetch` as a parameter, so a token-bearing fetch from [Decide whether the viewer may hold a GitHub token for private Catalogs](https://github.com/phix/appContextViewer/issues/15) plugs in without touching the validator.

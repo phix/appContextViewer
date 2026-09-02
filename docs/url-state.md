@@ -15,7 +15,8 @@ https://viewer.example.com/?src=./catalog.json#app=acme/commerce/order-service&d
 
 | key | value | default | meaning |
 |---|---|---|---|
-| `app` | an Application id, raw slashes | none | the selected center of the impact board |
+| `app` | an Application id, raw slashes | none | the Center, when it is an Application |
+| `external` | an External id | none | the Center, when it is an External; mutually exclusive with `app` |
 | `depth` | a positive integer or `all` | `2` | the header Depth, applied to both columns and the pane |
 | `group` | `none`, `repository`, `team`, `kind`, or an `attributes` key | `repository` | the grouping Attribute (the menu's value verbatim; built-in names win over a colliding key) |
 | `view` | `overview` | absent | the canvas is expanded to the Overview |
@@ -39,5 +40,5 @@ https://viewer.example.com/?src=./catalog.json#app=acme/commerce/order-service&d
 ## Consequences
 
 - **Slicing:** one slice owns `state/url.ts` with Vitest tests for read, write, defaults, invalid values and the raw-slash round trip, and one Playwright test that opens a deep link on the served 1,000-Application fixture and asserts the board, Depth, grouping and Overview state, plus the missing-Application notice.
-- **External or Channel as center:** if that ticket widens the selection, the hash gains `external=<id>` or `channel=<name>`, mutually exclusive with `app`; `app` itself does not change.
+- **External or Channel as Center:** decided; `external=<id>` is a key, `channel=` stays reserved and unused because a Channel is never a Center (see [`center.md`](./center.md)). The missing-Center notice in rule 5 applies to both kinds.
 - **Validation surfacing:** the missing-Application notice is an inline notice, not a report row; it is view state, not a Catalog finding.

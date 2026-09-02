@@ -28,11 +28,11 @@ Resolves [Set performance budgets to 1,000 apps](https://github.com/phix/appCont
 | 13 | **Initial bundle**: JS and CSS needed for budgets 1 to 8 (Cytoscape, dagre, app code) | <= 250 KB gzipped | build manifest |
 | 14 | **Overview layout chunk**: the layout engine loaded on first expand (elkjs today; fcose if the licence ticket says so) | <= 500 KB gzipped | build manifest |
 
-The ranked table paints its first 100 rows and the rest on scroll or a show-more, so 1,000 rows never sit between the user and first paint.
+The ranked table paints its first 100 rows and the rest on scroll or a show-more, so 1,000 rows never sit between the user and first paint; Externals are rows in the same table (Center decision), so the count includes them.
 
 ## Policies
 
-**Pane cap.** The pane holds at most **150 nodes** (Applications and Externals together). When the Neighborhood at the header Depth exceeds the cap, the pane draws the largest Depth that fits (2 falls to 1, 3 to 2) and says so: "Showing Depth 1 of 2; 431 more in the Overview", with the Overview one click away. The impact board columns keep the full header Depth; they are lists and hold 700 rows. At 1,000 Applications roughly 45% of Depth-2 Neighborhoods fall back to Depth 1 this way; 33% exceed 200 nodes and 59% exceed 100, which is why the cap sits at 150.
+**Pane cap.** The pane holds at most **150 nodes** (Applications and Externals together). When the Neighborhood at the header Depth exceeds the cap, the pane draws the largest Depth that fits (2 falls to 1, 3 to 2) and says so: "Showing Depth 1 of 2; 431 more in the Overview", with the Overview one click away. When even Depth 1 exceeds the cap, as it does for an External with 197 Dependents, the pane draws the Center alone and says "197 Dependents, more than the pane can draw; see the Breaks column". The impact board columns keep the full header Depth; they are lists and hold 700 rows. At 1,000 Applications roughly 45% of Depth-2 Neighborhoods fall back to Depth 1 this way; 33% exceed 200 nodes and 59% exceed 100, which is why the cap sits at 150.
 
 **The board never waits for the pane.** Selection and Depth changes repaint the impact board first, under budgets 5 and 6; the pane re-lays out afterwards under budget 3 and never blocks input.
 

@@ -58,12 +58,16 @@ _Avoid_: assignment, responsibility
 
 ### Exploring
 
+**Center**:
+The Application or External the impact board and the Neighborhood are computed from. Set by selecting from the ranked table, search, a chip, or a canvas. A Channel is never a Center.
+_Avoid_: selection, focus, root, current app
+
 **Blast radius**:
-The transitive set of Dependents of an Application: everything that breaks, directly or through others, if it dies.
+The transitive set of Dependents of an Application or External: everything that breaks, directly or through others, if it dies.
 _Avoid_: impact set, affected apps, downstream, transitive dependents
 
 **Neighborhood**:
-The Applications, Externals, and Channels within a chosen Depth of a selected Application, in a chosen direction (Dependencies, Dependents, or both).
+The Applications, Externals, and Channels within a chosen Depth of the Center, in a chosen direction (Dependencies, Dependents, or both). An External Center has Dependents only.
 _Avoid_: subgraph, context, surroundings
 
 **Depth**:
