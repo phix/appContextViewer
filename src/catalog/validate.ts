@@ -232,7 +232,8 @@ type Entry = { name: string; index: number };
 
 type ApplicationRecord = {
   index: number;
-  id: string;
+  /** Undefined when repository or project is missing or empty; the record is still checked in full. */
+  id?: string;
   /** False for a duplicate Application, which the Catalog would not contain. */
   kept: boolean;
   dependsOn: Entry[];
@@ -318,20 +319,22 @@ function checkApplications(
       id,
       out,
     );
-    if (id === undefined) {
-      continue;
-    }
-    const first = byId.get(id);
-    if (first === undefined) {
-      byId.set(id, i);
-    } else {
-      out.error(
-        'E_DUPLICATE_APPLICATION',
-        path,
-        `another Application already has the id "${id}" (applications[${first}])`,
-        id,
-        id,
-      );
+    // An invalid identity exempts the record from nothing: its refs and Flows are still checked, so
+    // the producer fixes everything in one round (docs/validation-surfacing.md, decision 7).
+    let first: number | undefined;
+    if (id !== undefined) {
+      first = byId.get(id);
+      if (first === undefined) {
+        byId.set(id, i);
+      } else {
+        out.error(
+          'E_DUPLICATE_APPLICATION',
+          path,
+          `another Application already has the id "${id}" (applications[${first}])`,
+          id,
+          id,
+        );
+      }
     }
     records.push({ index: i, id, kept: first === undefined, dependsOn, publishes, subscribes });
   }
@@ -476,7 +479,7 @@ function checkReferences(
   for (const app of records) {
     for (const { name: ref, index } of app.dependsOn) {
       const path = `applications[${app.index}].dependsOn[${index}]`;
-      if (ref === app.id) {
+      if (app.id !== undefined && ref === app.id) {
         out.error('E_SELF_DEPENDENCY', path, `${app.id} lists itself in dependsOn`, app.id, ref);
       } else if (RE.externalRef.test(ref)) {
         if (!externalsById.has(ref.slice(EXTERNAL_PREFIX.length))) {
@@ -495,11 +498,11 @@ function checkReferences(
   }
 }
 
-type ChannelSides = { publishers: number; subscribers: number; path: string; id: string };
+type ChannelSides = { publishers: number; subscribers: number; path: string; id?: string };
 
 function checkChannels(records: ApplicationRecord[], out: Collector): void {
   const channels = new Map<string, ChannelSides>();
-  const sides = (name: string, path: string, id: string): ChannelSides => {
+  const sides = (name: string, path: string, id: string | undefined): ChannelSides => {
     let channel = channels.get(name);
     if (!channel) {
       channel = { publishers: 0, subscribers: 0, path, id };
@@ -600,11 +603,12 @@ function toExternal(raw: JsonObject): External {
 
 // ------------------------------------------------------------------------------------- formats
 
-// RFC 3339 section 5.6: full-date "T" full-time with a mandatory offset; the separator may also be a
-// space, as the RFC's note allows and ajv-formats accepts. Calendar days and offset ranges are
-// checked; a leap second (":60") is accepted at any hour.
+// RFC 3339 section 5.6 exactly as ajv-formats' full "date-time" reads it, so a producer validating
+// with the schema and the viewer agree: full-date, a "T" or whitespace separator, full-time with a
+// mandatory offset written "Z", "+HH:MM", "+HHMM" or "+HH", calendar days checked, and a leap
+// second (":60") accepted only where it falls on 23:59 UTC once the offset is removed.
 const DATE_TIME =
-  /^(\d{4})-(\d{2})-(\d{2})[Tt ](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:[Zz]|[+-](\d{2}):(\d{2}))$/;
+  /^(\d{4})-(\d{2})-(\d{2})[Tt\s](\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)(?:[Zz]|([+-])(\d{2})(?::?(\d{2}))?)$/;
 const DAYS_IN_MONTH = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 function isRfc3339DateTime(value: string): boolean {
@@ -618,10 +622,20 @@ function isRfc3339DateTime(value: string): boolean {
   if (month < 1 || month > 12 || day < 1 || day > days) {
     return false;
   }
-  if (hour > 23 || minute > 59 || second > 60) {
+  const offsetSign = match[7] === '-' ? -1 : 1;
+  const offsetHour = Number(match[8] ?? 0);
+  const offsetMinute = Number(match[9] ?? 0);
+  if (offsetHour > 23 || offsetMinute > 59) {
     return false;
   }
-  return match[7] === undefined || (Number(match[7]) <= 23 && Number(match[8]) <= 59);
+  if (hour <= 23 && minute <= 59 && second < 60) {
+    return true;
+  }
+  const utcMinute = minute - offsetMinute * offsetSign;
+  const utcHour = hour - offsetHour * offsetSign - (utcMinute < 0 ? 1 : 0);
+  return (
+    (utcHour === 23 || utcHour === -1) && (utcMinute === 59 || utcMinute === -1) && second < 61
+  );
 }
 
 // RFC 3986: a scheme, then only the characters a URI may contain (ASCII unreserved, reserved and

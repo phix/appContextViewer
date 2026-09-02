@@ -393,12 +393,16 @@ describe('W_INVALID_FORMAT', () => {
   const generatedAtWarnings = (generatedAt: string) =>
     validateCatalog({ schemaVersion: 1, generatedAt, applications: [] }).warnings.length;
 
+  // Accept and warn lists were checked against ajv-formats 3.0.1 fullFormats['date-time'] directly.
   it.each([
     '2026-09-02T18:00:00Z',
     '2026-09-02t18:00:00.123+05:30',
     '2026-09-02 18:00:00-00:00',
+    '2026-09-02T18:00:00+0530',
+    '2026-09-02T18:00:00+05',
     '2024-02-29T23:59:60Z',
-  ])('accepts the RFC 3339 date-time %s', (value) => {
+    '2024-02-29T18:29:60-05:30',
+  ])('accepts the date-time %s, as ajv-formats does', (value) => {
     expect(generatedAtWarnings(value)).toBe(0);
   });
 
@@ -408,7 +412,7 @@ describe('W_INVALID_FORMAT', () => {
     '2026-13-01T00:00:00Z',
     '2026-09-02T24:00:00Z',
     '2026-09-02T18:00:00+24:00',
-    '2026-09-02T18:00:00+0530',
+    '2024-02-29T12:00:60Z',
     '2026-09-02',
     'Tue, 02 Sep 2026 18:00:00 GMT',
     '',
@@ -579,6 +583,54 @@ describe('collection and the cap', () => {
     expect(result.errors).toEqual([]);
     expect(result.warnings).toHaveLength(MAX_FINDINGS);
     expect(result.catalog?.applications).toHaveLength(1200);
+  });
+});
+
+describe('every rule runs, whatever failed before it', () => {
+  it('checks the refs and Flows of an Application whose identity is invalid', () => {
+    // Decision 7 of docs/validation-surfacing.md: the producer fixes everything in one round, so a
+    // missing repository must not hide the unresolved ref and the one-sided Channel beside it.
+    const result = validateCatalog({
+      schemaVersion: 1,
+      applications: [{ project: 'x', dependsOn: ['nope/nope'], publishes: ['lonely'] }],
+    });
+    expect(result.errors).toEqual([
+      { code: 'E_INVALID', path: 'applications[0].repository', message: 'repository is missing' },
+      {
+        code: 'E_UNRESOLVED_REF',
+        path: 'applications[0].dependsOn[0]',
+        message: 'nope/nope names no Application in the Catalog',
+        value: 'nope/nope',
+      },
+    ]);
+    expect(result.warnings).toEqual([
+      {
+        code: 'W_EMPTY_CHANNEL',
+        path: 'applications[0].publishes[0]',
+        message: 'Channel "lonely" has 1 publisher and no subscriber',
+        value: 'lonely',
+      },
+    ]);
+    expect(result.catalog).toBeUndefined();
+  });
+
+  it('resolves refs from an id-less Application and never invents a self-dependency for it', () => {
+    const result = validateCatalog({
+      schemaVersion: 1,
+      applications: [
+        { repository: 'r', project: 'p' },
+        { project: 'p', dependsOn: ['r/p', 'external:db'] },
+      ],
+    });
+    expect(rows(result.errors)).toEqual([
+      { code: 'E_INVALID', path: 'applications[1].repository', id: undefined, value: undefined },
+      {
+        code: 'E_UNRESOLVED_REF',
+        path: 'applications[1].dependsOn[1]',
+        id: undefined,
+        value: 'external:db',
+      },
+    ]);
   });
 });
 
