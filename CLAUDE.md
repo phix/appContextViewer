@@ -2,7 +2,7 @@
 
 Dependency and relationship graph viewer for hundreds of applications, fed by a sparse JSON catalog (every record has a repository name and a project name; everything else is optional).
 
-Status: being charted with `/wayfinder`. The map issue is labelled `wayfinder:map`.
+Status: spec complete (wayfinder map #1 closed 2026-09-02). Build tracked in #30; slices #19–#29 carry File Ownership blocks and native blocking. Decisions live in `docs/`; do not re-decide them in a slice.
 
 ## Agent skills
 
