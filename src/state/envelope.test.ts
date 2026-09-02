@@ -18,7 +18,7 @@ let dir: string;
 function generated(apps: number): Catalog {
   const out = path.join(dir, `catalog-${apps}.json`);
   execFileSync(process.execPath, [generator, '--apps', String(apps), '--out', out], {
-    stdio: ['ignore', 'ignore', 'inherit'],
+    stdio: 'ignore',
   });
   const result = validateCatalog(JSON.parse(readFileSync(out, 'utf8')));
   if (result.catalog === undefined) {
