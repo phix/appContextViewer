@@ -62,8 +62,14 @@ export interface Neighborhood {
 export interface PaneNeighborhood extends Neighborhood {
   /** The Depth actually drawn: the largest at or below `depth` that fits the cap; 0 is the Center alone. */
   readonly depthShown: number;
-  /** Applications and Externals within `depth` that the fallback left out. */
+  /**
+   * Applications and Externals within `depth` that the fallback left out, together and split by
+   * kind: the pane's "N more in the Overview" counts Applications only, since the Overview never
+   * draws Externals (grouping decision, #7), and the Externals are then named separately.
+   */
   readonly hidden: number;
+  readonly hiddenApplications: number;
+  readonly hiddenExternals: number;
 }
 
 /** The pane's node cap, Applications and Externals together (docs/performance-budgets.md). */
@@ -113,6 +119,8 @@ export function paneNeighborhood(
       ...assemble(graph, origin, depth, 'both', reached, depth),
       depthShown: depth,
       hidden: 0,
+      hiddenApplications: 0,
+      hiddenExternals: 0,
     };
   }
   let depthShown = 0;
@@ -122,8 +130,25 @@ export function paneNeighborhood(
       break;
     }
   }
-  const shown = assemble(graph, origin, depth, 'both', reached, depthShown);
-  return { ...shown, depthShown, hidden: total - upTo[depthShown] };
+  const hiddenApplications = countBeyond(reached.applications, depthShown);
+  const hiddenExternals = countBeyond(reached.externals, depthShown);
+  return {
+    ...assemble(graph, origin, depth, 'both', reached, depthShown),
+    depthShown,
+    hidden: hiddenApplications + hiddenExternals,
+    hiddenApplications,
+    hiddenExternals,
+  };
+}
+
+function countBeyond(depths: ReadonlyMap<string, number>, shown: number): number {
+  let count = 0;
+  for (const depth of depths.values()) {
+    if (depth > shown) {
+      count++;
+    }
+  }
+  return count;
 }
 
 /** Ids reached from the Center with their Depth, in breadth-first (ascending Depth) order. */

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import demoCatalog from '../../samples/catalog.demo.json';
+import { readSampleCatalog } from './fixtures.test-helper';
 import { buildGraph, type Neighborhood, neighborhood, PANE_CAP, paneNeighborhood } from './index';
-import { readSampleCatalog } from './test-fixtures';
 
 const demo = buildGraph(demoCatalog);
 const thousand = buildGraph(readSampleCatalog('catalog-1000.json'));
@@ -178,12 +178,19 @@ describe('paneNeighborhood: the 150-node cap and its Depth fallback', () => {
     expect(pane.hidden).toBe(nodeCount(depth2) - nodeCount(depth1));
     expect(pane.hidden).toBeGreaterThan(0);
     expect(ids(pane.applications)).toEqual(ids(depth1.applications));
+    // Split by kind, because the Overview the notice points at never draws Externals.
+    expect(pane.hiddenApplications).toBe(depth2.applications.length - depth1.applications.length);
+    expect(pane.hiddenExternals).toBe(depth2.externals.length - depth1.externals.length);
+    expect(pane.hiddenApplications + pane.hiddenExternals).toBe(pane.hidden);
+    expect(pane).toMatchObject({ hidden: 564, hiddenApplications: 544, hiddenExternals: 20 });
   });
 
   it('draws mysql-legacy alone when its 197 Dependents exceed the cap at Depth 1', () => {
     const pane = paneNeighborhood(thousand, 'mysql-legacy', 1);
     expect(pane.depthShown).toBe(0);
     expect(pane.hidden).toBe(197);
+    expect(pane.hiddenApplications).toBe(197);
+    expect(pane.hiddenExternals).toBe(0);
     expect(pane.applications).toEqual([]);
     expect(pane.externals).toEqual([{ id: 'mysql-legacy', depth: 0 }]);
     expect(pane.dependencies).toEqual([]);
@@ -233,7 +240,7 @@ describe('paneNeighborhood: the 150-node cap and its Depth fallback', () => {
     // A leaf: doc-site has no Dependencies and no Dependents, so nothing lies beyond Depth 0.
     const leaf = paneNeighborhood(demo, 'acme/tools/doc-site', 2);
     expect(leaf.depthShown).toBe(2);
-    expect(leaf.hidden).toBe(0);
+    expect(leaf).toMatchObject({ hidden: 0, hiddenApplications: 0, hiddenExternals: 0 });
     expect(nodeCount(leaf)).toBe(1);
 
     const whole = paneNeighborhood(demo, 'acme/mobile/ios-app', Number.POSITIVE_INFINITY);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import demoCatalog from '../../samples/catalog.demo.json';
+import { catalogOf } from './fixtures.test-helper';
 import { buildGraph, buildSearchIndex, search } from './index';
-import { catalogOf } from './test-fixtures';
 
 const demo = buildGraph(demoCatalog);
 const index = buildSearchIndex(demo);

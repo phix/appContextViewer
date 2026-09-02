@@ -1,7 +1,7 @@
 /**
  * Search: case-insensitive substring matches over Application ids, External ids, names and kinds,
- * Channel names, Teams and scalar Attribute values, with typed hits (budget 7 in
- * docs/performance-budgets.md; docs/center.md for what search finds).
+ * Channel names, Application Teams and scalar Attribute values, with hits typed by kind
+ * (application, external, channel). Budget 7 in docs/performance-budgets.md; docs/center.md.
  */
 import { type Attributes, compareIds, type Graph, isScalar, type Scalar } from './model';
 

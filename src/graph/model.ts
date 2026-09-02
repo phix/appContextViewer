@@ -165,7 +165,7 @@ export function buildGraph(catalog: CatalogInput): Graph {
       name: input.name,
       description: input.description,
       url: input.url,
-      attributes: Object.freeze({ ...input.attributes }),
+      attributes: frozenAttributes(input.attributes),
       dependents: [],
     });
   }
@@ -184,7 +184,7 @@ export function buildGraph(catalog: CatalogInput): Graph {
       team: input.team,
       description: input.description,
       url: input.url,
-      attributes: Object.freeze({ ...input.attributes }),
+      attributes: frozenAttributes(input.attributes),
       dependencies: [],
       dependents: [],
       publishes: [],
@@ -256,6 +256,24 @@ export function buildGraph(catalog: CatalogInput): Graph {
 
 function unique(entries: readonly string[] | undefined): readonly string[] {
   return entries === undefined ? [] : [...new Set(entries)];
+}
+
+/**
+ * A private, deeply frozen copy of a record's Attributes, so nested values (`links`, `tags`) are
+ * neither shared with the caller's Catalog nor writable through the Graph.
+ */
+function frozenAttributes(attributes: Attributes | undefined): Attributes {
+  return deepFreeze(structuredClone(attributes ?? {}));
+}
+
+function deepFreeze<T>(value: T): T {
+  if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const nested of Object.values(value)) {
+      deepFreeze(nested);
+    }
+  }
+  return value;
 }
 
 function frozenRef(kind: NodeKind, id: string): NodeRef {

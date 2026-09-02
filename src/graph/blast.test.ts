@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import demoCatalog from '../../samples/catalog.demo.json';
+import { readSampleCatalog } from './fixtures.test-helper';
 import { blastRadius, buildGraph, rankedByBlastRadius } from './index';
-import { readSampleCatalog } from './test-fixtures';
 
 // The fixture numbers are the ones samples/README.md lists and `node samples/check.mjs` prints.
 const demo = buildGraph(demoCatalog);

@@ -63,12 +63,17 @@ export function groupableAttributes(graph: Graph): string[] {
 }
 
 /**
- * The Groups for one Attribute. Values are compared by their string form (1 and "1" share a
- * Group, "Platform" and "platform" do not); a non-scalar or absent value puts the Application into
- * the "No <attribute>" Group, listed last. Value Groups are ordered numerically when their labels
- * are numbers, then by code unit.
+ * The Groups for one Attribute, which must be one `groupableAttributes` lists; any other key
+ * throws naming it, as `resolveCenter` does for an unknown Center, so a bad `#group=` value can
+ * never render as one all-member Group (the state slice maps invalid values to the default first).
+ * Values are compared by their string form (1 and "1" share a Group, "Platform" and "platform" do
+ * not); an absent value puts the Application into the "No <attribute>" Group, listed last. Value
+ * Groups are ordered numerically when their labels are numbers, then by code unit.
  */
 export function groupBy(graph: Graph, attribute: string): Group[] {
+  if (!groupableAttributes(graph).includes(attribute)) {
+    throw new Error(`not a groupable Attribute: ${attribute}`);
+  }
   const byLabel = new Map<string, ApplicationId[]>();
   const missing: ApplicationId[] = [];
   for (const application of graph.applications.values()) {

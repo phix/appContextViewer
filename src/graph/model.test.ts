@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import demoCatalog from '../../samples/catalog.demo.json';
+import { catalogOf, readSampleCatalog } from './fixtures.test-helper';
 import { buildGraph, type CatalogInput } from './index';
-import { catalogOf, readSampleCatalog } from './test-fixtures';
 
 // Row counts and the named records come from samples/README.md and `node samples/check.mjs`.
 const demo = buildGraph(demoCatalog);
@@ -100,12 +100,37 @@ describe('buildGraph: immutability', () => {
     expect(() => dependents.push('x/y')).toThrow(TypeError);
   });
 
-  it('copies Attributes rather than freezing the caller’s Catalog', () => {
-    const attributes = { tier: 1 };
+  it('freezes nested Attribute values too, all the way down', () => {
+    const links = demo.applications.get('acme/platform-core/api-gateway')?.attributes
+      .links as Record<string, unknown>;
+    expect(Object.isFrozen(links)).toBe(true);
+    expect(() => {
+      links.__probe = 1;
+    }).toThrow(TypeError);
+    expect(links.__probe).toBeUndefined();
+
+    const tags = demo.applications.get('legacy-monolith/monolith')?.attributes.tags as string[];
+    expect(Object.isFrozen(tags)).toBe(true);
+    expect(() => tags.push('probe')).toThrow(TypeError);
+    expect(tags).toEqual(['strangler', 'php']);
+  });
+
+  it('deep-copies Attributes rather than freezing or sharing the caller’s Catalog', () => {
+    const links = { dashboard: 'https://grafana.example.com/d/p', nested: { level: 2 } };
+    const attributes = { tier: 1, links, tags: ['a'] };
     const catalog = catalogOf([{ repository: 'r', project: 'p', attributes }]);
     const graph = buildGraph(catalog);
-    expect(graph.applications.get('r/p')?.attributes).toEqual({ tier: 1 });
+    const copied = graph.applications.get('r/p')?.attributes;
+    expect(copied).toEqual(attributes);
+    const copiedLinks = copied?.links as { nested: { level: number } };
+    expect(copiedLinks).not.toBe(links);
+    expect(Object.isFrozen(copiedLinks)).toBe(true);
+    expect(Object.isFrozen(copiedLinks.nested)).toBe(true);
     expect(Object.isFrozen(attributes)).toBe(false);
+    expect(Object.isFrozen(links)).toBe(false);
+    // A write through the caller's object never reaches the Graph.
+    links.nested.level = 3;
+    expect(copiedLinks.nested.level).toBe(2);
   });
 });
 

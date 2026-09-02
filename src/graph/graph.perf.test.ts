@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readSampleCatalog } from './fixtures.test-helper';
 import { blastRadius, buildGraph, buildSearchIndex, search } from './index';
-import { readSampleCatalog } from './test-fixtures';
 
 /**
  * The graph module's two budget rows from docs/performance-budgets.md, timed in Node on

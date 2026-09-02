@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import demoCatalog from '../../samples/catalog.demo.json';
+import { catalogOf, readSampleCatalog } from './fixtures.test-helper';
 import {
   buildGraph,
   type GroupEdge,
@@ -7,7 +8,6 @@ import {
   groupBy,
   groupDependencies,
 } from './index';
-import { catalogOf, readSampleCatalog } from './test-fixtures';
 
 const demo = buildGraph(demoCatalog);
 
@@ -143,11 +143,19 @@ describe('groupBy: Groups with the synthetic "No <Attribute>" Group last', () =>
     expect(groups[0].members).toEqual(['r/d', 'r/e']);
   });
 
-  it('treats a non-scalar value as missing', () => {
-    const groups = groupBy(demo, 'tags');
-    expect(groups).toHaveLength(1);
-    expect(groups[0]).toMatchObject({ label: 'No tags', missing: true });
-    expect(groups[0].members).toHaveLength(34);
+  it('rejects a key that is not groupable, so a bad #group= value can never render as one Group', () => {
+    expect(() => groupBy(demo, 'nonsense')).toThrow(/nonsense/);
+    // Display-only keys: an object and an array value.
+    expect(() => groupBy(demo, 'links')).toThrow(/links/);
+    expect(() => groupBy(demo, 'tags')).toThrow(/tags/);
+  });
+
+  it('keeps the missing-value Group for a groupable key that is sparse', () => {
+    const groups = groupBy(demo, 'gpu');
+    expect(groups.map((group) => group.label)).toEqual(['true', 'No gpu']);
+    expect(groups[0].members).toEqual(['acme/data/ml-recommender']);
+    expect(groups[1]).toMatchObject({ missing: true });
+    expect(groups[1].members).toHaveLength(33);
   });
 });
 
