@@ -28,7 +28,7 @@ Invariants: `catalog` is present exactly when `errors` is empty; every rule runs
 ```ts
 buildGraph(catalog: Catalog): Graph                       // immutable; ids, adjacency both ways, Channels, Teams
 blastRadius(graph, center: Id | ExternalId, maxDepth?: number): Id[][]   // Dependents banded by Depth, cycles handled; an External works the same
-rankedByBlastRadius(graph): { id: Id; size: number }[]      // the default screen's rows
+rankedByBlastRadius(graph): { kind: 'application' | 'external'; id: Id; size: number }[]   // the default screen's rows, both kinds
 neighborhood(graph, id, opts: { depth: number; direction: 'dependencies' | 'dependents' | 'both' }): Neighborhood
 paneNeighborhood(graph, id, depth: number, cap?: number): Neighborhood & { depthShown: number; hidden: number }
 groupableAttributes(graph): string[]                        // Repository, Team, Kind, then scalar attribute keys
