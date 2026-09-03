@@ -103,7 +103,10 @@ export const EXTERNAL_NEEDS_NOTE = 'An External has no Dependencies in the Catal
 export interface PaneModel extends PaneNeighborhood {
   /** Render-ready nodes; the view never has to look records up in the Graph. */
   readonly nodes: readonly PaneNode[];
-  /** Every current-Attribute Group represented in the pane, always drawn open. */
+  /**
+   * Every current-Attribute Group represented in the pane, always drawn open -- and empty whenever
+   * `groupsDrawn` is false, which is how the flat-above-the-Dependency-cap policy reaches the view.
+   */
   readonly groups: readonly PaneGroup[];
   readonly grouping: string;
   /** The cap notice (docs/performance-budgets.md, "Pane cap"), or null when everything fits. */
@@ -242,14 +245,19 @@ export function createDerived(s: StoreSignals): Derived {
     const applicationIds = new Set(pane.applications.map((member) => member.id));
     const groupFor = new Map<string, GroupId>();
     const groups: PaneGroup[] = [];
-    for (const group of groupsFor(graph, grouping)) {
-      const members = group.members.filter((id) => applicationIds.has(id));
-      if (members.length === 0) {
-        continue;
-      }
-      groups.push({ id: group.id, label: group.label, members });
-      for (const id of members) {
-        groupFor.set(id, group.id);
+    // Above the Dependency cap the pane is drawn flat (docs/performance-budgets.md, "Pane cap"):
+    // no Group boxes and no parents, which is where that policy's ~40% saving comes from. The Depth
+    // is untouched -- `paneNeighborhood` already settled it on the node cap alone.
+    if (pane.groupsDrawn) {
+      for (const group of groupsFor(graph, grouping)) {
+        const members = group.members.filter((id) => applicationIds.has(id));
+        if (members.length === 0) {
+          continue;
+        }
+        groups.push({ id: group.id, label: group.label, members });
+        for (const id of members) {
+          groupFor.set(id, group.id);
+        }
       }
     }
     const nodes: PaneNode[] = [

@@ -194,6 +194,31 @@ describe('paneModel', () => {
     expect(pane?.notice).toBe('197 Dependents, more than the pane can draw; see the Breaks column');
   });
 
+  it("drops the Groups, and the nodes' parents, when the pane is drawn flat", () => {
+    // docs/performance-budgets.md, "Pane cap": above 350 Dependencies the pane drops the Group
+    // boxes and lays out flat. This is the view-model half of that -- `paneNeighborhood` reports
+    // `groupsDrawn: false` and the model must carry no Groups and no parents at all, since the
+    // ~40% saving comes from dagre not being handed a compound graph.
+    const { catalog } = validatedSample('catalog-1000.json');
+    const store = createStore({ catalog });
+    store.actions.select({ kind: 'application', id: 'acme/legal-3/export-service' });
+    const flat = store.derived.paneModel.value;
+    expect(flat?.groupsDrawn).toBe(false);
+    expect(flat?.depthShown).toBe(2); // flat, NOT shallower
+    expect(flat?.dependencies.length).toBeGreaterThan(350);
+    expect(flat?.groups).toEqual([]);
+    expect(flat?.nodes.every((node) => node.group === undefined)).toBe(true);
+    // The grouping Attribute is unchanged; only the drawing of it is suppressed.
+    expect(flat?.grouping).toBe('repository');
+
+    // The same store, a Center under the Dependency cap: Groups and parents are back.
+    store.actions.select({ kind: 'application', id: 'acme-labs/data-core/index-android' });
+    const grouped = store.derived.paneModel.value;
+    expect(grouped?.groupsDrawn).toBe(true);
+    expect(grouped?.groups.length).toBeGreaterThan(0);
+    expect(grouped?.nodes.some((node) => node.group !== undefined)).toBe(true);
+  });
+
   it('spells the two notices from the budgets doc, all for an unbounded Depth', () => {
     const base = {
       center: ORDER_SERVICE,
@@ -204,6 +229,7 @@ describe('paneModel', () => {
       channels: [],
       dependencies: [],
       flows: [],
+      groupsDrawn: true,
     };
     expect(
       paneNotice({

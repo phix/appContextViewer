@@ -3,8 +3,13 @@
  * deferred until after the impact board's paint opportunity; Canvas only receives the result.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { type LayoutSpec, layoutWithFallback, type Positions } from '@/layout';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import {
+  type FallbackEngines,
+  type LayoutSpec,
+  layoutWithFallback,
+  type Positions,
+} from '@/layout';
 import type { Center, PaneModel } from '@/state';
 import { Canvas, type CanvasElements } from './canvas/Canvas';
 
@@ -21,9 +26,22 @@ export interface NeighborhoodPaneProps {
   readonly model: PaneModel;
   readonly onSelect: (center: Center) => void;
   readonly onExpandOverview: () => void;
+  /**
+   * The layout engines, defaulting to the real dagre -> elk -> breadthfirst chain. Injectable only
+   * so a test can make an engine fail on purpose: dagre genuinely throws on some Neighborhoods
+   * ("Not possible to find intersection"), and without a seam the fallback readout and the error
+   * alert below can never be reached by a test. The app passes nothing. Anything passed here must
+   * hold its identity across renders -- it is an effect dependency.
+   */
+  readonly engines?: FallbackEngines;
 }
 
-export function NeighborhoodPane({ model, onSelect, onExpandOverview }: NeighborhoodPaneProps) {
+export function NeighborhoodPane({
+  model,
+  onSelect,
+  onExpandOverview,
+  engines,
+}: NeighborhoodPaneProps) {
   const render = useMemo(() => paneRenderOf(model), [model]);
   const [layout, setLayout] = useState<{ positions: Positions; engine: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +59,7 @@ export function NeighborhoodPane({ model, onSelect, onExpandOverview }: Neighbor
       inner = requestAnimationFrame(() => {
         timer = setTimeout(() => {
           performance.mark(PANE_LAYOUT_MARK);
-          void layoutWithFallback(render.spec).then(
+          void layoutWithFallback(render.spec, { engines }).then(
             (result) => {
               if (sequence.current === run) {
                 setLayout({ positions: result.positions, engine: result.engine });
@@ -64,12 +82,17 @@ export function NeighborhoodPane({ model, onSelect, onExpandOverview }: Neighbor
         clearTimeout(timer);
       }
     };
-  }, [render]);
+  }, [render, engines]);
 
-  const painted = () => {
+  // Stable identity on purpose: `Canvas` lists this in the effect deps that build its Cytoscape
+  // core, so a fresh closure every render would tear down and rebuild the core on any unrelated
+  // re-render of this component -- and because `performance.measure` would then reuse the stale
+  // start mark while the specs take the MAX of the measure, budgets 3 and 4 would fail with a
+  // number that has nothing to do with layout.
+  const painted = useCallback(() => {
     performance.mark(PANE_PAINT_MARK);
     performance.measure(PANE_PAINT_MEASURE, PANE_LAYOUT_MARK, PANE_PAINT_MARK);
-  };
+  }, []);
 
   return (
     <section class="neighborhood" data-testid="neighborhood-pane" aria-label="Neighborhood">

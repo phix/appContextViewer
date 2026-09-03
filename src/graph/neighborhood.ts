@@ -3,6 +3,13 @@
  * direction (CONTEXT.md), and the pane variant with the 150-node cap and its Depth fallback
  * (docs/performance-budgets.md, "Pane cap"; docs/center.md, decision 6).
  *
+ * The two caps do different jobs, and conflating them is a defect this file has already had once.
+ * The NODE cap alone binds the Depth fallback: 2 falls to 1 when Depth 2 will not fit 150 nodes.
+ * The DEPENDENCY cap never changes the Depth; above it the pane drops the Group boxes and lays the
+ * drawn Neighborhood out flat, which the budgets doc measures at about 40% less. So a Center whose
+ * Depth-2 Neighborhood fits 150 nodes but carries more than 350 Dependencies is drawn AT DEPTH 2,
+ * flat -- see `groupsDrawn`, and the test that pins one such Center in neighborhood.test.ts.
+ *
  * Reach is a breadth-first walk over Dependency edges from the Center: an Application expands to
  * its Dependencies, its Dependents, or both; an External is expanded only when it is the Center
  * (its Dependents are Depth 1) and is otherwise a leaf, so a shared database never pulls its
@@ -60,8 +67,18 @@ export interface Neighborhood {
 }
 
 export interface PaneNeighborhood extends Neighborhood {
-  /** The Depth actually drawn: the largest at or below `depth` that fits the cap; 0 is the Center alone. */
+  /**
+   * The Depth actually drawn: the largest at or below `depth` that fits the NODE cap; 0 is the
+   * Center alone. The Dependency cap does not enter here (docs/performance-budgets.md, "Pane cap").
+   */
   readonly depthShown: number;
+  /**
+   * Whether the pane draws Group boxes around the Applications. False when the drawn Neighborhood
+   * carries more than `PANE_DEPENDENCY_CAP` Dependencies: above that figure the budgets doc has the
+   * pane drop the boxes and lay out flat, which costs about 40% less. It is not a Depth fallback --
+   * `depthShown` is unaffected -- and it is the only thing this cap controls.
+   */
+  readonly groupsDrawn: boolean;
   /**
    * Applications and Externals within `depth` that the fallback left out, together and split by
    * kind: the pane's "N more in the Overview" counts Applications only, since the Overview never
@@ -72,9 +89,17 @@ export interface PaneNeighborhood extends Neighborhood {
   readonly hiddenExternals: number;
 }
 
-/** The pane's node cap, Applications and Externals together (docs/performance-budgets.md). */
+/**
+ * The pane's node cap, Applications and Externals together (docs/performance-budgets.md). The only
+ * thing that binds the Depth fallback. Pinned against movement in either direction by the synthetic
+ * 150/151-node graphs in neighborhood.test.ts, so changing this number turns the suite red.
+ */
 export const PANE_CAP = 150;
-/** The pane's Dependency cap; dagre's cost follows edges more closely than nodes. */
+/**
+ * The pane's Dependency cap; dagre's cost follows edges more closely than nodes. Above it the
+ * Group boxes are dropped (`groupsDrawn`) and the Neighborhood is laid out flat. It never changes
+ * `depthShown`. Pinned by the synthetic 350/351-Dependency graphs in neighborhood.test.ts.
+ */
 export const PANE_DEPENDENCY_CAP = 350;
 
 export function neighborhood(
@@ -88,8 +113,9 @@ export function neighborhood(
 }
 
 /**
- * The Neighborhood the pane draws: both directions, at the largest Depth at or below the one
- * asked whose Applications plus Externals fit `cap`, down to the Center alone.
+ * The Neighborhood the pane draws: both directions, at the largest Depth at or below the one asked
+ * whose Applications plus Externals fit `cap`, down to the Center alone. `dependencyCap` decides
+ * `groupsDrawn` for whatever that leaves; it never pushes the Depth down.
  */
 export function paneNeighborhood(
   graph: Graph,
@@ -116,12 +142,14 @@ export function paneNeighborhood(
     upTo.push(total);
   }
   const full = assemble(graph, origin, depth, 'both', reached, depth);
-  if (total <= cap && full.dependencies.length <= dependencyCap) {
-    // Everything within the asked Depth fits, so that Depth is shown, whether or not the reach
-    // extends that far (an unbounded Depth included).
+  if (total <= cap) {
+    // Every node within the asked Depth fits, so that Depth is shown, whether or not the reach
+    // extends that far (an unbounded Depth included). A Dependency count above the cap makes this
+    // Neighborhood flat, not shallower.
     return {
       ...full,
       depthShown: depth,
+      groupsDrawn: full.dependencies.length <= dependencyCap,
       hidden: 0,
       hiddenApplications: 0,
       hiddenExternals: 0,
@@ -131,12 +159,8 @@ export function paneNeighborhood(
   let shown = assemble(graph, origin, depth, 'both', reached, 0);
   for (let d = upTo.length - 1; d > 0; d--) {
     if (upTo[d] <= cap) {
-      const candidate = assemble(graph, origin, depth, 'both', reached, d);
-      if (candidate.dependencies.length > dependencyCap) {
-        continue;
-      }
       depthShown = d;
-      shown = candidate;
+      shown = assemble(graph, origin, depth, 'both', reached, d);
       break;
     }
   }
@@ -145,6 +169,7 @@ export function paneNeighborhood(
   return {
     ...shown,
     depthShown,
+    groupsDrawn: shown.dependencies.length <= dependencyCap,
     hidden: hiddenApplications + hiddenExternals,
     hiddenApplications,
     hiddenExternals,

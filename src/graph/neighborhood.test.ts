@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import demoCatalog from '../../samples/catalog.demo.json';
-import { readSampleCatalog } from './fixtures.test-helper';
+import { catalogOf, readSampleCatalog } from './fixtures.test-helper';
 import {
   buildGraph,
   type Neighborhood,
@@ -215,7 +215,7 @@ describe('paneNeighborhood: the 150-node cap and its Depth fallback', () => {
     expect(paneNeighborhood(demo, 'redis', 1, 11).depthShown).toBe(1);
   });
 
-  it('never exceeds either cap for any Application or External at 1,000 Applications', () => {
+  it('never exceeds the node cap for any Application or External at 1,000 Applications', () => {
     const centers = [
       ...[...thousand.applications.keys()].map((id) => ({ kind: 'application' as const, id })),
       ...[...thousand.externals.keys()].map((id) => ({ kind: 'external' as const, id })),
@@ -225,30 +225,145 @@ describe('paneNeighborhood: the 150-node cap and its Depth fallback', () => {
     for (const center of centers) {
       for (const depth of [2, 3]) {
         const pane = paneNeighborhood(thousand, center, depth);
-        expect(nodeCount(pane), `${center.id} at Depth ${depth}`).toBeLessThanOrEqual(150);
-        expect(pane.dependencies.length, `${center.id} at Depth ${depth}`).toBeLessThanOrEqual(
-          PANE_DEPENDENCY_CAP,
-        );
+        expect(nodeCount(pane), `${center.id} at Depth ${depth}`).toBeLessThanOrEqual(PANE_CAP);
         expect(pane.depthShown).toBeLessThanOrEqual(depth);
+        // The Dependency cap is a drawing style, not a node budget: it may be exceeded freely, and
+        // when it is, the Groups go instead of the Depth.
+        expect(pane.groupsDrawn, `${center.id} at Depth ${depth}`).toBe(
+          pane.dependencies.length <= PANE_DEPENDENCY_CAP,
+        );
         if (depth === 2 && pane.depthShown < depth) fallbacks++;
       }
     }
-    // The earlier node-only cap caused roughly 45% to fall back; the Dependency cap intentionally
-    // catches an additional edge-dense slice of the fixture.
-    expect(fallbacks / centers.length).toBeGreaterThan(0.55);
-    expect(fallbacks / centers.length).toBeLessThan(0.7);
+    // docs/performance-budgets.md, "Pane cap": "At 1,000 Applications roughly 45% of Depth-2
+    // Neighborhoods fall back to Depth 1 this way". That figure is the node cap's alone -- it was
+    // 60.6% while the Dependency cap was wrongly binding the Depth, which is what gave this band
+    // away. Measured here: 459 / 1,025 = 44.8%.
+    expect(fallbacks / centers.length).toBeGreaterThan(0.35);
+    expect(fallbacks / centers.length).toBeLessThan(0.55);
   });
 
-  it('falls back when the Dependency cap binds before the node cap', () => {
-    const centers = [...thousand.applications.keys()];
-    const id = centers.find((candidate) => {
+  // docs/performance-budgets.md, "Pane cap": "above the Dependency figure it drops the Group boxes
+  // and lays the Neighborhood out flat". Dropping a Depth instead is the defect this pins shut.
+  it('draws a Depth-2 Neighborhood that fits the node cap flat, not shallower, above the Dependency cap', () => {
+    const centers = [
+      ...[...thousand.applications.keys()].map((id) => ({ kind: 'application' as const, id })),
+      ...[...thousand.externals.keys()].map((id) => ({ kind: 'external' as const, id })),
+    ];
+    const dense = centers.filter((candidate) => {
       const full = neighborhood(thousand, candidate, { depth: 2, direction: 'both' });
       return nodeCount(full) <= PANE_CAP && full.dependencies.length > PANE_DEPENDENCY_CAP;
     });
-    expect(id).toBeDefined();
-    const pane = paneNeighborhood(thousand, id as string, 2);
-    expect(pane.depthShown).toBeLessThan(2);
-    expect(pane.dependencies.length).toBeLessThanOrEqual(PANE_DEPENDENCY_CAP);
+    // 162 Centers of the fixture are in exactly this position (160 Applications and 2 Externals);
+    // every one is drawn at Depth 2. Under the defect they all fell to Depth 1, which is what took
+    // the Depth-2 fallback rate from the doc's 45% to 60.6%.
+    expect(dense).toHaveLength(162);
+    for (const center of dense) {
+      const pane = paneNeighborhood(thousand, center, 2);
+      expect(pane.depthShown, center.id).toBe(2);
+      expect(pane.groupsDrawn, center.id).toBe(false);
+      expect(pane.hidden, center.id).toBe(0);
+      expect(pane.dependencies.length, center.id).toBeGreaterThan(PANE_DEPENDENCY_CAP);
+    }
+
+    // One of them, named, so the case survives a change in the fixture's iteration order.
+    const pinned = paneNeighborhood(thousand, 'acme-labs/billing/admin-service', 2);
+    expect(pinned.depthShown).toBe(2);
+    expect(pinned.groupsDrawn).toBe(false);
+  });
+
+  it('keeps the Groups whenever the drawn Neighborhood is at or under the Dependency cap', () => {
+    // acme/video/config-service falls back on the NODE cap (its Depth-2 reach is 638 nodes), and
+    // what is left -- 111 nodes, 325 Dependencies -- is under the Dependency cap, so it keeps them.
+    const pane = paneNeighborhood(thousand, 'acme/video/config-service', 2);
+    expect(pane.depthShown).toBe(1);
+    expect(nodeCount(pane)).toBe(111);
+    expect(pane.dependencies).toHaveLength(325);
+    expect(pane.groupsDrawn).toBe(true);
+  });
+
+  // ---------------------------------------------------------------- the caps, falsifiably
+  //
+  // Every other test in this file reads a cap through the constant that sets it, so both constants
+  // were free to move: PANE_DEPENDENCY_CAP at 320/348/380/420/460 and PANE_CAP at 130/140/200/250
+  // and even 400 all left the suite green. These four graphs are built to sit ON the caps with
+  // literal counts, so moving either constant by one step flips a drawn/not-drawn outcome and the
+  // suite goes red. Do not rewrite the literals below in terms of the constants.
+
+  /**
+   * A star: one Center plus `spokes` Applications it depends on, and `cross` extra Dependencies
+   * among the spokes. Nodes = spokes + 1, Dependencies = spokes + cross, and the two are
+   * independent, which is what lets each cap be cornered on its own.
+   */
+  function star(spokes: number, cross = 0) {
+    const name = (i: number) => `spoke-${i}`;
+    const applications = [
+      {
+        repository: 'r',
+        project: 'center',
+        dependsOn: Array.from({ length: spokes }, (_, i) => `r/${name(i)}`),
+      },
+      ...Array.from({ length: spokes }, (_, i) => {
+        const dependsOn: string[] = [];
+        // Spread the cross edges over distinct ordered pairs, skipping self and the Center.
+        for (let step = 1; dependsOn.length < Math.ceil(cross / spokes) && step < spokes; step++) {
+          dependsOn.push(`r/${name((i + step) % spokes)}`);
+        }
+        return { repository: 'r', project: name(i), dependsOn };
+      }),
+    ];
+    // Trim the cross edges to exactly `cross`.
+    let budget = cross;
+    for (let i = 1; i < applications.length; i++) {
+      const app = applications[i] as { dependsOn: string[] };
+      const keep = Math.min(app.dependsOn.length, budget);
+      app.dependsOn = app.dependsOn.slice(0, keep);
+      budget -= keep;
+    }
+    expect(budget, 'the star must place every cross edge').toBe(0);
+    return buildGraph(catalogOf(applications));
+  }
+
+  it('places exactly the node and Dependency counts its cap cases need', () => {
+    // The generator itself, so a silent miscount cannot make the four cap tests below vacuous.
+    const at150 = paneNeighborhood(star(149), 'r/center', 1);
+    expect(nodeCount(at150)).toBe(150);
+    expect(at150.dependencies).toHaveLength(149);
+
+    const dense = paneNeighborhood(star(100, 250), 'r/center', 1);
+    expect(nodeCount(dense)).toBe(101);
+    expect(dense.dependencies).toHaveLength(350);
+  });
+
+  it('draws Depth 1 at exactly 150 nodes and falls back at 151', () => {
+    // Falsifies PANE_CAP downward: at 149 or less, the 150-node graph would fall back to 0.
+    const fits = paneNeighborhood(star(149), 'r/center', 1);
+    expect(nodeCount(fits)).toBe(150);
+    expect(fits.depthShown).toBe(1);
+    expect(fits.hidden).toBe(0);
+
+    // Falsifies PANE_CAP upward: at 151 or more, the 151-node graph would be drawn whole.
+    const overflows = paneNeighborhood(star(150), 'r/center', 1);
+    expect(overflows.depthShown).toBe(0);
+    expect(overflows.hidden).toBe(150);
+    expect(nodeCount(overflows)).toBe(1);
+  });
+
+  it('keeps the Groups at exactly 350 Dependencies and drops them at 351', () => {
+    // Both graphs are 101 nodes, far inside the node cap, so only the Dependency cap can decide.
+    const atCap = paneNeighborhood(star(100, 250), 'r/center', 1);
+    expect(atCap.dependencies).toHaveLength(350);
+    expect(atCap.depthShown).toBe(1);
+    // Falsifies PANE_DEPENDENCY_CAP downward: at 349 or less this would be flat.
+    expect(atCap.groupsDrawn).toBe(true);
+
+    const overCap = paneNeighborhood(star(100, 251), 'r/center', 1);
+    expect(overCap.dependencies).toHaveLength(351);
+    // The one Dependency over the cap costs the Groups and NOT the Depth.
+    expect(overCap.depthShown).toBe(1);
+    expect(nodeCount(overCap)).toBe(101);
+    // Falsifies PANE_DEPENDENCY_CAP upward: at 351 or more this would keep its Groups.
+    expect(overCap.groupsDrawn).toBe(false);
   });
 
   it('keeps hidden plus shown equal to the full Neighborhood', () => {

@@ -2,15 +2,40 @@ import { expect, type Page, test } from '@playwright/test';
 import { budget } from './budget.ts';
 
 const THOUSAND = '/?src=/samples/catalog-1000.json';
-const TYPICAL = 'acme/video/inference'; // 23 pane nodes at Depth 2
-const EDGE_CAP_CASE = 'acme/video/config-service'; // 111 nodes, 325 Dependencies
+
+// The operating points docs/performance-budgets.md names, measured where it names them. Both are
+// Centers of the committed samples/catalog-1000.json; the numbers beside them are asserted below,
+// so a fixture change that moves them fails here rather than quietly measuring somewhere else.
+//
+// Budget 4 says "at 50 nodes" and budget 3 says "at 150 nodes". An earlier revision of this file
+// measured budget 4 at 23 nodes and budget 3 at 111 -- neither at its specified point, and the
+// 150-node case the layout research measured at 582 to 791 ms could not be reached at all, because
+// the Dependency cap was wrongly forcing a Depth fallback and so held every pane under 123 nodes.
+/** Budget 4's point: 50 nodes, 119 Dependencies, Depth 2, Groups drawn. */
+const TYPICAL = 'acme-labs/data-core/index-android';
+/**
+ * Budget 3's point: 150 nodes, drawn flat. This is the SLOWEST of the four Centers in the fixture
+ * that reach 150 nodes (542.3 to 598.3 ms), not the one with the most Dependencies and not a
+ * convenient one -- docs/performance-budgets.md names it and tabulates all four.
+ */
+const AT_THE_CAP = 'acme-labs/data-core/secret-service';
 const DEPTH_FALLBACK = 'acme/billing-platform/auth-service';
 
 const PANE_MEASURE = 'acv:pane-layout-to-paint';
 const HOVER_MEASURE = 'acv:pane-hover-to-paint';
+const BOARD_PAINT_MARK = 'acv:board-painted';
+const PANE_LAYOUT_MARK = 'acv:pane-layout-start';
 
 function rankedLink(page: Page, id: string) {
   return page.getByTestId('ranked-link').filter({ hasText: id }).first();
+}
+
+/** The `startTime` of the one mark of this name, or NaN when it was never stamped. */
+async function markAt(page: Page, name: string): Promise<number> {
+  return page.evaluate((mark) => {
+    const entries = performance.getEntriesByName(mark);
+    return entries.length === 0 ? Number.NaN : entries[0].startTime;
+  }, name);
 }
 
 async function clearTimings(page: Page): Promise<void> {
@@ -29,34 +54,105 @@ async function longestMs(page: Page, name: string): Promise<number> {
 
 async function select(page: Page, id: string): Promise<void> {
   await rankedLink(page, id).click();
+  await settled(page, id);
+}
+
+/**
+ * Selects through search rather than the ranked table. The two budget Centers sit at ranks 558 and
+ * 694 of 1,025, past the table's first page, and search reaches them in one step -- through the
+ * same `select` callback in the shell, so budgets 5 and 6 stamp their marks exactly as they do for
+ * a table click.
+ */
+async function selectBySearch(page: Page, id: string): Promise<void> {
+  await page.getByTestId('search-input').fill(id);
+  await page
+    .getByTestId('search-result')
+    .filter({ hasText: id })
+    .first()
+    .getByTestId('search-choose')
+    .click();
+  await settled(page, id);
+}
+
+async function settled(page: Page, id: string): Promise<void> {
   await expect(page.getByTestId('center-id')).toHaveText(id);
   await expect(page.locator('[data-testid="canvas"][data-ready="true"]')).toBeVisible();
 }
 
-test('budget 4: a typical Application Neighborhood lays out and paints under 100 ms', async ({
-  page,
-}) => {
+test('budget 4: a 50-node Neighborhood lays out and paints under 100 ms', async ({ page }) => {
   await page.goto(THOUSAND);
   await clearTimings(page);
 
-  await select(page, TYPICAL);
+  await selectBySearch(page, TYPICAL);
 
-  await expect(page.getByTestId('canvas')).toHaveAttribute('data-nodes', '23');
+  const canvas = page.getByTestId('canvas');
+  await expect(canvas).toHaveAttribute('data-nodes', '50'); // budget 4's specified point
+  await expect(canvas).toHaveAttribute('data-edges', '119');
+  // Well under the Dependency cap, so this one keeps its Group boxes.
+  await expect(canvas).not.toHaveAttribute('data-groups', '0');
   await expect.poll(() => longestMs(page, PANE_MEASURE)).toBeLessThanOrEqual(budget(100));
 });
 
-test('budget 3: an edge-dense pane near the Dependency cap paints under 500 ms', async ({
+test('budget 3: the pane at the 150-node cap, drawn flat, paints under 750 ms', async ({
   page,
 }) => {
   await page.goto(THOUSAND);
   await clearTimings(page);
 
-  await select(page, EDGE_CAP_CASE);
+  await selectBySearch(page, AT_THE_CAP);
 
-  // The 350-Dependency cap now binds before the legacy 150-node case in this fixture.
-  await expect(page.getByTestId('canvas')).toHaveAttribute('data-nodes', '111');
-  await expect(page.getByTestId('canvas')).toHaveAttribute('data-edges', '325');
-  await expect.poll(() => longestMs(page, PANE_MEASURE)).toBeLessThanOrEqual(budget(500));
+  const canvas = page.getByTestId('canvas');
+  await expect(canvas).toHaveAttribute('data-nodes', '150'); // budget 3's specified point
+  // 785 Dependencies, far above the 350 cap -- so docs/performance-budgets.md's "Pane cap" policy
+  // has the pane drop the Group boxes and lay out flat, at the SAME Depth. Zero Group boxes here is
+  // that policy observed from outside, and it is the assertion that pins the policy: a Depth
+  // fallback would show fewer than 150 nodes, and drawing the boxes would show more than zero.
+  await expect(canvas).toHaveAttribute('data-edges', '785');
+  await expect(canvas).toHaveAttribute('data-groups', '0');
+  // 750 ms, not the 500 ms this row first carried. 500 was never measured -- it was a design-time
+  // estimate -- and the first browser measurement of a genuine 150-node flat Neighborhood put the
+  // median at 502.6 ms, so the spec failed about one run in six. All four Centers in the fixture
+  // that reach 150 nodes were measured and three miss 500; this is the slowest of them, at
+  // 542.3 to 598.3 ms warm on the reference laptop. docs/performance-budgets.md carries the table
+  // and the reasoning: 750 is budget 9's number, it clears the worst case by about 25%, and the
+  // pane is deferred behind an already-painted board (the ordering test above).
+  //
+  // The ceiling is NOT what pins the flat-layout policy, and this was checked rather than assumed.
+  // Reverting the policy so the Group boxes are drawn again fails this test 3 times out of 3 -- but
+  // on the `data-groups` assertion above ("0" against "51"), never on the time. With the structural
+  // assertions removed, the same revert passed the 750 ms bound 5 times out of 5, because this
+  // Center costs 733.7 ms median with Groups, just inside the ceiling. So `data-groups` is the
+  // assertion doing the work; the timing bound guards regressions in layout cost, not the policy.
+  await expect.poll(() => longestMs(page, PANE_MEASURE)).toBeLessThanOrEqual(budget(750));
+});
+
+test('the board never waits for the pane: layout starts only after the board has painted', async ({
+  page,
+}) => {
+  // docs/performance-budgets.md: "Selection and Depth changes repaint the impact board first ...
+  // the pane re-lays out afterwards and never blocks input."
+  //
+  // Asserted as ORDERING, not as a duration. Deleting the pane's deferral so that layout runs
+  // synchronously in its effect left every timing test in this file green -- budgets 5 and 6 have
+  // slack, and BUDGET_FACTOR multiplies that slack, so at factor 4 a duration bound is even weaker.
+  // Two marks in the wrong order, by contrast, cannot be absorbed by any factor.
+  await page.goto(THOUSAND);
+  await clearTimings(page);
+
+  await selectBySearch(page, AT_THE_CAP); // the densest Center: the worst case for blocking
+
+  const boardPaint = await markAt(page, BOARD_PAINT_MARK);
+  const paneStart = await markAt(page, PANE_LAYOUT_MARK);
+  expect(boardPaint).not.toBeNaN();
+  expect(paneStart).not.toBeNaN();
+  // `toBeGreaterThanOrEqual`, not `toBeGreaterThan`: Chromium coarsens `performance.now()` to
+  // 100 microseconds, and the board's paint frame and the pane's following task legitimately land
+  // in the same bucket -- a strict `>` flaked on roughly one run in three for that reason alone.
+  // The equality this admits is "the pane started no earlier than the board painted", which is the
+  // property. It costs nothing in detection: with the deferral removed, layout runs synchronously
+  // inside the effect and `paneStart` lands HUNDREDS of milliseconds BEFORE `boardPaint` at this
+  // Center, so the mutant fails by a margin no clock resolution can hide.
+  expect(paneStart).toBeGreaterThanOrEqual(boardPaint);
 });
 
 test('the two cap notices use the Overview and Breaks escape hatches', async ({ page }) => {
@@ -81,7 +177,7 @@ test('budget 8: hover highlights a node and its edges; click selects it and the 
   page,
 }) => {
   await page.goto(THOUSAND);
-  await select(page, TYPICAL);
+  await selectBySearch(page, TYPICAL);
   await page.getByTestId('canvas').scrollIntoViewIfNeeded();
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(null))));
   await clearTimings(page);

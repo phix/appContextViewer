@@ -91,6 +91,11 @@ export function Canvas({ elements, positions, onHover, onSelect, onPainted }: Ca
     container.dataset.ready = 'true';
     container.dataset.nodes = String(elements.nodes.filter((node) => node.kind !== 'group').length);
     container.dataset.edges = String(elements.edges.length);
+    // Group boxes drawn. Zero is the flat-above-the-Dependency-cap case from the budgets doc's
+    // "Pane cap" policy, and this is what lets e2e/pane.spec.ts see that policy from outside.
+    container.dataset.groups = String(
+      elements.nodes.filter((node) => node.kind === 'group').length,
+    );
     (container as HTMLDivElement & { __cy?: Core }).__cy = cy;
 
     const selectable = (target: cytoscape.NodeSingular) => {
@@ -130,9 +135,15 @@ export function Canvas({ elements, positions, onHover, onSelect, onPainted }: Ca
       }
     });
 
-    let paintFrame = requestAnimationFrame(() => {
-      paintFrame = requestAnimationFrame(() => onPainted?.());
-    });
+    // ONE frame, deliberately. `onPainted` closes budgets 3 and 4, which are LAYOUT budgets: the
+    // measure must span layout plus the one paint that puts the pane on screen. A second rAF fence
+    // adds a frame of the runner's own compositor cadence to every reading -- a quantity that
+    // scales with the display's refresh rate rather than with anything the pane does. Measured on
+    // the reference laptop at budget 4's Center, six runs each, median of the warm five: 70.9 ms
+    // with one frame against 77.3 ms with two, so the fence was contributing 6.4 ms. That is small
+    // here and larger on a slower runner, and either way it is the wrong quantity to put inside a
+    // layout budget. Re-measure by restoring the second frame rather than trusting this number.
+    const paintFrame = requestAnimationFrame(() => onPainted?.());
     const observer =
       typeof ResizeObserver === 'function'
         ? new ResizeObserver(() => {
