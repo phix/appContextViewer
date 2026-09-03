@@ -104,6 +104,14 @@ vercel link --yes --scope 1337-software --project appcontextviewer
 
 ## Runbook: publish a private Catalog
 
+**Not in use.** The deployment ships the bundled sample Catalog and sets neither variable — Nick
+confirmed on 2026-09-02 that there is no private Catalog to point at
+([issue #29](https://github.com/phix/appContextViewer/issues/29)). Everything below is the path if
+that changes; **none of it has been exercised against a real private source**, so treat the steps as
+written-from-documentation, not observed. The `fetch-catalog` script itself is covered by 11 tests
+that run inside every build, including one asserting the token never reaches the log.
+
+
 Real Catalog data never enters this public repository. It arrives at build time, from a location
 only the build machine can read, and lands beside `index.html` as `dist/catalog.json`.
 
