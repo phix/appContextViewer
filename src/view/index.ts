@@ -23,6 +23,7 @@ export {
   type CenterCardProps,
   centerTags,
   kindText,
+  named,
 } from './CenterCard';
 export { ChannelCard, type ChannelCardProps } from './ChannelCard';
 export { ANIMATION_MS } from './canvas/OverviewCanvas';

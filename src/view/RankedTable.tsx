@@ -174,17 +174,26 @@ export function RankedTable({
             })}
           </tbody>
         </table>
-        {more > 0 ? (
-          <button
-            type="button"
-            class="ranked__more"
-            data-testid="ranked-more"
-            onClick={() => setShown((current) => Math.min(rows.length, current + pageSize))}
-          >
-            Show {Math.min(more, pageSize)} more of {rows.length.toLocaleString('en-US')}
-          </button>
-        ) : null}
       </div>
+
+      {/*
+       * OUTSIDE the scroll container, deliberately. Inside it, the button sat below every painted
+       * row — roughly 4,600 px down a 535 px window once the first stylesheet gave each row two
+       * lines — so reaching it meant scrolling the table to its very bottom, past a sticky header.
+       * That is unreachable for a real user, not merely awkward for a test, and it is why CI could
+       * not click it. As a footer beneath the scroll box it is always on screen, and the scroll
+       * handler above still pages the same rows for anyone who scrolls instead.
+       */}
+      {more > 0 ? (
+        <button
+          type="button"
+          class="ranked__more"
+          data-testid="ranked-more"
+          onClick={() => setShown((current) => Math.min(rows.length, current + pageSize))}
+        >
+          Show {Math.min(more, pageSize)} more of {rows.length.toLocaleString('en-US')}
+        </button>
+      ) : null}
     </section>
   );
 }

@@ -158,6 +158,28 @@ body {
   padding: 4px 6px;
 }
 
+/*
+ * The paging control is a footer BENEATH the scroll box, not the last thing inside it — see the
+ * comment in RankedTable.tsx. Full width so it reads as the end of the table rather than as a
+ * stray button.
+ */
+.ranked__more {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--acv-line);
+  border-radius: 6px;
+  background: var(--acv-ground);
+  color: var(--acv-accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ranked__more:hover {
+  border-color: var(--acv-accent);
+}
+
 .ranked__size {
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -176,6 +198,37 @@ body {
   color: var(--acv-ink-soft);
   font-size: 12px;
   font-weight: 400;
+}
+
+/* ------------------------------------------------------------------ Center card */
+
+.center__label {
+  margin: 2px 0 0;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+/* The id stays readable but plainly secondary to the name above it. */
+.center__record-id {
+  margin: 2px 0 8px;
+  color: var(--acv-ink-soft);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.center__kind {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--acv-ink-soft);
+}
+
+.center__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0;
 }
 
 /* ------------------------------------------------------------------ Tags */

@@ -239,6 +239,73 @@ test('a ranked row reads its name and its id as two things, not one run-on strin
   );
 });
 
+/**
+ * The regression CI caught. Inside the scroll container the Show-more button sat below all 100
+ * painted rows — about 4,600 px down a 535 px window once each row became two lines — so it could
+ * not be clicked without scrolling the table to its end, past a sticky header. Geometry is the
+ * assertion, because "the click worked" depends on the viewport and would pass on a tall screen.
+ */
+test('the Show-more control sits below the scroll box, not 4,600 px inside it', async ({
+  page,
+}) => {
+  await page.goto(THOUSAND);
+  await expect(page.getByTestId('header-counts')).toHaveText('1,000 Applications, 25 Externals');
+
+  const scroll = page.getByTestId('ranked-scroll');
+  const more = page.getByTestId('ranked-more');
+  await expect(more).toBeVisible();
+
+  const scrollBox = await scroll.boundingBox();
+  const moreBox = await more.boundingBox();
+  expect(scrollBox).not.toBeNull();
+  expect(moreBox).not.toBeNull();
+
+  // Beneath the scroll box entirely, so it never moves as the table scrolls.
+  expect(moreBox?.y ?? 0).toBeGreaterThanOrEqual(
+    (scrollBox?.y ?? 0) + (scrollBox?.height ?? 0) - 1,
+  );
+  // The container really is a small window onto a much taller table — otherwise this proves nothing.
+  const overflow = await scroll.evaluate((node) => node.scrollHeight - node.clientHeight);
+  expect(overflow).toBeGreaterThan(1000);
+
+  // And it is clickable where it stands, with the table left exactly where it was.
+  const before = await scroll.evaluate((node) => node.scrollTop);
+  await more.click();
+  expect(await scroll.evaluate((node) => node.scrollTop)).toBe(before);
+  await expect(page.getByTestId('ranked-row')).toHaveCount(200);
+});
+
+/**
+ * Item N6 on the Center card, against the AT&T Catalog where an id is an APM number. The card used
+ * to render `ATT-IDP4/customer-profile/apm10099` as its heading with the record's real name
+ * nowhere on screen.
+ */
+test('the Center card leads with the name and keeps the id beneath it', async ({ page }) => {
+  await page.goto('/?src=/samples/att/catalog.att.json');
+  await expect(page.getByTestId('header-counts')).toHaveText('141 Applications, 32 Externals');
+
+  await page.getByTestId('search-input').fill('Contact Preference');
+  await page.getByTestId('search-choose').first().click();
+
+  const heading = page.getByTestId('center-name');
+  await expect(heading).toHaveText('Contact Preference Service');
+  expect(await heading.evaluate((node) => node.tagName)).toBe('H2');
+
+  // The id is never hidden, and it is still the full one every other spec asserts.
+  const id = page.getByTestId('center-id');
+  await expect(id).toHaveText('ATT-IDP4/customer-profile/apm10099');
+  await expect(id).toBeVisible();
+
+  // Secondary: beneath the heading and smaller than it.
+  const headingBox = await heading.boundingBox();
+  const idBox = await id.boundingBox();
+  expect(idBox?.y ?? 0).toBeGreaterThanOrEqual(
+    (headingBox?.y ?? 0) + (headingBox?.height ?? 0) - 1,
+  );
+  const size = (node: Element) => Number.parseFloat(getComputedStyle(node).fontSize);
+  expect(await id.evaluate(size)).toBeLessThan(await heading.evaluate(size));
+});
+
 test('budget 8: a Highlight crossing 1,000 ranked rows, painted in 50 ms', async ({ page }) => {
   await page.goto(THOUSAND);
   await expect(page.getByTestId('header-counts')).toHaveText('1,000 Applications, 25 Externals');

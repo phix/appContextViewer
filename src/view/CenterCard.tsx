@@ -157,6 +157,11 @@ export function centerTags(
   return tags;
 }
 
+/** Whether the producer gave the record a name of its own, as schema v1's optional `name`. */
+export function named(card: CenterCardModel): boolean {
+  return card.name !== undefined;
+}
+
 async function writeToClipboard(text: string): Promise<void> {
   await navigator.clipboard.writeText(text);
 }
@@ -194,15 +199,32 @@ export function CenterCard({
       <p class="center__kind" data-testid="center-kind">
         {kindText(card)}
       </p>
-      <h2 class="center__id" data-testid="center-id">
-        {card.id}
+
+      {/*
+       * The card leads with `labelOf` — the producer's name when there is one — and keeps the id
+       * beneath it (item N6 of docs/retrospective-2026-09-03.md). Leading with the id rendered
+       * `ATT-IDP4/customer-profile/apm10099` as the heading of a card whose record is called
+       * "Contact Preference Service", which is unreadable and was the whole point of that item.
+       *
+       * `center-id` always exists and always carries the FULL id, because e2e/board.spec.ts,
+       * e2e/naming.spec.ts and e2e/pane.spec.ts assert exactly that and none of them belongs to
+       * this slice. With no name there is nothing better to lead with, so the heading IS the id and
+       * there is no second line repeating it.
+       *
+       * Note this asks `card.name`, not `labelOf`: `labelOf` falls back to the PROJECT, so
+       * `order-service` differs from `acme/commerce/order-service` without the producer having
+       * named anything, and leading with it would have quietly dropped the Repository from a
+       * heading that is supposed to identify the record.
+       */}
+      <h2 class="center__label" data-testid={named(card) ? 'center-name' : 'center-id'}>
+        {card.name ?? card.id}
       </h2>
 
-      {card.name === undefined ? null : (
-        <p class="center__name" data-testid="center-name">
-          {card.name}
+      {named(card) ? (
+        <p class="center__record-id" data-testid="center-id">
+          {card.id}
         </p>
-      )}
+      ) : null}
 
       {card.team === undefined ? null : (
         <p class="center__team" data-testid="center-team">

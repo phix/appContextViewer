@@ -210,3 +210,61 @@ describe('Tags on the Center card', () => {
     });
   });
 });
+
+/**
+ * Item N6 of docs/retrospective-2026-09-03.md on the card. Every other fixture in this repo has ids
+ * that read as names, so this uses the AT&T-style shape the item was raised for: an APM id with a
+ * real name beside it.
+ */
+describe('the card leads with the name and keeps the id', () => {
+  const apm = {
+    kind: 'application' as const,
+    id: 'ATT-IDP4/customer-profile/apm10099',
+    label: 'Contact Preference Service',
+    repository: 'ATT-IDP4/customer-profile',
+    recordKind: 'service',
+    name: 'Contact Preference Service',
+    attributes: {},
+    publishes: [],
+    subscribes: [],
+  };
+  const model = (center: typeof apm) => ({
+    center,
+    depth: 2,
+    needs: { bands: [], note: null },
+    breaks: { bands: [], total: 0, teams: 0 },
+  });
+
+  it('renders the name as the heading, not the APM id', () => {
+    render(<CenterCard model={model(apm)} />);
+
+    const heading = screen.getByTestId('center-name');
+    expect(heading.tagName).toBe('H2');
+    expect(heading.textContent).toBe('Contact Preference Service');
+  });
+
+  it('keeps the full id, secondary and never hidden', () => {
+    render(<CenterCard model={model(apm)} />);
+
+    const id = screen.getByTestId('center-id');
+    expect(id.textContent).toBe('ATT-IDP4/customer-profile/apm10099');
+    // Beneath the heading, not the heading itself: that is what "secondary" means here.
+    expect(id.tagName).not.toBe('H2');
+  });
+
+  it('does not repeat itself when the label already is the id', () => {
+    const model = boardOf(ORDER_SERVICE);
+    render(<CenterCard model={model} />);
+
+    // order-service names itself, so there is one line, and it is the one carrying the id.
+    expect(screen.getByTestId('center-id').textContent).toBe('acme/commerce/order-service');
+    expect(screen.getByTestId('center-id').tagName).toBe('H2');
+    expect(screen.queryByTestId('center-name')).toBeNull();
+  });
+
+  it('carries the name into the Markdown export, which also used to lose it', () => {
+    const markdown = boardMarkdown(model(apm));
+    expect(markdown).toContain('Contact Preference Service');
+    expect(markdown.split('\n')[0]).toBe('# ATT-IDP4/customer-profile/apm10099');
+  });
+});

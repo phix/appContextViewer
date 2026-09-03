@@ -402,6 +402,10 @@ function centerCardOf(graph: Graph, center: Center): CenterCard {
     return {
       ...node,
       recordKind: application.kind,
+      // The producer's own name, as an External already carried. Without it the card and the
+      // Markdown export both lost it and led with an APM id (item N6), even though `labelOf` had
+      // resolved the name for every other surface.
+      name: application.name,
       description: application.description,
       url: application.url,
       attributes: application.attributes,

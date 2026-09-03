@@ -250,3 +250,29 @@ describe('Tags in the ranked table', () => {
     expect(screen.getAllByTestId('ranked-row')[0]?.hasAttribute('data-groups')).toBe(false);
   });
 });
+
+/**
+ * The paging control's placement, which is a correctness property and not a style one: inside the
+ * scroll box it sat below every painted row, and once rows became two lines tall that put it ~4,600
+ * px down a 535 px window — unreachable without scrolling the table to its end.
+ */
+describe('the Show-more control is reachable without scrolling the table', () => {
+  it('is a sibling of the scroll box, not a descendant of it', () => {
+    renderTable({ model: modelOf({ rows: manyRows(FIRST_PAGE + 5) }) });
+
+    const scroll = screen.getByTestId('ranked-scroll');
+    const more = screen.getByTestId('ranked-more');
+    expect(scroll.contains(more)).toBe(false);
+    // And it is still inside the table's own section, so it reads as that table's footer.
+    expect(screen.getByTestId('ranked-table').contains(more)).toBe(true);
+  });
+
+  it('still pages the same rows from where it now sits', () => {
+    renderTable({ model: modelOf({ rows: manyRows(FIRST_PAGE + 5) }) });
+    expect(screen.getAllByTestId('ranked-row')).toHaveLength(FIRST_PAGE);
+
+    fireEvent.click(screen.getByTestId('ranked-more'));
+    expect(screen.getAllByTestId('ranked-row')).toHaveLength(FIRST_PAGE + 5);
+    expect(screen.queryByTestId('ranked-more')).toBeNull();
+  });
+});
