@@ -83,15 +83,16 @@ Numbered so they can be referred to. Status as of writing.
 | N2 | Validator, graph model, `samples/check.mjs` carry `name` | **done** `6c06934` |
 | N3 | Search indexes `name` as a primary field, ranked with the id | **done** `6c06934` |
 | N4 | Budget 3 ruled at 750 ms from measurement, replacing an unmeasured 500 ms | **done** `6c06934` |
-| N5 | `label()` in the graph module: `name` when present, id otherwise — one place every view calls | open |
-| N6 | Ranked table, board rows, Center card, search results and canvas nodes label by `label()`, id as secondary | open |
-| N7 | Group-by menu hides near-unique Attributes (a cardinality rule, stated in the doc) | open |
-| N8 | Tags: pointing at one Highlights its Group; choosing one makes it the grouping Attribute | open |
-| N9 | `samples/README.md` links `samples/att/` | open |
-| N10 | An e2e case that loads `catalog.att.json` and asserts a name is rendered, not an APM id | open |
+| N5 | `labelOf` in the graph module: `name` when present, id otherwise — one place every view calls | **done** `f8e18f6` |
+| N6 | Ranked table, board rows, Center card and search results label by `labelOf`, id as secondary | **done** `f8e18f6`, `6b0ea59` |
+| N7 | Cardinality rule as a predicate in `src/graph/grouping.ts`; the menu adopts it next | **predicate done** `6b0ea59` |
+| N8 | Tags: pointing at one Highlights its Group; choosing one makes it the grouping Attribute | **done** `6b0ea59` |
+| N9 | `samples/README.md` links `samples/att/` | **done** `9ef2a8c` |
+| N10 | An e2e case that loads `catalog.att.json` and asserts a name is rendered, not an APM id | **done** `f8e18f6` |
 
-N5 through N8 all touch `src/view/`, which two slice workers hold open right now (#26 pane, #27
-Overview). They are sequenced after those merge, not deferred for any other reason.
+All ten are done. The group-by menu's adoption of N7's predicate is the one piece left, and it waits
+on the Overview cap slice ([#44](https://github.com/phix/appContextViewer/issues/44)) rather than on
+any decision.
 
 ## N8, stated properly, because it is the one new capability
 
@@ -129,6 +130,36 @@ is a new capability, not a recovery of a lost one, and it should be judged as on
 - `prefers-reduced-motion` must disable the lift. The "3D" is a transform and a shadow, nothing more.
 - A Highlight must never write to the URL — [`url-state.md`](./url-state.md) says the hash names the
   view, and a transient emphasis is not view state.
+
+## The pattern behind every defect found this session
+
+Named by the tags slice, and it fits every one of them: **an assertion that never touched its
+subject.** Three surviving mutants in that slice alone, each a different disguise:
+
+- a **negated attribute check** (`not.toHaveAttribute('data-tagged', '')`) that passes when the
+  attribute is *absent*, so a canvas which never subscribed satisfied it;
+- a **reported count computed independently of the work it described**, so a canvas that styled
+  nothing still published the right number;
+- a **hand-built fixture standing in for the code under test** — the card's tests constructed their
+  own model, so the `derived` layer that was actually broken was never executed, and the Markdown
+  export silently lost every Application's name.
+
+That is the same family as the earlier ones: constants asserted through themselves, a cap no fixture
+ever reached, a deferral that could be deleted with the suite still green. In each case the test
+named the right thing and never ran it.
+
+Two corollaries worth keeping:
+
+1. **A measurement taken through a defect describes the defect.** The pane review concluded a new
+   fixture was needed because the largest drawable pane was 123 nodes — a ceiling created by the very
+   bug under review. And the Overview cap was first set to 800 by reading a cost curve measured on an
+   *arbitrary* edge subset while the ruling adopted *heaviest-first* selection, which is a different
+   input and costs more. A number read off a curve that does not describe the rule you adopted is not
+   a measurement.
+2. **"It passes when I run it alone" is not a flake report; it is a result.** Half the browser suite
+   asserts a duration, and `playwright.config.ts` ran parallel workers locally while CI ran one, so
+   timed budgets were measuring the machine's load. Budgets 3, 4 and 6 all failed intermittently in
+   whole-suite runs and passed file by file. One worker everywhere fixed it.
 
 ## The one-line lesson
 
