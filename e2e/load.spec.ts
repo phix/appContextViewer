@@ -1,9 +1,8 @@
-import { readFileSync } from 'node:fs';
-import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { budget } from './budget.ts';
+import { createStaticServer } from './server.mjs';
 
 /**
  * The load path of docs/catalog-sources.md and docs/url-state.md, in a real browser: the picker,
@@ -19,30 +18,10 @@ const LOAD_MEASURE = 'acv:load-to-table';
 
 /**
  * A second origin that serves one Catalog and sends NO `Access-Control-Allow-Origin`, which is what
- * docs/catalog-sources.md decision 2 calls "a host that refuses".
- *
- * Issue #24 expected this to be `createStaticServer({ cors: false })` from `e2e/server.mjs`, and it
- * cannot be: `tsconfig.json` sets neither `allowJs` nor `checkJs`, so importing that `.mjs` from a
- * `.ts` spec is `error TS7016` and `npm run check` goes red. Reproduce with:
- *
- *     printf "import { createStaticServer } from './server.mjs';\nexport const s = createStaticServer();\n" > e2e/probe.ts \
- *       && npx tsc --noEmit; rm e2e/probe.ts
- *
- * The one-line fix belongs to whoever owns `tsconfig.json` (add `"allowJs": true`) or `e2e/`
- * (add an `e2e/server.d.ts`); this slice owns neither, so it serves the bytes itself. Nothing here
- * exercises `server.mjs`; e2e/smoke.spec.ts already does.
+ * docs/catalog-sources.md decision 2 calls "a host that refuses". `e2e/server.d.mts` is what makes
+ * this import type-check: TypeScript resolves `./server.mjs` to `server.d.mts`, and without that
+ * declaration `tsconfig.json` (no `allowJs`, no `checkJs`) rejects it as TS7016.
  */
-function noCorsServer(file: string): Server {
-  const body = readFileSync(file);
-  return createServer((_request, response) => {
-    response.writeHead(200, {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Content-Length': body.byteLength,
-      'Cache-Control': 'no-store',
-    });
-    response.end(body);
-  });
-}
 
 async function measuredMs(page: import('@playwright/test').Page): Promise<number> {
   return page.evaluate((name) => {
@@ -100,7 +79,7 @@ test('?src= with a relative path loads the Catalog beside the viewer', async ({ 
 });
 
 test('a cross-origin ?src= without CORS is rejected with E_FETCH naming CORS', async ({ page }) => {
-  const server = noCorsServer(DEMO);
+  const server = createStaticServer({ cors: false });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address() as AddressInfo;
   try {
