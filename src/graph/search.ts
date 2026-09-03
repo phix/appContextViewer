@@ -40,6 +40,11 @@ export function buildSearchIndex(graph: Graph): SearchIndex {
   const entries: SearchEntry[] = [];
   for (const application of graph.applications.values()) {
     const terms: Term[] = [term('id', application.id, true)];
+    // Ranked with the id, not below it: when `project` is an APM number the name is the only thing
+    // a person can actually type (docs/schema-v1.md, "When the id names nothing").
+    if (application.name !== undefined) {
+      terms.push(term('name', application.name, true));
+    }
     if (application.kind !== undefined) {
       terms.push(term('kind', application.kind, false));
     }

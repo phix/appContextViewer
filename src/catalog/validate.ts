@@ -32,6 +32,7 @@ const CATALOG_KEYS = new Set([
 const APPLICATION_KEYS = new Set([
   'repository',
   'project',
+  'name',
   'kind',
   'team',
   'description',
@@ -557,6 +558,9 @@ const unique = (list: unknown[]): string[] => [...new Set(list as string[])];
 
 function toApplication(raw: JsonObject): Application {
   const app: Application = { repository: raw.repository as string, project: raw.project as string };
+  if (typeof raw.name === 'string') {
+    app.name = raw.name;
+  }
   if (typeof raw.kind === 'string') {
     app.kind = raw.kind;
   }

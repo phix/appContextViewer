@@ -66,6 +66,7 @@
       "properties": {
         "repository": { "$ref": "#/$defs/repository" },
         "project": { "$ref": "#/$defs/project" },
+        "name": { "type": "string", "minLength": 1, "description": "Human-readable name, for display and search. Optional: an id built from a readable Repository and Project already carries one. Supply it whenever the Project is an opaque identifier such as an APM number, because the id then names nothing a reader recognises." },
         "kind": { "type": "string", "examples": ["service", "library", "pipeline", "mobile-app", "web-app", "job"], "description": "What sort of unit this is. Open string; the examples are conventions, not an enum." },
         "team": { "type": "string", "minLength": 1, "description": "The single Team that owns this Application. Teams are implicit: naming one here brings it into existence." },
         "description": { "type": "string" },

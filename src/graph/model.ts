@@ -29,6 +29,8 @@ export function isScalar(value: unknown): value is Scalar {
 export interface ApplicationInput {
   readonly repository: string;
   readonly project: string;
+  /** Human-readable name. Present when `project` is opaque; absent when the id already reads as one. */
+  readonly name?: string;
   readonly kind?: string;
   readonly team?: string;
   readonly description?: string;
@@ -76,6 +78,11 @@ export interface Application {
   readonly id: ApplicationId;
   readonly repository: string;
   readonly project: string;
+  /**
+   * Human-readable name, when the producer supplied one. `label(application)` is what callers
+   * should render: it falls back to the id, so no view needs to know whether this is set.
+   */
+  readonly name?: string;
   readonly kind?: string;
   readonly team?: TeamName;
   readonly description?: string;
@@ -180,6 +187,7 @@ export function buildGraph(catalog: CatalogInput): Graph {
       id,
       repository: input.repository,
       project: input.project,
+      name: input.name,
       kind: input.kind,
       team: input.team,
       description: input.description,

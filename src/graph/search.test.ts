@@ -118,3 +118,63 @@ describe('search: case-insensitive substrings with typed hits', () => {
     expect(search(index, 'shared cluster')[0]).toMatchObject({ value: 'Redis (shared cluster)' });
   });
 });
+
+describe('an Application name', () => {
+  // docs/schema-v1.md, "When the id names nothing": with an opaque project the name is the only
+  // thing a person can type. A Catalog whose ids already read well must not regress either.
+  const named = buildGraph(
+    catalogOf([
+      {
+        repository: 'ATT-IDP1/network-fault-management',
+        project: 'apm10003',
+        name: 'Fault Correlation Engine',
+      },
+      { repository: 'acme/commerce', project: 'order-service' },
+    ]),
+  );
+  const namedIndex = buildSearchIndex(named);
+
+  it('is searchable, and reports name as the field that matched', () => {
+    const hits = search(namedIndex, 'fault correlation');
+    expect(hits.map((hit) => hit.id)).toEqual(['ATT-IDP1/network-fault-management/apm10003']);
+    expect(hits[0]?.field).toBe('name');
+  });
+
+  it('ranks as a primary field, so a name beats an Attribute that also contains the query', () => {
+    // rankOf: a non-primary term is rank 3 whatever it matched, a primary one that starts with the
+    // query is rank 1. Demote the name term and this order inverts, which is the whole point of
+    // indexing it beside the id rather than beneath it.
+    const graph = buildGraph(
+      catalogOf([
+        {
+          repository: 'ATT-IDP3/revenue-core',
+          project: 'apm10064',
+          name: 'Billing Cycle Scheduler',
+        },
+        {
+          repository: 'ATT-IDP1/network-performance',
+          project: 'apm10009',
+          name: 'KPI Collection Service',
+          attributes: { owner: 'runs the billing feed' },
+        },
+      ]),
+    );
+    const hits = search(buildSearchIndex(graph), 'billing');
+    expect(hits.map((hit) => hit.id)).toEqual([
+      'ATT-IDP3/revenue-core/apm10064',
+      'ATT-IDP1/network-performance/apm10009',
+    ]);
+    expect(hits[0]?.field).toBe('name');
+    expect(hits[1]?.field).toBe('attributes.owner');
+  });
+
+  it('does not stop the opaque id itself from matching', () => {
+    expect(search(namedIndex, 'apm10003')[0]?.id).toBe(
+      'ATT-IDP1/network-fault-management/apm10003',
+    );
+  });
+
+  it('leaves an Application without a name matching by id', () => {
+    expect(search(namedIndex, 'order-service')[0]?.id).toBe('acme/commerce/order-service');
+  });
+});

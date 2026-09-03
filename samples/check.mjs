@@ -31,7 +31,7 @@ const RE = {
   externalId: /^[^\s/]+$/,
 };
 const ENVELOPE_KEYS = new Set(['schemaVersion', 'generatedAt', 'source', 'applications', 'externals']);
-const APP_KEYS = new Set(['repository', 'project', 'kind', 'team', 'description', 'url', 'dependsOn', 'publishes', 'subscribes', 'attributes']);
+const APP_KEYS = new Set(['repository', 'project', 'name', 'kind', 'team', 'description', 'url', 'dependsOn', 'publishes', 'subscribes', 'attributes']);
 const EXT_KEYS = new Set(['id', 'kind', 'name', 'description', 'url', 'attributes']);
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isScalar = (v) => ['string', 'number', 'boolean'].includes(typeof v);

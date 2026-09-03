@@ -20,6 +20,7 @@ The contract a producer must emit and the viewer loads. Machine-readable form: [
 |---|---|---|
 | `repository` | yes | Repository name. May contain `/` (e.g. `org/repo`). No whitespace, no leading or trailing `/`. |
 | `project` | yes | Name within the Repository. No `/`, no whitespace. |
+| `name` | no | Human-readable name, for display and search. Supply it whenever `project` is opaque — see "When the id names nothing". |
 | `kind` | no | Open string. Conventions: `service`, `library`, `pipeline`, `mobile-app`, `web-app`, `job`. |
 | `team` | no | The one Team that owns it. Implicit: naming a Team creates it. |
 | `description`, `url` | no | Display only. |
@@ -32,10 +33,27 @@ No other keys are allowed at the Application level. Custom data goes in `attribu
 ## Identity and references
 
 - An Application's **id** is `repository + "/" + project`, for example `acme/platform-core/auth-service`.
+- The id is the Application's identity, **not necessarily its name** — see below.
 - Ids split at the **last** slash. That is why `project` may not contain one.
 - Ids are compared **exactly** (case-sensitive, no trimming).
 - A ref in `dependsOn` is either an Application id or `external:<id>` naming a declared External.
 - Bare project names are not refs. There is no same-repository shorthand.
+
+## When the id names nothing
+
+`acme/platform-core/auth-service` is an id that doubles as a name: a reader knows what it is without
+looking anything up. That is a property of the *producer's* naming, not of this schema, and it does
+not survive contact with an estate that identifies systems by number. In
+[`samples/att/`](../samples/att/README.md) the same Application is
+`ATT-IDP1/network-fault-management/apm10003`, and the ranked table's top row —
+`ATT-IDP5/shared-libraries/apm10133`, 84% of the Catalog in its Blast radius — tells a reader nothing
+at all. A viewer whose entire purpose is "what breaks if X dies" cannot answer it while X is unreadable.
+
+So **`name` is optional in the schema and mandatory in practice whenever `project` is opaque.** The
+viewer labels an Application by `name` when it has one and falls back to the id, and searches both.
+Producers with readable ids lose nothing by omitting it.
+
+`name` is an additive optional key, so this stays schema v1 under the versioning rule below.
 
 ## External
 

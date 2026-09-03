@@ -58,6 +58,10 @@ _Avoid_: assignment, responsibility
 
 ### Exploring
 
+**Tag**:
+The visible handle of a Group: one Attribute value rendered on a row, a card or a canvas node — `Team: Billing Platform`, `Repository: ATT-IDP3/billing-core`, `External · database`. A Tag is not a new relation; it is a Group made reachable. Pointing at one reveals its Group wherever it is on screen; choosing one makes that Attribute the grouping Attribute.
+_Avoid_: chip (in prose; `chip` is the existing CSS and test-id name and stays in code), label, pill, badge, facet
+
 **Center**:
 The Application or External the impact board and the Neighborhood are computed from. Set by selecting from the ranked table, search, a chip, or a canvas. A Channel is never a Center.
 _Avoid_: selection, focus, root, current app
@@ -75,12 +79,16 @@ How many relation hops a Neighborhood or Blast radius extends from the selected 
 _Avoid_: level, radius, hops (in prose)
 
 **Group**:
-A set of Applications sharing one value of the current grouping Attribute. Repository is the default grouping. Applications lacking that Attribute form the Group "No <Attribute>". Values are compared by their string form, case-sensitively: `1` and `"1"` are one Group, `platform` and `Platform` are two; numeric-looking values order numerically. In the Overview a Group is either open, showing its members, or collapsed, standing in for them as one unit.
+A set of Applications sharing one value of one Attribute. Every Attribute value names a Group, whether or not the Overview is currently laid out by it; the **grouping Attribute** is the one the Overview draws boxes for. Repository is the default grouping. Applications lacking that Attribute form the Group "No <Attribute>". Values are compared by their string form, case-sensitively: `1` and `"1"` are one Group, `platform` and `Platform` are two; numeric-looking values order numerically. In the Overview a Group is either open, showing its members, or collapsed, standing in for them as one unit.
 _Avoid_: cluster, compound, folder, namespace, bucket
 
 **Group Dependency**:
 The Dependencies between members of two Groups, shown as one relation between the Groups while either is collapsed.
 _Avoid_: aggregated edge, meta-edge, bundle, summary edge
+
+**Highlight**:
+The transient emphasis of a set of nodes without changing the Center: the Group behind a pointed-at Tag, or the Neighborhood at the header Depth. A Highlight never changes what the board reads, never writes to the URL, and clears when the pointer or focus leaves.
+_Avoid_: selection (that is the Center), filter (that removes rows; a Highlight removes nothing), focus (that is the browser's)
 
 **Overview**:
 The whole Catalog drawn at once: every Application inside its Group, with the Dependencies between them. Secondary to the Neighborhood, which is where a selected Application is read.

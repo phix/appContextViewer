@@ -13,6 +13,11 @@ export type Application = {
   repository: string;
   /** Name within the Repository. No `/`, no whitespace. */
   project: string;
+  /**
+   * Human-readable name, for display and search. Absent whenever the id already reads as one;
+   * present whenever `project` is opaque (docs/schema-v1.md, "When the id names nothing").
+   */
+  name?: string;
   kind?: string;
   team?: string;
   description?: string;
