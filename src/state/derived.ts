@@ -17,8 +17,9 @@ import type {
 import {
   blastRadius,
   buildTagIndex,
+  capGroupDependencies,
   type Group,
-  groupDependencies,
+  groupDependencies as groupEdgesOf,
   groupingAttributes,
   groupBy as groupsFor,
   labelOf,
@@ -138,8 +139,18 @@ export interface OverviewModel {
   /** Every Group under `attribute`; empty while the Overview is collapsed or disabled. */
   readonly groups: readonly Group[];
   readonly open: ReadonlySet<GroupId>;
-  /** Group Dependencies and member edges for the open set; empty with `groups`. */
+  /**
+   * What the Overview DRAWS for the open set: at most `OVERVIEW_DEPENDENCY_CAP` Group Dependencies,
+   * heaviest by count first, plus every member edge (docs/performance-budgets.md, "Overview cap").
+   * Empty with `groups`.
+   */
   readonly edges: readonly GroupEdge[];
+  /** Group Dependencies BEFORE the cap, which is what `capNotice` counts against. */
+  readonly groupDependencies: number;
+  /** Group Dependencies the cap left undrawn; 0 when everything fits. */
+  readonly hiddenGroupDependencies: number;
+  /** The cap notice naming what is not drawn, in the pane cap notice's shape; null when nothing is. */
+  readonly capNotice: string | null;
   /** The Center's Group, or the Groups of an External Center's direct Dependents (docs/center.md, 7). */
   readonly highlighted: readonly GroupId[];
   readonly expandAllDisabled: boolean;
@@ -311,13 +322,16 @@ export function createDerived(s: StoreSignals): Derived {
     const open = s.openGroups.value;
     const active = expanded && !overviewDisabled;
     const groups = active ? groupsFor(graph, attribute) : [];
-    const edges = active ? groupDependencies(graph, groups, open) : [];
+    const drawn = capGroupDependencies(active ? groupEdgesOf(graph, groups, open) : []);
     return {
       expanded,
       attribute,
       groups,
       open,
-      edges,
+      edges: drawn.edges,
+      groupDependencies: drawn.total,
+      hiddenGroupDependencies: drawn.hidden,
+      capNotice: overviewCapNotice(drawn.total, drawn.hidden),
       highlighted: highlightedGroups(s, attribute),
       expandAllDisabled,
       overviewDisabled,
@@ -444,6 +458,20 @@ export function paneNotice(pane: PaneNeighborhood): string | null {
       ? `, and ${pane.hiddenExternals} ${pane.hiddenExternals === 1 ? 'External' : 'Externals'} not drawn`
       : '';
   return `Showing Depth ${pane.depthShown} of ${asked}; ${pane.hiddenApplications} more in the Overview${externals}`;
+}
+
+/**
+ * The Overview's cap notice (docs/performance-budgets.md, "Overview cap"), written in the pane cap
+ * notice's shape and vocabulary above -- "Showing <what is drawn>; <what is not>". It names the cap
+ * as a choice about legibility rather than an apology: the heaviest Group Dependencies are the ones
+ * a reader came for.
+ */
+export function overviewCapNotice(total: number, hidden: number): string | null {
+  if (hidden === 0) {
+    return null;
+  }
+  const drawn = (total - hidden).toLocaleString('en-US');
+  return `Showing the heaviest ${drawn} Group Dependencies of ${total.toLocaleString('en-US')}; ${hidden.toLocaleString('en-US')} not drawn`;
 }
 
 function highlightedGroups(s: StoreSignals, attribute: string): GroupId[] {

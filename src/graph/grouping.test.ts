@@ -5,11 +5,13 @@ import {
   attributeCardinality,
   buildGraph,
   buildTagIndex,
+  capGroupDependencies,
   type GroupEdge,
   groupableAttributes,
   groupBy,
   groupDependencies,
   groupingAttributes,
+  OVERVIEW_DEPENDENCY_CAP,
   qualifiesAsGrouping,
   tagToken,
 } from './index';
@@ -448,5 +450,106 @@ describe('buildTagIndex: tokens on a row, members behind a token', () => {
       }
     }
     expect(counted).toBe(1000);
+  });
+});
+
+describe('capGroupDependencies: the Overview cap (docs/performance-budgets.md, "Overview cap")', () => {
+  /**
+   * `n` Group Dependencies with distinct counts, LIGHTEST first, so a cap that merely truncated the
+   * input in order would keep exactly the wrong ones and these tests would go red.
+   */
+  function ascendingGroupEdges(n: number): GroupEdge[] {
+    return Array.from({ length: n }, (_, i) => ({
+      kind: 'group' as const,
+      from: `repository=g${i}`,
+      to: 'repository=hub',
+      count: i + 1,
+    }));
+  }
+
+  const counts = (edges: readonly GroupEdge[]) =>
+    edges.flatMap((edge) => (edge.kind === 'group' ? [edge.count] : []));
+
+  /**
+   * ON the boundary, not near it, and spelled with LITERALS on both sides: 701 in, 700 out, one
+   * hidden. That is what makes the constant falsifiable rather than asserted through itself --
+   * move `OVERVIEW_DEPENDENCY_CAP` to 699 and the length is wrong, move it to 701 and nothing is
+   * hidden. A fixture sized from the constant would follow it and prove nothing.
+   */
+  it('draws 700 of 701 Group Dependencies and hides the single lightest one', () => {
+    const capped = capGroupDependencies(ascendingGroupEdges(701));
+    expect(capped.edges).toHaveLength(700);
+    expect(capped.total).toBe(701);
+    expect(capped.hidden).toBe(1);
+    // The one dropped is the lightest; the heaviest leads what is drawn.
+    expect(counts(capped.edges)[0]).toBe(701);
+    expect(Math.min(...counts(capped.edges))).toBe(2);
+    expect(
+      capped.edges.some((edge) => edge.kind === 'group' && edge.from === 'repository=g0'),
+    ).toBe(false);
+  });
+
+  /** The other side of the same boundary: 700 exactly fits, so there is nothing to notice. */
+  it('draws all 700 Group Dependencies untouched, and hides none', () => {
+    const edges = ascendingGroupEdges(700);
+    const capped = capGroupDependencies(edges);
+    expect(capped.edges).toEqual(edges);
+    expect(capped.total).toBe(700);
+    expect(capped.hidden).toBe(0);
+  });
+
+  it('is the cap the budgets doc names', () => {
+    expect(OVERVIEW_DEPENDENCY_CAP).toBe(700);
+  });
+
+  it('orders by count descending and keeps first-encounter order among ties', () => {
+    const edges: GroupEdge[] = [
+      { kind: 'group', from: 'a', to: 'b', count: 5 },
+      { kind: 'group', from: 'c', to: 'd', count: 9 },
+      { kind: 'group', from: 'e', to: 'f', count: 5 },
+      { kind: 'group', from: 'g', to: 'h', count: 1 },
+    ];
+    expect(capGroupDependencies(edges, 3).edges).toEqual([edges[1], edges[0], edges[2]]);
+  });
+
+  /**
+   * Member edges are not Group Dependencies: they are drawn only between members of open Groups and
+   * are budget 11's input, not budget 9's. Capping them would silently break Expand all's 4,395.
+   */
+  it('never caps member edges, and keeps them after the Group Dependencies', () => {
+    const members: GroupEdge[] = [
+      { kind: 'member', from: 'A/a1', to: 'A/a2' },
+      { kind: 'member', from: 'A/a2', to: 'B/b1' },
+    ];
+    const capped = capGroupDependencies([...ascendingGroupEdges(701), ...members]);
+    expect(capped.edges.filter((edge) => edge.kind === 'member')).toEqual(members);
+    expect(capped.edges.slice(-2)).toEqual(members);
+    expect(capped.total).toBe(701);
+    expect(capped.hidden).toBe(1);
+  });
+
+  /**
+   * The real input budget 9 was written against, and the reason for the cap: 1,498 Group
+   * Dependencies over 123 Group nodes (docs/performance-budgets.md, "Overview cap"). This asserts
+   * heaviest-first on the actual Catalog rather than on a constructed one -- no drawn edge may be
+   * lighter than any hidden edge.
+   */
+  it('keeps the 700 heaviest of the 1,000-Application Catalog 1,498 Group Dependencies', () => {
+    const thousand = buildGraph(readSampleCatalog('catalog-1000.json'));
+    const groups = groupBy(thousand, 'repository');
+    expect(groups).toHaveLength(123);
+
+    const all = groupDependencies(thousand, groups, new Set());
+    expect(counts(all)).toHaveLength(1498);
+
+    const capped = capGroupDependencies(all);
+    expect(capped.total).toBe(1498);
+    expect(capped.edges).toHaveLength(700);
+    expect(capped.hidden).toBe(798);
+
+    const drawn = new Set(capped.edges);
+    const hiddenCounts = counts(all.filter((edge) => !drawn.has(edge)));
+    expect(hiddenCounts).toHaveLength(798);
+    expect(Math.min(...counts(capped.edges))).toBeGreaterThanOrEqual(Math.max(...hiddenCounts));
   });
 });

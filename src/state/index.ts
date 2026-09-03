@@ -22,7 +22,7 @@ export type {
   RankedModel,
   TagsModel,
 } from './derived';
-export { EXTERNAL_NEEDS_NOTE, paneNotice } from './derived';
+export { EXTERNAL_NEEDS_NOTE, overviewCapNotice, paneNotice } from './derived';
 export type {
   Actions,
   Center,

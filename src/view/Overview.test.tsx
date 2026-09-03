@@ -238,6 +238,9 @@ const OVER_ENVELOPE: OverviewModel = {
   notice: null,
   applications: 1001,
   dependencies: 5400,
+  groupDependencies: 0,
+  hiddenGroupDependencies: 0,
+  capNotice: null,
 };
 
 describe('OverviewControls', () => {
@@ -363,6 +366,33 @@ function positionsFor(spec: OverviewSpec): Positions {
 }
 
 describe('Overview', () => {
+  /**
+   * The cap notice reaching the screen (docs/performance-budgets.md, "Overview cap"). The model is
+   * the demo store's with the two cap fields overridden, because the notice's job here is to be
+   * RENDERED -- what the numbers are is `src/state/derived.test.ts`'s assertion, over the real
+   * 1,000-Application fixture.
+   */
+  it('shows the cap notice the model carries, and nothing when there is none', () => {
+    const { model } = expanded();
+    const capped: OverviewModel = {
+      ...model,
+      groupDependencies: 1498,
+      hiddenGroupDependencies: 798,
+      capNotice: 'Showing the heaviest 700 Group Dependencies of 1,498; 798 not drawn',
+    };
+    const props = { center: null, onToggleGroup: vi.fn(), onSelect: vi.fn() };
+
+    const { layout } = stubLayout();
+    const { rerender } = render(<Overview model={capped} {...props} createLayout={() => layout} />);
+    expect(screen.getByTestId('overview-cap-notice').textContent).toBe(
+      'Showing the heaviest 700 Group Dependencies of 1,498; 798 not drawn',
+    );
+
+    rerender(<Overview model={model} {...props} createLayout={() => layout} />);
+    expect(screen.queryByTestId('overview-cap-notice')).toBeNull();
+    expect(model.capNotice).toBeNull();
+  });
+
   it('shows a progress state with a cancel control until the first layout lands', async () => {
     const { layout, runs } = stubLayout();
     const { model } = expanded();

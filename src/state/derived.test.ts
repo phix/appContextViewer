@@ -8,7 +8,7 @@ import {
   tagToken,
 } from '@/graph';
 import { demoStore, validatedSample } from './fixtures.test-helper';
-import { createStore, EXTERNAL_NEEDS_NOTE, paneNotice } from './index';
+import { createStore, EXTERNAL_NEEDS_NOTE, overviewCapNotice, paneNotice } from './index';
 
 const ORDER_SERVICE = { kind: 'application', id: 'acme/commerce/order-service' } as const;
 const REDIS = { kind: 'external', id: 'redis' } as const;
@@ -293,6 +293,9 @@ describe('overviewModel', () => {
       notice: null,
       applications: 34,
       dependencies: 82,
+      groupDependencies: 0,
+      hiddenGroupDependencies: 0,
+      capNotice: null,
     });
   });
 
@@ -306,6 +309,30 @@ describe('overviewModel', () => {
     expect(model.highlighted).toEqual(['repository=acme/commerce']);
     expect(model.edges.some((edge) => edge.kind === 'group')).toBe(true);
     expect(model.edges.some((edge) => edge.kind === 'member')).toBe(true);
+    // A 34-Application Catalog is nowhere near the cap, so it is drawn whole and says nothing.
+    expect(model.hiddenGroupDependencies).toBe(0);
+    expect(model.capNotice).toBeNull();
+  });
+
+  /**
+   * The Overview cap reaching the view (docs/performance-budgets.md, "Overview cap"). The numbers
+   * are the fixture's real ones, not the constant's: 1,498 Group Dependencies over 123 Repositories
+   * is what budget 9 was unknowingly written against, and 700 of them is what it now draws.
+   */
+  it('caps the 1,000-Application Overview at 700 Group Dependencies, with a notice naming 798', () => {
+    const { catalog, warnings } = validatedSample('catalog-1000.json');
+    const store = createStore({ catalog, warnings });
+    store.actions.expandOverview(true);
+    const model = store.derived.overviewModel.value;
+
+    expect(model.groups).toHaveLength(123);
+    expect(model.groupDependencies).toBe(1498);
+    expect(model.edges).toHaveLength(700);
+    expect(model.edges.every((edge) => edge.kind === 'group')).toBe(true);
+    expect(model.hiddenGroupDependencies).toBe(798);
+    expect(model.capNotice).toBe(
+      'Showing the heaviest 700 Group Dependencies of 1,498; 798 not drawn',
+    );
   });
 
   it('falls none back to Repository while expanded', () => {
@@ -447,5 +474,18 @@ describe('the Center card carries an Applicationâ€™s name, not only an Externalâ
     expect(card?.name).toBeUndefined();
     expect(card?.label).toBe('order-service');
     expect(card?.id).toBe('acme/commerce/order-service');
+  });
+});
+
+describe('overviewCapNotice: the Overview cap notice (docs/performance-budgets.md, "Overview cap")', () => {
+  it('says nothing when every Group Dependency is drawn', () => {
+    expect(overviewCapNotice(1498, 0)).toBeNull();
+    expect(overviewCapNotice(0, 0)).toBeNull();
+  });
+
+  it('names what is drawn and what is not, in the pane cap notice shape', () => {
+    expect(overviewCapNotice(1498, 798)).toBe(
+      'Showing the heaviest 700 Group Dependencies of 1,498; 798 not drawn',
+    );
   });
 });
