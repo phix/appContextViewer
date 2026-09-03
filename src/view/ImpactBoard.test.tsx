@@ -1,0 +1,169 @@
+import { fireEvent, render, screen } from '@testing-library/preact';
+import { describe, expect, it, vi } from 'vitest';
+import { EXTERNAL_NEEDS_NOTE } from '@/state';
+import {
+  DEPTH_MEASURE,
+  ImpactBoard,
+  markDepthStart,
+  markSelectStart,
+  SELECT_MEASURE,
+} from '@/view';
+import { boardOf } from './fixtures.test-helper';
+
+/**
+ * The board over the demo Catalog's real view models (docs/center.md): three columns, both outer
+ * ones banded by Depth, chips and rows selecting, and the External Center's single Needs line that
+ * keeps the column's place.
+ */
+
+function noop() {
+  /* the test does not care */
+}
+
+function renderBoard(props: Partial<Parameters<typeof ImpactBoard>[0]>) {
+  const model = props.model ?? boardOf({ kind: 'application', id: 'acme/commerce/order-service' });
+  return render(<ImpactBoard onSelect={noop} {...props} model={model} />);
+}
+
+/** The band structure of one column, as "depth:rows" pairs. */
+function bandsOf(column: 'Needs' | 'Breaks'): string[] {
+  return screen
+    .getAllByTestId('board-band')
+    .filter((band) => band.dataset.column === column)
+    .map((band) => `${band.dataset.depth}:${band.querySelectorAll('li').length}`);
+}
+
+function rowsOf(column: 'Needs' | 'Breaks'): HTMLElement[] {
+  return screen.getAllByTestId('board-row').filter((row) => row.dataset.column === column);
+}
+
+/** Two frames: the board stamps its paint on the second one. */
+function afterPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
+
+describe('ImpactBoard', () => {
+  it('bands Needs and Breaks by Depth for an Application Center', () => {
+    renderBoard({ model: boardOf({ kind: 'application', id: 'acme/commerce/order-service' }) });
+
+    // The demo Catalog at the default Depth 2: what order-service needs, and what breaks with it.
+    expect(bandsOf('Needs')).toEqual(['1:7', '2:8']);
+    expect(bandsOf('Breaks')).toEqual(['1:2', '2:4']);
+    expect(screen.getByTestId('board-breaks-count').textContent).toBe('6');
+  });
+
+  it('lays the three columns out in order, Needs then the Center then Breaks', () => {
+    renderBoard({});
+
+    const board = screen.getByTestId('impact-board');
+    expect([...board.children].map((child) => (child as HTMLElement).dataset.testid)).toEqual([
+      'board-needs',
+      'center-panel',
+      'board-breaks',
+    ]);
+  });
+
+  it('gives an Application row its Repository and Team chips', () => {
+    renderBoard({});
+
+    const row = rowsOf('Breaks').find(
+      (candidate) =>
+        candidate.querySelector('[data-testid="board-link"]')?.getAttribute('data-id') ===
+        'acme/platform-core/api-gateway',
+    );
+    expect(row).toBeTruthy();
+    const chips = [...(row?.querySelectorAll('[data-testid="board-chip"]') ?? [])].map(
+      (chip) => `${(chip as HTMLElement).dataset.chip}=${chip.textContent}`,
+    );
+    expect(chips).toEqual(['repository=acme/platform-core', 'team=platform']);
+  });
+
+  it('gives an External in the Needs column its kind chip (docs/center.md, decision 3)', () => {
+    renderBoard({});
+
+    const externals = rowsOf('Needs').filter((row) => row.dataset.kind === 'external');
+    expect(externals.length).toBeGreaterThan(0);
+    const chips = externals.map(
+      (row) => row.querySelector('[data-testid="board-chip"]')?.textContent,
+    );
+    expect(chips).toContain('External · database');
+  });
+
+  it('selects the node when the row is clicked', () => {
+    const onSelect = vi.fn();
+    renderBoard({ onSelect });
+
+    const link = screen
+      .getAllByTestId('board-link')
+      .find((candidate) => candidate.dataset.id === 'acme/platform-core/api-gateway');
+    fireEvent.click(link as HTMLElement);
+
+    expect(onSelect).toHaveBeenCalledWith({
+      kind: 'application',
+      id: 'acme/platform-core/api-gateway',
+    });
+  });
+
+  it('selects the same node when one of its chips is clicked', () => {
+    const onSelect = vi.fn();
+    renderBoard({ onSelect });
+
+    const row = rowsOf('Needs').find((candidate) => candidate.dataset.kind === 'external');
+    const chip = row?.querySelector('[data-testid="board-chip"]');
+    const id = row?.querySelector('[data-testid="board-link"]')?.getAttribute('data-id');
+    fireEvent.click(chip as Element);
+
+    expect(onSelect).toHaveBeenCalledWith({ kind: 'external', id });
+  });
+
+  it('holds one line in the Needs column for an External Center, without moving the columns', () => {
+    renderBoard({ model: boardOf({ kind: 'external', id: 'redis' }) });
+
+    const board = screen.getByTestId('impact-board');
+    // Decision 5: the Needs column keeps its place, so the layout never shifts.
+    expect([...board.children].map((child) => (child as HTMLElement).dataset.testid)).toEqual([
+      'board-needs',
+      'center-panel',
+      'board-breaks',
+    ]);
+    expect(screen.getByTestId('board-note').textContent).toBe(EXTERNAL_NEEDS_NOTE);
+    expect(bandsOf('Needs')).toEqual([]);
+    // The Breaks column is banded by Depth as usual: redis has 10 direct Dependents in the demo.
+    expect(bandsOf('Breaks')).toEqual(['1:10', '2:10']);
+  });
+
+  it('measures a selection to the board painted (budget 5)', async () => {
+    performance.clearMarks();
+    performance.clearMeasures();
+
+    markSelectStart();
+    renderBoard({});
+    await afterPaint();
+
+    expect(performance.getEntriesByName(SELECT_MEASURE)).toHaveLength(1);
+    expect(performance.getEntriesByName(SELECT_MEASURE)[0].duration).toBeGreaterThanOrEqual(0);
+  });
+
+  it('measures a Depth change to the board repainted (budget 6)', async () => {
+    performance.clearMarks();
+    performance.clearMeasures();
+
+    const { rerender } = renderBoard({});
+    await afterPaint();
+    // Only the interaction starts a stopwatch, so the first paint measures nothing.
+    expect(performance.getEntriesByName(DEPTH_MEASURE)).toHaveLength(0);
+
+    markDepthStart();
+    rerender(
+      <ImpactBoard
+        model={boardOf({ kind: 'application', id: 'acme/commerce/order-service' }, 3)}
+        onSelect={noop}
+      />,
+    );
+    await afterPaint();
+
+    expect(performance.getEntriesByName(DEPTH_MEASURE)).toHaveLength(1);
+  });
+});
