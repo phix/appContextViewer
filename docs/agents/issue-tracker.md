@@ -5,7 +5,7 @@ Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all op
 ## Conventions
 
 - **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
-- **Read an issue**: `gh issue view <number> --comments`, filtering comments by `jq` and also fetching labels.
+- **Read an issue**: `gh issue view <number>` for the body and labels, then `gh api repos/<owner>/<repo>/issues/<number>/comments --jq '.[] | "\(.user.login): \(.body)"'` for the comments. **Do not pass `--comments`** — see Traps.
 - **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
 - **Comment on an issue**: `gh issue comment <number> --body "..."`
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
@@ -19,7 +19,7 @@ Infer the repo from `git remote -v` — `gh` does this automatically when run in
 
 When set to `yes`, PRs run through the same labels and states as issues, using the `gh pr` equivalents:
 
-- **Read a PR**: `gh pr view <number> --comments` and `gh pr diff <number>` for the diff.
+- **Read a PR**: `gh pr view <number>` plus `gh api repos/<owner>/<repo>/issues/<number>/comments` for the conversation (PRs share the issue comment endpoint), and `gh pr diff <number>` for the diff.
 - **List external PRs for triage**: `gh pr list --state open --json number,title,body,labels,author,authorAssociation,comments` then keep only `authorAssociation` of `CONTRIBUTOR`, `FIRST_TIME_CONTRIBUTOR`, or `NONE` (drop `OWNER`/`MEMBER`/`COLLABORATOR`).
 - **Comment / label / close**: `gh pr comment`, `gh pr edit --add-label`/`--remove-label`, `gh pr close`.
 
@@ -31,7 +31,12 @@ Create a GitHub issue.
 
 ## When a skill says "fetch the relevant ticket"
 
-Run `gh issue view <number> --comments`.
+Run `gh issue view <number>`, then read its comments with `gh api repos/<owner>/<repo>/issues/<number>/comments`.
+
+## Traps
+
+- **`gh issue view <number> --comments` prints nothing and exits 0** on gh 2.97.0. It is the `gh` build, not a wrapper: `rtk proxy gh issue view --comments` is empty too, and redirecting it to a file gives 0 bytes. An agent reading a ticket body as its spec therefore gets *nothing* and may invent the spec, so every read of an issue's comments goes through `gh api repos/<owner>/<repo>/issues/<number>/comments`.
+- **`gh pr checks <number>` fabricates counts.** It reported 9 passed / 0 failed / 12 pending for a commit with exactly two check runs, both `completed success`. Read a PR's status with `gh api repos/<owner>/<repo>/commits/<sha>/check-runs --jq '.check_runs[] | {name, status, conclusion}'`.
 
 ## Wayfinding operations
 
