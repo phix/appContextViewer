@@ -6,3 +6,5 @@ dist/
 playwright-report/
 test-results/
 e2e/.fixtures/
+.vercel
+.env*

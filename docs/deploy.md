@@ -12,8 +12,43 @@ Everything an agent can prepare is committed: [`vercel.json`](../vercel.json),
 What is left is the part that needs a signed-in human in the Vercel dashboard, and that is this
 runbook.
 
-**Production URL:** _not deployed yet — filled in by
-[issue #29](https://github.com/phix/appContextViewer/issues/29) once the project exists._
+**Production URL:** <https://appcontextviewer.vercel.app> — live, public, serving the bundled
+sample Catalog. Project `appcontextviewer` (`prj_fISpmuxYKxTxSAkgsL1i4iRTy6XK`) on team
+`1337-software`, Git-connected to `phix/appContextViewer` with production branch `main`.
+
+## Verified against the live project (2026-09-02)
+
+Everything above this line was research until the project existed. These are the facts as the live
+API reports them, and where the runbook below was written from documentation, this section says
+whether reality agreed.
+
+| claim | as measured |
+| --- | --- |
+| team and plan | `1337-software`, **hobby** — so every Hobby caveat below applies |
+| the three `vercel.json` settings survive import | framework **Vite**, build `npm run build`, output `dist`, all three live |
+| Node version | **24.x**, taken from `engines` with no dashboard edit |
+| production branch | `main` |
+| a build with no `CATALOG_URL` | log ends `fetch-catalog: CATALOG_URL is unset, so no Catalog is placed beside the viewer.` — the exact line step 4 predicts |
+| build time | 11 fetch-script tests pass, `vite build` in 133 ms, deployment Ready in 13 s |
+| Vercel Authentication | on, `deploymentType: all_except_custom_domains`; password protection is off (it is the paid add-on) |
+
+**The Hobby protection boundary, measured rather than inferred.** With Vercel Authentication on, an
+unauthenticated request to the **deployment URL** `appcontextviewer-<hash>-1337-software.vercel.app`
+answers **302 to `vercel.com/sso-api`**, while the same request to the **production alias**
+`appcontextviewer.vercel.app` answers **200 with the page**. So protection covers previews and
+per-deployment URLs, and the production alias is public — which is what makes the scoping rule in
+step 5 load-bearing rather than cautious: on Hobby, `CATALOG_URL` and `CATALOG_TOKEN` belong to
+**Preview only**, because a Production-scoped Catalog would be readable by anyone with the alias.
+
+**One live warning the docs did not predict.** The build log says `"engines": { "node": ">=24" }`
+*will automatically upgrade when a new major Node.js Version is released*. An open range means a
+future Node 26 silently becomes the build runtime. That is fine today and worth pinning the day a
+build breaks for no reason anyone changed.
+
+**Creating the project needs the CLI, not the MCP server.** The Vercel MCP connection can read
+teams and projects but answers **403 `forbidden`** on project creation and **404** on the
+deployment-protection endpoint. `vercel link --yes --scope 1337-software --project appcontextviewer`,
+signed in as `phix-4747`, created the project *and* connected the GitHub repository in one step.
 
 ## What is already decided in the repository
 
@@ -42,7 +77,13 @@ the build" below.
 
 ## Runbook: create the project (once)
 
-Account: team **`1337-software`**, user **`phix-4747`**. No project exists yet.
+Account: team **`1337-software`**, user **`phix-4747`**. **This has been done** — steps 1 to 4 are
+recorded here for the next environment, and their outcomes are in the table above. The one-command
+equivalent of steps 1 and 3, which is what was actually run:
+
+```bash
+vercel link --yes --scope 1337-software --project appcontextviewer
+```
 
 1. **Import the repository.** Vercel dashboard → the `1337-software` team → **Add New… → Project**
    → **Import Git Repository** → `phix/appContextViewer`. If the repository is not listed, use
