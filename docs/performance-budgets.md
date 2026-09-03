@@ -21,7 +21,7 @@ Resolves [Set performance budgets to 1,000 apps](https://github.com/phix/appCont
 | 6 | **Depth change** in the header to the impact board repainted | <= 100 ms | browser |
 | 7 | **Search**: one keystroke to results over 1,000 ids and every scalar Attribute | <= 50 ms | Vitest or browser |
 | 8 | **Canvas hover** highlight | <= 50 ms | browser |
-| 9 | **Overview, collapsed**: 123 Group nodes with Group Dependencies laid out (elk in a worker) and painted, **at most 800 Group Dependencies drawn** | <= 750 ms | browser |
+| 9 | **Overview, collapsed**: 123 Group nodes with Group Dependencies laid out (elk in a worker) and painted, **at most 700 Group Dependencies drawn** | <= 750 ms | browser |
 | 10 | **Overview, one Group opened or closed**: re-layout done and painted | <= 1.5 s | browser |
 | 11 | **Overview, Expand all**: 1,000 compound nodes laid out in the worker | <= 10 s, with a progress state, cancelable, main thread stays interactive throughout | browser |
 | 12 | **Animation** of Overview nodes to new positions | 300 ms, fixed | design constant |
@@ -102,7 +102,7 @@ research's "582 to 791 ms for the densest 150-node Neighborhood" independently.
 
 **Pane cap: 150 nodes and 350 Dependencies, whichever binds first, and Groups are drawn only under the Dependency cap.** dagre's time follows edge count, not node count: measured on the 1,000-Application fixture, 110 nodes at 240 Dependencies lays out in 92 ms with Groups, while 130 nodes at 507 Dependencies takes 337 ms and the densest 150-node Neighborhood takes 582 to 791 ms. A node-only cap therefore admits a threefold spread in layout time and cannot hold budget 3 with Group boxes drawn. So the pane counts both: it draws the largest Depth whose Neighborhood fits **150 nodes and 350 Dependencies**, and above the Dependency figure it drops the Group boxes and lays the Neighborhood out flat, which costs about 40% less. Switching engines does not help and is not the answer: elk measured **slower** than dagre at the cap (874 ms against 678 ms) and would put a 458 KB lazy chunk and a worker hop on the pane's critical path; the engine stays dagre, per the [layout research](./research/cytoscape-layouts.md) and the measurements in [PR #34](https://github.com/phix/appContextViewer/pull/34). The pane holds at most **150 nodes** (Applications and Externals together). When the Neighborhood at the header Depth exceeds the cap, the pane draws the largest Depth that fits (2 falls to 1, 3 to 2) and says so: "Showing Depth 1 of 2; 431 more in the Overview", with the Overview one click away. When even Depth 1 exceeds the cap, as it does for an External with 197 Dependents, the pane draws the Center alone and says "197 Dependents, more than the pane can draw; see the Breaks column". The impact board columns keep the full header Depth; they are lists and hold 700 rows. At 1,000 Applications roughly 45% of Depth-2 Neighborhoods fall back to Depth 1 this way; 33% exceed 200 nodes and 59% exceed 100, which is why the cap sits at 150.
 
-**Overview cap: 800 Group Dependencies, heaviest first, with a notice.** elk's cost is superlinear
+**Overview cap: 700 Group Dependencies, heaviest first, with a notice.** elk's cost is superlinear
 in *edges*, not nodes — the same shape this document already records for dagre and the pane. Measured
 on the 1,000-Application fixture at a fixed 123 Group nodes: 9 ms at 0 Group Dependencies, 48 ms at
 200, 126 ms at 350, 190 ms at 500, 565 ms at 750, and **2,783 ms at the full 1,498**. Budget 9 was
@@ -114,6 +114,26 @@ is a hairball — drawing every one of them costs 2.3 seconds to produce a pictu
 Keeping the heaviest 800 and naming the rest in a notice is what the pane's cap already does, for the
 same reason, and it makes the Overview *more* legible, not less. Had the budget held at 1,498 edges
 the cap would still be worth having.
+
+**The cap was first set at 800 and that was wrong, for a reason worth recording.** The curve above —
+"565 ms at 750 edges" — was measured on an **arbitrary** subset of the Group Dependencies, and the
+same ruling then chose to keep the **heaviest** ones. Those are not the same input: heaviest-first
+concentrates edges on hub Groups, and elk costs more for the same count. Measured both ways at 123
+nodes:
+
+| Group Dependencies kept | heaviest first | first encountered |
+|---|---|---|
+| 700 | 584 ms | — |
+| 750 | 614 ms | 537 ms |
+| 800 | **764 ms** | 702 ms |
+
+The 565 ms figure tracks the right-hand column. At 800 heaviest-first the elk half alone is 764 ms —
+over the whole 750 ms budget before a pixel is painted, and budget 9 measured 832 ms end to end. **A
+number read off a curve that does not describe the rule you adopted is not a measurement**, which is
+the same mistake as setting a budget without counting its input, one level up. The cap is **700**,
+where budget 9 measures 651 ms end to end. Keeping the heaviest 700 of 1,498 rather than the heaviest
+800 costs almost nothing: both are "a bit under half", and the edges dropped are the lightest either
+way.
 
 **Switching engines is not the answer here either, and it was measured.** dagre is worse at the same
 input (6,249 ms) and **throws** on the compound shape Expand all needs. No `elk.layered` option gets

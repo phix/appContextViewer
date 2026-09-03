@@ -13,7 +13,14 @@ export default defineConfig({
   testMatch: /.*\.spec\.ts$/,
   // Files run serially in one worker on CI so the timed budgets are not skewed by contention.
   fullyParallel: false,
-  workers: process.env.CI ? 1 : undefined,
+  // One worker everywhere, not just on CI. Half of this suite asserts a *duration*, and parallel
+  // files contend for the same cores, so a timed budget measured beside three other specs is
+  // measuring the machine's load rather than the code. That contention is what made budgets 3, 4
+  // and 6 fail intermittently in whole-suite runs while passing file by file — the most misleading
+  // shape a test can have, because "it passes when I run it alone" reads as flake rather than as
+  // the harness telling the truth about a loaded box. The suite runs in well under a minute
+  // serially, which is a cheap price for a timing assertion that means something.
+  workers: 1,
   forbidOnly: !!process.env.CI,
   retries: 0,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : [['list']],
