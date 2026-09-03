@@ -69,20 +69,32 @@ subscriber, `partner.settlement.due` the reverse.
   all; `apm10133` has no
   `team`, `apm10136` has no `kind`.
 - **Groupable Attributes** the menu will discover: `org`, `portfolio`, `businessUnit`, `tier`,
-  `lifecycle`, `hosting`, `language`, `cpni`, `pci`, `sox`, and `appName`.
+  `lifecycle`, `hosting`, `language`, `cpni`, `pci`, and `sox`. Ten keys, all of them plausible
+  groupings — see the note below on the one that was not.
 - **Externals of every convention kind** plus `search` and `secrets`, weighted the way a telecom
   estate is: the event bus has 57 Dependents, the fulfilment database 22.
 
-## The cost of the naming rule, stated plainly
+## The cost of the naming rule, and what it changed in the schema
 
-The ranked table now reads `ATT-IDP5/shared-libraries/apm10133`, not `Common Logging Library`. The
-id no longer carries meaning, so **the impact-first view is unreadable without a second lookup** —
-which is what `index.att.json` is for, and what `attributes.appName` restores inside the viewer
-(search finds "Fault Correlation" and resolves it to `apm10003`; verified against the built app).
+The ranked table would read `ATT-IDP5/shared-libraries/apm10133`, not `Common Logging Library`: the id
+no longer carries meaning, so **the impact-first view is unreadable without a second lookup**. That is
+what `index.att.json` is for.
 
-Two things follow, neither of them fixed here:
+Inside the viewer it is fixed at the source. This fixture is why schema v1 gained an optional
+**`name`** on an Application ([`docs/schema-v1.md`](../../docs/schema-v1.md), "When the id names
+nothing"): an External always had one, an Application never did, because the id *was* the name. The
+viewer labels by `name` and falls back to the id, and searches both, so the table reads
+`Common Logging Library` with the id beside it.
 
-1. **The board and the ranked table still label rows by id.** They could label by
-   `attributes.appName` and fall back to the id. That is a product decision, not a data one.
-2. **`appName` is a groupable Attribute with 139 distinct values**, so it will appear in the
-   group-by menu as a useless grouping. Worth a rule that hides near-unique keys from that menu.
+**The workaround this replaced is worth recording, because it caused a second defect.** Before `name`
+existed, the generator smuggled the readable name into `attributes.appName` — the only place the
+schema allowed free-form data that search would reach. It worked, and it produced a **139-value
+scalar Attribute over 141 Applications**, which the group-by menu offered as a grouping: 139 Groups
+of one. That forced the cardinality rule now in [`docs/tags.md`](../../docs/tags.md) — an Attribute
+qualifies as a grouping when it has at least two values and at most half as many values as the
+Applications carrying it.
+
+`appName` is gone from this fixture, so **nothing here exercises that rule in the failing direction
+any more**; the tests that pin it reconstruct `appName` over these same 141 records, and use
+`catalog.demo.json`'s `pci` for the exact boundary. A fixture that fails the rule outright would be
+better than a reconstruction.
