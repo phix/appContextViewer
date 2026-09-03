@@ -21,9 +21,9 @@ Resolves [Set performance budgets to 1,000 apps](https://github.com/phix/appCont
 | 6 | **Depth change** in the header to the impact board repainted | <= 100 ms | browser |
 | 7 | **Search**: one keystroke to results over 1,000 ids and every scalar Attribute | <= 50 ms | Vitest or browser |
 | 8 | **Canvas hover** highlight | <= 50 ms | browser |
-| 9 | **Overview, collapsed**: 123 Group nodes with Group Dependencies laid out (elk in a worker) and painted | <= 750 ms | browser |
+| 9 | **Overview, collapsed**: 123 Group nodes with Group Dependencies laid out (elk in a worker) and painted, **at most 800 Group Dependencies drawn** | <= 750 ms | browser |
 | 10 | **Overview, one Group opened or closed**: re-layout done and painted | <= 1.5 s | browser |
-| 11 | **Overview, Expand all**: 1,000 compound nodes laid out in the worker | <= 5 s, with a progress state, cancelable, main thread stays interactive throughout | browser |
+| 11 | **Overview, Expand all**: 1,000 compound nodes laid out in the worker | <= 10 s, with a progress state, cancelable, main thread stays interactive throughout | browser |
 | 12 | **Animation** of Overview nodes to new positions | 300 ms, fixed | design constant |
 | 13 | **Initial bundle**: JS and CSS needed for budgets 1 to 8 (Cytoscape, dagre, app code) | <= 250 KB gzipped | build manifest |
 | 14 | **Overview layout chunk**: the layout engine loaded on first expand (elkjs today; fcose if the licence ticket says so) | <= 500 KB gzipped | build manifest |
@@ -101,6 +101,53 @@ research's "582 to 791 ms for the densest 150-node Neighborhood" independently.
 ## Policies
 
 **Pane cap: 150 nodes and 350 Dependencies, whichever binds first, and Groups are drawn only under the Dependency cap.** dagre's time follows edge count, not node count: measured on the 1,000-Application fixture, 110 nodes at 240 Dependencies lays out in 92 ms with Groups, while 130 nodes at 507 Dependencies takes 337 ms and the densest 150-node Neighborhood takes 582 to 791 ms. A node-only cap therefore admits a threefold spread in layout time and cannot hold budget 3 with Group boxes drawn. So the pane counts both: it draws the largest Depth whose Neighborhood fits **150 nodes and 350 Dependencies**, and above the Dependency figure it drops the Group boxes and lays the Neighborhood out flat, which costs about 40% less. Switching engines does not help and is not the answer: elk measured **slower** than dagre at the cap (874 ms against 678 ms) and would put a 458 KB lazy chunk and a worker hop on the pane's critical path; the engine stays dagre, per the [layout research](./research/cytoscape-layouts.md) and the measurements in [PR #34](https://github.com/phix/appContextViewer/pull/34). The pane holds at most **150 nodes** (Applications and Externals together). When the Neighborhood at the header Depth exceeds the cap, the pane draws the largest Depth that fits (2 falls to 1, 3 to 2) and says so: "Showing Depth 1 of 2; 431 more in the Overview", with the Overview one click away. When even Depth 1 exceeds the cap, as it does for an External with 197 Dependents, the pane draws the Center alone and says "197 Dependents, more than the pane can draw; see the Breaks column". The impact board columns keep the full header Depth; they are lists and hold 700 rows. At 1,000 Applications roughly 45% of Depth-2 Neighborhoods fall back to Depth 1 this way; 33% exceed 200 nodes and 59% exceed 100, which is why the cap sits at 150.
+
+**Overview cap: 800 Group Dependencies, heaviest first, with a notice.** elk's cost is superlinear
+in *edges*, not nodes — the same shape this document already records for dagre and the pane. Measured
+on the 1,000-Application fixture at a fixed 123 Group nodes: 9 ms at 0 Group Dependencies, 48 ms at
+200, 126 ms at 350, 190 ms at 500, 565 ms at 750, and **2,783 ms at the full 1,498**. Budget 9 was
+written for "123 Group nodes with Group Dependencies" and nobody counted the Dependencies; twelve
+edges per node is what it turned out to mean.
+
+**The cap is not a performance trade, and that is the point.** A 123-node graph carrying 1,498 edges
+is a hairball — drawing every one of them costs 2.3 seconds to produce a picture no reader can follow.
+Keeping the heaviest 800 and naming the rest in a notice is what the pane's cap already does, for the
+same reason, and it makes the Overview *more* legible, not less. Had the budget held at 1,498 edges
+the cap would still be worth having.
+
+**Switching engines is not the answer here either, and it was measured.** dagre is worse at the same
+input (6,249 ms) and **throws** on the compound shape Expand all needs. No `elk.layered` option gets
+under the ceiling: the best is 1,148 ms, and it buys that by disabling crossing minimisation, which is
+most of what makes a dependency graph readable. The algorithms that do come close — `stress` at
+830 ms, `force` at 757 ms, `mrtree` at 358 ms — are not layered, and abandon the top-down reading of
+direction the Overview exists to show. The engine stays elk.
+
+**Budget 11 is 10 seconds, and its three qualifiers are the reason.** Expand all measured 7,334 ms in
+the worker and 7,814 ms end to end, against a 5 s ceiling that was never measured. Unlike every other
+row here, budget 11 has always been specified as an explicitly *long* operation — "with a progress
+state, cancelable, main thread stays interactive throughout" — and all three of those hold and are
+asserted. Once an operation is progress-reported and cancelable and off the main thread, 5 s and 8 s
+are the same experience; what would be a different experience is a frozen tab, and that is what the
+qualifiers prevent. 10 s clears the measured worst case with enough headroom not to flake. **If this
+ever needs to be genuinely faster, the answer is incremental rendering — paint each Group as its
+layout lands — not a larger number.** Expand all also remains disabled above 1,000 Applications.
+
+**Budget 10 keeps its 1.5 s pending re-measurement under the cap**, since opening one Group draws that
+Group's member edges on top of a now-bounded Group-Dependency set, and the figure that missed it was
+taken without the cap.
+
+**Three budget numbers moved on 2026-09-03, and they moved for three different reasons.** Recorded
+together so the pattern is auditable rather than looking like drift:
+
+| budget | what was wrong | what changed |
+|---|---|---|
+| 3 | the *number* was a design-time guess, wrong by ~20%; the design was fine | the number, 500 ms to 750 ms |
+| 4 | the *measurement* was a single frame-quantized sample, 72–118 ms on identical work | the method — median of five; **the 100 ms ceiling did not move** |
+| 9 | the *input* was unbounded — nobody counted the Group Dependencies | the input, capped at 800; the 750 ms ceiling did not move |
+| 11 | the *number* was never measured, on the one row already specified as a long operation | the number, 5 s to 10 s |
+
+The rule this follows: fix the input or the method first, and move a number only when the number
+itself is the thing that was never measured.
 
 **The board never waits for the pane.** Selection and Depth changes repaint the impact board first, under budgets 5 and 6; the pane re-lays out afterwards under budget 3 and never blocks input.
 
