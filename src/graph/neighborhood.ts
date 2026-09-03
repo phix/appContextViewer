@@ -74,6 +74,8 @@ export interface PaneNeighborhood extends Neighborhood {
 
 /** The pane's node cap, Applications and Externals together (docs/performance-budgets.md). */
 export const PANE_CAP = 150;
+/** The pane's Dependency cap; dagre's cost follows edges more closely than nodes. */
+export const PANE_DEPENDENCY_CAP = 350;
 
 export function neighborhood(
   graph: Graph,
@@ -94,6 +96,7 @@ export function paneNeighborhood(
   center: CenterRef,
   depth: number,
   cap: number = PANE_CAP,
+  dependencyCap: number = PANE_DEPENDENCY_CAP,
 ): PaneNeighborhood {
   const origin = resolveCenter(graph, center);
   const reached = reach(graph, origin, depth, 'both');
@@ -112,11 +115,12 @@ export function paneNeighborhood(
     total += count;
     upTo.push(total);
   }
-  if (total <= cap) {
+  const full = assemble(graph, origin, depth, 'both', reached, depth);
+  if (total <= cap && full.dependencies.length <= dependencyCap) {
     // Everything within the asked Depth fits, so that Depth is shown, whether or not the reach
     // extends that far (an unbounded Depth included).
     return {
-      ...assemble(graph, origin, depth, 'both', reached, depth),
+      ...full,
       depthShown: depth,
       hidden: 0,
       hiddenApplications: 0,
@@ -124,16 +128,22 @@ export function paneNeighborhood(
     };
   }
   let depthShown = 0;
+  let shown = assemble(graph, origin, depth, 'both', reached, 0);
   for (let d = upTo.length - 1; d > 0; d--) {
     if (upTo[d] <= cap) {
+      const candidate = assemble(graph, origin, depth, 'both', reached, d);
+      if (candidate.dependencies.length > dependencyCap) {
+        continue;
+      }
       depthShown = d;
+      shown = candidate;
       break;
     }
   }
   const hiddenApplications = countBeyond(reached.applications, depthShown);
   const hiddenExternals = countBeyond(reached.externals, depthShown);
   return {
-    ...assemble(graph, origin, depth, 'both', reached, depthShown),
+    ...shown,
     depthShown,
     hidden: hiddenApplications + hiddenExternals,
     hiddenApplications,

@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import demoCatalog from '../../samples/catalog.demo.json';
 import { readSampleCatalog } from './fixtures.test-helper';
-import { buildGraph, type Neighborhood, neighborhood, PANE_CAP, paneNeighborhood } from './index';
+import {
+  buildGraph,
+  type Neighborhood,
+  neighborhood,
+  PANE_CAP,
+  PANE_DEPENDENCY_CAP,
+  paneNeighborhood,
+} from './index';
 
 const demo = buildGraph(demoCatalog);
 const thousand = buildGraph(readSampleCatalog('catalog-1000.json'));
@@ -208,7 +215,7 @@ describe('paneNeighborhood: the 150-node cap and its Depth fallback', () => {
     expect(paneNeighborhood(demo, 'redis', 1, 11).depthShown).toBe(1);
   });
 
-  it('never exceeds the cap for any Application or External at 1,000 Applications', () => {
+  it('never exceeds either cap for any Application or External at 1,000 Applications', () => {
     const centers = [
       ...[...thousand.applications.keys()].map((id) => ({ kind: 'application' as const, id })),
       ...[...thousand.externals.keys()].map((id) => ({ kind: 'external' as const, id })),
@@ -219,13 +226,29 @@ describe('paneNeighborhood: the 150-node cap and its Depth fallback', () => {
       for (const depth of [2, 3]) {
         const pane = paneNeighborhood(thousand, center, depth);
         expect(nodeCount(pane), `${center.id} at Depth ${depth}`).toBeLessThanOrEqual(150);
+        expect(pane.dependencies.length, `${center.id} at Depth ${depth}`).toBeLessThanOrEqual(
+          PANE_DEPENDENCY_CAP,
+        );
         expect(pane.depthShown).toBeLessThanOrEqual(depth);
         if (depth === 2 && pane.depthShown < depth) fallbacks++;
       }
     }
-    // docs/performance-budgets.md: roughly 45% of Depth-2 Neighborhoods fall back at this size.
-    expect(fallbacks / centers.length).toBeGreaterThan(0.35);
-    expect(fallbacks / centers.length).toBeLessThan(0.55);
+    // The earlier node-only cap caused roughly 45% to fall back; the Dependency cap intentionally
+    // catches an additional edge-dense slice of the fixture.
+    expect(fallbacks / centers.length).toBeGreaterThan(0.55);
+    expect(fallbacks / centers.length).toBeLessThan(0.7);
+  });
+
+  it('falls back when the Dependency cap binds before the node cap', () => {
+    const centers = [...thousand.applications.keys()];
+    const id = centers.find((candidate) => {
+      const full = neighborhood(thousand, candidate, { depth: 2, direction: 'both' });
+      return nodeCount(full) <= PANE_CAP && full.dependencies.length > PANE_DEPENDENCY_CAP;
+    });
+    expect(id).toBeDefined();
+    const pane = paneNeighborhood(thousand, id as string, 2);
+    expect(pane.depthShown).toBeLessThan(2);
+    expect(pane.dependencies.length).toBeLessThanOrEqual(PANE_DEPENDENCY_CAP);
   });
 
   it('keeps hidden plus shown equal to the full Neighborhood', () => {

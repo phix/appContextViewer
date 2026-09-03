@@ -162,6 +162,15 @@ describe('paneModel', () => {
     const pane = store.derived.paneModel.value;
     expect(pane).toMatchObject(paneNeighborhood(store.graph.value, ORDER_SERVICE, 2));
     expect(pane?.notice).toBeNull();
+    expect(pane?.grouping).toBe('repository');
+    expect(pane?.nodes.find((node) => node.id === ORDER_SERVICE.id)).toMatchObject({
+      label: 'order-service',
+      depth: 0,
+      group: 'repository=acme/commerce',
+    });
+    expect(pane?.groups.find((group) => group.id === 'repository=acme/commerce')).toMatchObject({
+      label: 'acme/commerce',
+    });
   });
 
   it('says how many more appear in the Overview when a Depth falls back', () => {

@@ -19,6 +19,7 @@ import {
   ImpactBoard,
   markDepthStart,
   markSelectStart,
+  NeighborhoodPane,
   Picker,
   RankedTable,
   Report,
@@ -120,6 +121,7 @@ export function App({ store }: AppProps) {
   const notice = store.notice.value;
   const board = store.derived.board.value;
   const channelCard = store.derived.channelCardModel.value;
+  const pane = store.derived.paneModel.value;
 
   return (
     <div class="shell" data-testid="shell">
@@ -154,6 +156,13 @@ export function App({ store }: AppProps) {
       <main class="shell__main">
         {board === null ? null : (
           <ImpactBoard model={board} onSelect={select} onClear={() => store.actions.select(null)} />
+        )}
+        {pane === null ? null : (
+          <NeighborhoodPane
+            model={pane}
+            onSelect={select}
+            onExpandOverview={() => store.actions.expandOverview(true)}
+          />
         )}
         <RankedTable
           model={store.derived.ranked.value}

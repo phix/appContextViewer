@@ -31,6 +31,14 @@ export {
   SELECT_MARK,
   SELECT_MEASURE,
 } from './ImpactBoard';
+export {
+  NeighborhoodPane,
+  type NeighborhoodPaneProps,
+  PANE_LAYOUT_MARK,
+  PANE_PAINT_MARK,
+  PANE_PAINT_MEASURE,
+  paneRenderOf,
+} from './NeighborhoodPane';
 export { Picker, type PickerProps } from './Picker';
 export { chipText, FIRST_PAGE, RankedTable, type RankedTableProps } from './RankedTable';
 export {
