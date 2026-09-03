@@ -18,15 +18,15 @@ had no CSS at all.
 
 | what | value (verified this session) |
 |---|---|
-| `main` | `4ccb8a6`, clean, in sync with `origin/main` |
-| `npm run check` | green: Biome, tsc, test-file claims, binary gate, **508 unit tests in 37 files**, build, bundle, licences, notices |
-| `npm run test:e2e` | green: **59 Playwright tests**, ~1.2 min, one worker |
-| initial bundle | 187.0 KB gzipped of the 250 KB budget (budget 13) |
+| `main` | `6b24e5f`, clean, in sync with `origin/main` |
+| `npm run check` | green: Biome, tsc, test-file claims, binary gate, **518 unit tests in 37 files**, build, bundle, licences, notices |
+| `npm run test:e2e` | green: **59 Playwright tests**, ~56 s, one worker |
+| initial bundle | 187.2 KB gzipped of the 250 KB budget (budget 13) |
 | deployed | `appcontextviewer` on team `1337-software`, Git-connected, production branch `main` |
 | build slices | **all 11 merged** (#19–#29) |
-| open issues | #44 (Overview cap, in flight), #40 (member-level Overview highlighting), #30 (slice index) |
+| open issues | #40 (member-level Overview highlighting), #30 (slice index) |
 | open PRs | none |
-| running agent | one slice-worker on #44, worktree `.claude/worktrees/slice-44` |
+| running agents | none |
 
 ## What changed this session
 
@@ -48,7 +48,7 @@ had no CSS at all.
 
 ## Blocked
 
-- **Nothing needs a person.** #44 is with a worker; #40 is specified and unclaimed.
+- **Nothing needs a person.** #40 is specified and unclaimed; no agent is running.
 - **The `LICENSE` holder line is still a recommendation nobody confirmed.** It reads
   `Copyright (c) 2026 1337 Software`. Nothing depends on the string.
 - **The private-Catalog path in `docs/deploy.md` has never been exercised.** Nick confirmed there is
@@ -66,6 +66,9 @@ None on `main`. Worth knowing what was fixed, because of what each looked like:
 - **The Center card showed the raw id and the Markdown export lost every name.** `centerCardOf`
   carried `name` for Externals but not Applications. The card's own tests built their model by hand,
   so the broken code path was never executed.
+- **A warm-timing helper reported ~965 ms for ~590 ms of work**, landing just above its ceiling and
+  in the direction its author's own escalation had argued for. Caught by an isolated probe
+  disagreeing with the in-suite run by 375 ms.
 - **The Overview's Dependency cap was implemented as a Depth fallback**, costing 162 Centers a whole
   Depth ring, and the test band was widened to match the code rather than the spec.
 
@@ -114,7 +117,7 @@ pattern is auditable rather than looking like drift:
 |---|---|---|
 | 3 | the **number** was a design-time guess, wrong by ~20% | 500 ms → 750 ms |
 | 4 | the **measurement** was one frame-quantized sample, 72–118 ms on identical work | the method (median of five); **ceiling unmoved** |
-| 9 | the **input** was unbounded — 1,498 Group Dependencies over 123 nodes | capped at 700; **ceiling unmoved** |
+| 9 | the **input** was unbounded — 1,498 Group Dependencies over 123 nodes | capped at 700, and measured warm; **ceiling unmoved** |
 | 11 | the **number** was never measured, on the one row already specified as long-running | 5 s → 10 s |
 
 The rule: fix the input or the method first, and move a number only when the number itself is the
@@ -122,12 +125,11 @@ thing that was never measured.
 
 ## Next, in order
 
-1. Land #44 (the 700-edge Overview cap), which turns budgets 9, 10 and 11 into real assertions.
-2. Have the group-by menu adopt `qualifiesAsGrouping` from `src/graph/grouping.ts` — the predicate
+1. Have the group-by menu adopt `qualifiesAsGrouping` from `src/graph/grouping.ts` — the predicate
    ships, the menu does not call it yet.
-3. #40: member-level Neighborhood highlighting on `OverviewModel`.
-4. Confirm or change the `LICENSE` holder line.
-5. Consider a fixture that fails the cardinality rule outright; today's tests reconstruct one.
+2. #40: member-level Neighborhood highlighting on `OverviewModel`.
+3. Confirm or change the `LICENSE` holder line.
+4. Consider a fixture that fails the cardinality rule outright; today's tests reconstruct one.
 
 ## What this session taught, in one line
 
