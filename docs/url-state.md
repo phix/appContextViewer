@@ -19,7 +19,7 @@ https://viewer.example.com/?src=./catalog.json#app=acme/commerce/order-service&d
 | `external` | an External id | none | the Center, when it is an External; mutually exclusive with `app` |
 | `depth` | a positive integer or `all` | `2` | the header Depth, applied to both columns and the pane |
 | `group` | `none`, `repository`, `team`, `kind`, or an `attributes` key | `repository` | the grouping Attribute (the menu's value verbatim; built-in names win over a colliding key) |
-| `view` | `overview` | absent | the canvas is expanded to the Overview |
+| `view` | `overview` or `space` | absent | the canvas is expanded to the Overview, or to the Space ([`space-view.md`](./space-view.md)); mutually exclusive |
 
 3. **Not in the URL:** open Groups (transient; the selection's Group auto-opens on arrival, per the grouping decision), search text, whether the report is open, scroll and hover. Filters, once the search-and-filter fog is resolved, join the hash under their own keys.
 4. **History.** A change of `app` pushes a history entry, so Back returns to the previous Application; changes of `depth`, `group` and `view` replace the current entry. `popstate` and `hashchange` apply the URL to the store, which makes the URL the source of truth for view state: the store writes it, and reads it back on navigation.

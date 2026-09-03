@@ -82,6 +82,48 @@ turn out to need, are a spec decision made from those measurements — not by th
 because elk's cost is superlinear in edges; a force simulation over 5,395 Dependencies may want its
 own limit, or may not. Measure, then say.
 
+## Measured, and ruled: no cap
+
+Six sizes, from the bundled demo Catalog up to 1,000 Applications, measured directly against the
+built app with Playwright, reading the same `settled()` flag the implementation exposes at
+`canvas.__spaceScene`:
+
+| Applications | Dependencies | time to settled | fps once settled |
+|---|---:|---:|---:|
+| 34 (demo) | 82 | 4.4 s | 61 |
+| 141 (att) | 534 | 5.1 s | 57 |
+| 200 | 900 | 6.3 s | 44 |
+| 300 | 1,453 | 8.9 s | 31 |
+| 350 | 1,689 | 10.3 s | 28 |
+| 500 | 2,579 | 14.3 s | 20 |
+| 1,000 | 5,395 | 15.5 s | 11 |
+
+Read at face value, that climbs to 15 seconds and asks the reader to wait — nothing like "at a
+glance". **It is the wrong number to rule from.** `settled()` is an internal flag the simulation
+uses for its own readiness (click precision, the recolour-without-relayout guarantee); it says
+nothing about what the screen shows. Watched directly: the scene renders and starts animating
+within one frame of entry, is a legible clustered shape by **1 to 3 seconds** even at 1,000
+Applications, and continues refining toward `settled()` in the background. A user sees the shape of
+the Catalog immediately; the wait the table above describes is invisible to them.
+
+So **no node or edge cap is set.** Capping what the Space draws would remove structure a viewer can
+already see forming, to shorten a number nobody is waiting on. That would have been the mistake —
+inventing a policy from a curve that measured the wrong thing, the same error the Overview cap made
+on its first attempt, corrected the same way: verify what the number actually costs before ruling
+from it.
+
+Two real, secondary findings, neither blocking:
+
+- **Frame rate at 1,000 Applications settles at ~10-11 fps**, well under what continuous orbiting
+  wants. Worth a look if it bothers people in practice; not launch-blocking, since the primary
+  reading of the scene happens during the first few seconds when node motion is doing the work,
+  not the frame rate.
+- **Re-entering the Space re-settles from scratch**, at the same cost as the first entry, because
+  nothing caches a previous layout. That is real waste for a session that opens and closes the
+  Space more than once, and is a plausible slice on its own if it turns out to matter.
+
+## Consequences for what already exists
+
 ## Consequences for what already exists
 
 - `docs/url-state.md` gains `view=space` alongside `overview`.
