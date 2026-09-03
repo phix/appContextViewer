@@ -34,6 +34,7 @@ export function readUrl(hash: string): ViewState {
     depth,
     groupBy,
     overviewExpanded: params.get('view') === 'overview',
+    spaceExpanded: params.get('view') === 'space',
   };
 }
 
@@ -63,7 +64,9 @@ export function writeUrl(state: ViewState): string {
   if (state.groupBy !== DEFAULT_GROUP && state.groupBy !== '') {
     params.set('group', state.groupBy);
   }
-  if (state.overviewExpanded) {
+  if (state.spaceExpanded) {
+    params.set('view', 'space');
+  } else if (state.overviewExpanded) {
     params.set('view', 'overview');
   }
   const text = params.toString().replaceAll('%2F', '/');
@@ -107,6 +110,7 @@ export function bindUrl(store: Store, window: UrlWindow): () => void {
     depth: store.depth.value,
     groupBy: store.groupBy.value,
     overviewExpanded: store.overviewExpanded.value,
+    spaceExpanded: store.spaceExpanded.value,
   });
 
   const write = (hash: string, push: boolean): void => {
@@ -128,6 +132,7 @@ export function bindUrl(store: Store, window: UrlWindow): () => void {
         store.actions.setDepth(state.depth);
         store.actions.setGroupBy(state.groupBy);
         store.actions.expandOverview(state.overviewExpanded);
+        store.actions.expandSpace(state.spaceExpanded ?? false);
       });
     } finally {
       applying = false;

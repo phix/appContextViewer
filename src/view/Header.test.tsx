@@ -114,4 +114,15 @@ describe('Header', () => {
     fireEvent.click(button);
     expect(onExpandCanvas).toHaveBeenCalledTimes(1);
   });
+
+  it('offers Space alongside Overview and reports its pressed state', () => {
+    const onExpandSpace = vi.fn();
+    renderHeader({ onExpandSpace, spaceExpanded: true, overviewExpanded: false });
+    const space = screen.getByTestId('space-toggle');
+    expect(space.getAttribute('aria-pressed')).toBe('true');
+    expect(space.textContent).toBe('Close Space');
+    fireEvent.click(space);
+    expect(onExpandSpace).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('expand-canvas').textContent).toBe('Overview');
+  });
 });

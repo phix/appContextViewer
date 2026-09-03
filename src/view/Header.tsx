@@ -33,6 +33,9 @@ export interface HeaderProps {
   readonly searchSlot?: ComponentChildren;
   /** Absent while the Overview is disabled over the envelope, which is what disables the button. */
   readonly onExpandCanvas?: () => void;
+  readonly overviewExpanded?: boolean;
+  readonly onExpandSpace?: () => void;
+  readonly spaceExpanded?: boolean;
   /** The Overview slice fills it with the group-by menu, Expand all, Collapse all, or its notice. */
   readonly overviewSlot?: ComponentChildren;
 }
@@ -47,6 +50,9 @@ export function Header({
   onOpenWarnings,
   searchSlot,
   onExpandCanvas,
+  overviewExpanded = false,
+  onExpandSpace,
+  spaceExpanded = false,
   overviewSlot,
 }: HeaderProps) {
   return (
@@ -103,7 +109,17 @@ export function Header({
         disabled={onExpandCanvas === undefined}
         onClick={onExpandCanvas}
       >
-        Expand canvas
+        {overviewExpanded ? 'Close Overview' : 'Overview'}
+      </button>
+
+      <button
+        type="button"
+        class="header__expand"
+        data-testid="space-toggle"
+        aria-pressed={spaceExpanded}
+        onClick={onExpandSpace}
+      >
+        {spaceExpanded ? 'Close Space' : 'Space'}
       </button>
 
       {/* Filled by the Overview slice (#27); empty on purpose here. */}

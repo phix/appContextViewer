@@ -81,6 +81,7 @@ export interface StoreSignals {
   readonly groupBy: Signal<string>;
   readonly openGroups: Signal<ReadonlySet<GroupId>>;
   readonly overviewExpanded: Signal<boolean>;
+  readonly spaceExpanded: Signal<boolean>;
   readonly report: Signal<Report | null>;
   /** The Channel whose card is open; transient, never URL state (docs/center.md, decision 8). */
   readonly channelCard: Signal<ChannelName | null>;
@@ -103,6 +104,7 @@ export interface Actions {
   expandAll(): void;
   collapseAll(): void;
   expandOverview(expanded: boolean): void;
+  expandSpace(expanded: boolean): void;
   closeReport(): void;
   /** Opens the warnings side sheet for the current Catalog. */
   openWarnings(): void;
@@ -132,6 +134,7 @@ export interface ViewState {
   readonly depth: number;
   readonly groupBy: string;
   readonly overviewExpanded: boolean;
+  readonly spaceExpanded?: boolean;
 }
 
 const SAMPLE_SOURCE: Source = { kind: 'sample', name: 'sample Catalog' };
@@ -147,6 +150,7 @@ export function createStore(init: StoreInit): Store {
     groupBy: signal<string>(DEFAULT_GROUP),
     openGroups: signal<ReadonlySet<GroupId>>(new Set()),
     overviewExpanded: signal<boolean>(false),
+    spaceExpanded: signal<boolean>(false),
     report: signal<Report | null>(null),
     channelCard: signal<ChannelName | null>(null),
     notice: signal<Notice | null>(null),
@@ -289,7 +293,17 @@ function createActions(s: StoreSignals, loadDeps: LoadDeps): Actions {
     },
 
     expandOverview(expanded) {
-      s.overviewExpanded.value = expanded;
+      batch(() => {
+        s.overviewExpanded.value = expanded;
+        if (expanded) s.spaceExpanded.value = false;
+      });
+    },
+
+    expandSpace(expanded) {
+      batch(() => {
+        s.spaceExpanded.value = expanded;
+        if (expanded) s.overviewExpanded.value = false;
+      });
     },
 
     closeReport() {

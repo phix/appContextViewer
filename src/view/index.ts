@@ -104,4 +104,5 @@ export {
   Search,
   type SearchProps,
 } from './Search';
+export { Space, type SpaceProps, spaceGraphOf, spaceStyleOf } from './Space';
 export { Tag, type TagProps, tagLabel } from './Tag';
