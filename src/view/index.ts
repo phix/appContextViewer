@@ -8,19 +8,37 @@
  * (#25) landed `ImpactBoard`, `CenterCard`, `Search` and `ChannelCard`, and deleted the placeholder
  * `CenterPanel` the shell had put above the table. The Overview slice (#27) landed `Overview`,
  * `GroupByMenu` and `canvas/OverviewCanvas`. `NeighborhoodPane` arrives with its own slice.
+ *
+ * The Tags slice (#43) landed `Tag`, the Highlight and `app.css` — the repository's first
+ * stylesheet, imported HERE so the module's own interface pulls it in and no shell file has to
+ * remember to (docs/tags.md, "What a first stylesheet has to settle").
  */
+import './app.css';
+
 export {
   attributeText,
   boardMarkdown,
   breaksBadge,
   CenterCard,
   type CenterCardProps,
+  centerTags,
   kindText,
 } from './CenterCard';
 export { ChannelCard, type ChannelCardProps } from './ChannelCard';
 export { ANIMATION_MS } from './canvas/OverviewCanvas';
 export { GROUP_BY_FALLBACK, GroupByMenu, type GroupByMenuProps, groupByLabel } from './GroupByMenu';
 export { DEPTH_OPTIONS, depthLabel, depthValue, Header, type HeaderProps } from './Header';
+export {
+  clearHighlight,
+  currentHighlight,
+  HIGHLIGHT_MARK,
+  HIGHLIGHT_MEASURE,
+  type Highlight,
+  highlightRules,
+  onHighlight,
+  resetHighlight,
+  setHighlight,
+} from './highlight';
 export {
   BOARD_MARK,
   chipsOf,
@@ -85,3 +103,4 @@ export {
   Search,
   type SearchProps,
 } from './Search';
+export { Tag, type TagProps, tagLabel } from './Tag';

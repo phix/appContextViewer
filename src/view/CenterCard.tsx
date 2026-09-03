@@ -14,7 +14,15 @@
  */
 
 import { useState } from 'preact/hooks';
-import type { BoardBand, BoardModel, BoardNode, CenterCard as CenterCardModel } from '@/state';
+import { isScalar } from '@/graph';
+import type {
+  BoardBand,
+  BoardModel,
+  BoardNode,
+  CenterCard as CenterCardModel,
+  TagsModel,
+} from '@/state';
+import { Tag } from './Tag';
 
 export interface CenterCardProps {
   readonly model: BoardModel;
@@ -22,6 +30,9 @@ export interface CenterCardProps {
   readonly onClear?: () => void;
   /** Injected so the Markdown is asserted without a clipboard; defaults to the async clipboard. */
   readonly copy?: (text: string) => void | Promise<void>;
+  /** Makes the card's values operable Tags (docs/tags.md). Without it they render as plain text. */
+  readonly tags?: TagsModel;
+  readonly onChooseTag?: (attribute: string) => void;
 }
 
 /** "Application · service", "External · cache", or the bare kind when the record names none. */
@@ -120,11 +131,43 @@ export function boardMarkdown(model: BoardModel): string {
   return lines.join('\n');
 }
 
+/**
+ * Every Tag the Center card carries. Repository and Team come from the record's own fields, `kind`
+ * from whichever kind the record states, and then every scalar Attribute; a non-scalar Attribute
+ * names no Group and so is not a Tag (docs/tags.md).
+ */
+export function centerTags(
+  card: CenterCardModel,
+): readonly { attribute: string; value: string | number | boolean; text: string }[] {
+  const tags: { attribute: string; value: string | number | boolean; text: string }[] = [];
+  if (card.repository !== undefined) {
+    tags.push({ attribute: 'repository', value: card.repository, text: card.repository });
+  }
+  if (card.team !== undefined) {
+    tags.push({ attribute: 'team', value: card.team, text: `Team: ${card.team}` });
+  }
+  if (card.recordKind !== undefined) {
+    tags.push({ attribute: 'kind', value: card.recordKind, text: kindText(card) });
+  }
+  for (const [key, value] of Object.entries(card.attributes)) {
+    if (isScalar(value)) {
+      tags.push({ attribute: key, value, text: `${key}: ${String(value)}` });
+    }
+  }
+  return tags;
+}
+
 async function writeToClipboard(text: string): Promise<void> {
   await navigator.clipboard.writeText(text);
 }
 
-export function CenterCard({ model, onClear, copy = writeToClipboard }: CenterCardProps) {
+export function CenterCard({
+  model,
+  onClear,
+  copy = writeToClipboard,
+  tags,
+  onChooseTag,
+}: CenterCardProps) {
   // The async clipboard rejects when the page has no permission for it; saying so beats a button
   // that looks like it worked (the report does the same).
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -145,6 +188,7 @@ export function CenterCard({ model, onClear, copy = writeToClipboard }: CenterCa
       class="center"
       data-testid="center-panel"
       data-kind={card.kind}
+      data-groups={tags?.index.tokens.get(card.id)}
       aria-label="Selected Center"
     >
       <p class="center__kind" data-testid="center-kind">
@@ -183,6 +227,27 @@ export function CenterCard({ model, onClear, copy = writeToClipboard }: CenterCa
       <p class="center__badge" data-testid="center-badge">
         {breaksBadge(model.breaks.total, model.breaks.teams)}
       </p>
+
+      {/*
+       * The card's Tags: Repository, Team, kind and every scalar Attribute (docs/tags.md, "The Tags
+       * a node carries"). They are added BESIDE the lines above rather than replacing them, because
+       * `center-team`, `center-kind` and `center-attributes` are asserted by files this slice does
+       * not own; a Tag strip is additive, an edit to those lines would not be.
+       */}
+      {tags === undefined ? null : (
+        <div class="center__tags" data-testid="center-tags">
+          {centerTags(card).map((tag) => (
+            <Tag
+              key={`${tag.attribute}=${String(tag.value)}`}
+              tags={tags}
+              attribute={tag.attribute}
+              value={tag.value}
+              text={tag.text}
+              onChoose={onChooseTag}
+            />
+          ))}
+        </div>
+      )}
 
       {attributes.length === 0 ? null : (
         <dl class="center__attributes" data-testid="center-attributes">

@@ -5,13 +5,21 @@
  */
 export { blastRadius, type RankedRow, rankedByBlastRadius } from './blast';
 export {
+  type AttributeCardinality,
+  attributeCardinality,
   BUILT_IN_ATTRIBUTES,
+  buildTagIndex,
   type Group,
   type GroupEdge,
   type GroupId,
   groupableAttributes,
   groupBy,
   groupDependencies,
+  groupingAttributes,
+  MIN_APPLICATIONS_PER_VALUE,
+  qualifiesAsGrouping,
+  type TagIndex,
+  tagToken,
 } from './grouping';
 export {
   type Application,

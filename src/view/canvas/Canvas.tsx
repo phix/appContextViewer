@@ -6,6 +6,7 @@
 
 import cytoscape, { type Core, type ElementDefinition } from 'cytoscape';
 import { useEffect, useRef } from 'preact/hooks';
+import { currentHighlight, type Highlight, onHighlight } from '../highlight';
 import { canvasStyle } from './style';
 
 export const HOVER_MARK = 'acv:pane-hover-start';
@@ -135,6 +136,33 @@ export function Canvas({ elements, positions, onHover, onSelect, onPainted }: Ca
       }
     });
 
+    /*
+     * The Highlight (docs/tags.md). Cytoscape paints to a `<canvas>`, so the one injected CSS rule
+     * that reaches every DOM row cannot reach a node here; the canvas subscribes instead and styles
+     * its own nodes, which the pane's cap holds at 150. This is the only surface whose cost scales
+     * with the node count, and it is deliberately the small one.
+     *
+     * Membership is decided by `sourceId`, not by anything the pane passes in, so the pane component
+     * needs no change to take part -- which matters, because another slice owns it.
+     */
+    const applyHighlight = (highlight: Highlight | null): void => {
+      cy.batch(() => {
+        cy.elements().removeClass('is-tagged is-dimmed');
+        if (highlight === null) {
+          return;
+        }
+        const tagged = cy
+          .nodes()
+          .filter((node) => highlight.members.has(String(node.data('sourceId'))));
+        tagged.addClass('is-tagged');
+        // Non-members are de-emphasised, never removed: a Highlight is not a filter (CONTEXT.md).
+        cy.elements().difference(tagged).addClass('is-dimmed');
+      });
+      container.dataset.tagged = highlight === null ? '' : String(highlight.members.size);
+    };
+    applyHighlight(currentHighlight());
+    const unsubscribe = onHighlight(applyHighlight);
+
     // ONE frame, deliberately. `onPainted` closes budgets 3 and 4, which are LAYOUT budgets: the
     // measure must span layout plus the one paint that puts the pane on screen. A second rAF fence
     // adds a frame of the runner's own compositor cadence to every reading -- a quantity that
@@ -157,6 +185,7 @@ export function Canvas({ elements, positions, onHover, onSelect, onPainted }: Ca
     window.addEventListener('scroll', refreshOffset, { passive: true, capture: true });
 
     return () => {
+      unsubscribe();
       cancelAnimationFrame(paintFrame);
       observer?.disconnect();
       window.removeEventListener('scroll', refreshOffset, { capture: true });

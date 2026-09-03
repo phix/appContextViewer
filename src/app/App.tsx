@@ -200,7 +200,13 @@ export function App({ store }: AppProps) {
           />
         ) : null}
         {board === null ? null : (
-          <ImpactBoard model={board} onSelect={select} onClear={() => store.actions.select(null)} />
+          <ImpactBoard
+            model={board}
+            onSelect={select}
+            onClear={() => store.actions.select(null)}
+            tags={store.derived.tags.value}
+            onChooseTag={store.actions.setGroupBy}
+          />
         )}
         {pane === null ? null : (
           <NeighborhoodPane
@@ -215,6 +221,8 @@ export function App({ store }: AppProps) {
           onFilterChange={store.actions.filterApplicationsOnly}
           externalKinds={externalKinds.value}
           onPainted={markTablePainted}
+          tags={store.derived.tags.value}
+          onChooseTag={store.actions.setGroupBy}
         />
       </main>
 

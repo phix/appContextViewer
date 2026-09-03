@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/preact';
 import { describe, expect, it, vi } from 'vitest';
+import { tagToken } from '@/graph';
 import { EXTERNAL_NEEDS_NOTE } from '@/state';
 import {
   DEPTH_MEASURE,
@@ -8,7 +9,7 @@ import {
   markSelectStart,
   SELECT_MEASURE,
 } from '@/view';
-import { boardOf } from './fixtures.test-helper';
+import { boardOf, tagsOf } from './fixtures.test-helper';
 
 /**
  * The board over the demo Catalog's real view models (docs/center.md): three columns, both outer
@@ -106,16 +107,63 @@ describe('ImpactBoard', () => {
     });
   });
 
-  it('selects the same node when one of its chips is clicked', () => {
+  /**
+   * The behaviour the row restructure moved, pinned in its new place rather than deleted. A chip is
+   * a Tag now (docs/tags.md): pointing at it Highlights its Group and choosing it sets the grouping
+   * Attribute, and NEITHER changes the Center. The purpose of docs/center.md decision 3 — that an
+   * External in the Needs column is reachable — is kept by the row's own control, asserted below.
+   */
+  it('chooses the grouping Attribute from a Tag, and leaves the Center alone', () => {
     const onSelect = vi.fn();
-    renderBoard({ onSelect });
+    const onChooseTag = vi.fn();
+    renderBoard({ onSelect, onChooseTag, tags: tagsOf() });
 
     const row = rowsOf('Needs').find((candidate) => candidate.dataset.kind === 'external');
     const chip = row?.querySelector('[data-testid="board-chip"]');
-    const id = row?.querySelector('[data-testid="board-link"]')?.getAttribute('data-id');
+    expect(chip?.tagName).toBe('BUTTON');
     fireEvent.click(chip as Element);
 
+    expect(onChooseTag).toHaveBeenCalledWith('kind');
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('still selects that same External from the row control beside its Tag', () => {
+    const onSelect = vi.fn();
+    renderBoard({ onSelect, tags: tagsOf() });
+
+    const row = rowsOf('Needs').find((candidate) => candidate.dataset.kind === 'external');
+    const link = row?.querySelector('[data-testid="board-link"]');
+    const id = link?.getAttribute('data-id');
+    expect(id).toBeTruthy();
+    fireEvent.click(link as Element);
+
     expect(onSelect).toHaveBeenCalledWith({ kind: 'external', id });
+  });
+
+  it('never nests a button inside a button, which is what forbade a Tag before', () => {
+    renderBoard({ tags: tagsOf() });
+
+    // The invalid markup jsdom would silently accept and a browser would reparent.
+    expect(document.querySelectorAll('button button')).toHaveLength(0);
+    const row = rowsOf('Needs')[0];
+    expect(row?.querySelectorAll('button').length).toBeGreaterThan(1);
+  });
+
+  it('carries every Tag token of its node in one `data-groups` attribute', () => {
+    renderBoard({ tags: tagsOf() });
+
+    const row = rowsOf('Breaks').find(
+      (candidate) =>
+        candidate.querySelector('[data-testid="board-link"]')?.getAttribute('data-id') ===
+        'acme/platform-core/api-gateway',
+    );
+    const groups = (row?.dataset.groups ?? '').split(' ');
+    expect(groups).toContain(tagToken('repository', 'acme/platform-core'));
+    expect(groups).toContain(tagToken('team', 'platform'));
+    // One attribute, whatever the row count: this is what one injected CSS rule matches.
+    expect(row?.getAttributeNames().filter((name) => name.startsWith('data-groups'))).toEqual([
+      'data-groups',
+    ]);
   });
 
   it('holds one line in the Needs column for an External Center, without moving the columns', () => {

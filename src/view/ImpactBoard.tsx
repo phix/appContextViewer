@@ -15,8 +15,10 @@
  */
 
 import { useEffect } from 'preact/hooks';
-import type { BoardBand, BoardModel, BoardNode, Center } from '@/state';
+import type { Scalar } from '@/graph';
+import type { BoardBand, BoardModel, BoardNode, Center, TagsModel } from '@/state';
 import { CenterCard } from './CenterCard';
+import { Tag } from './Tag';
 
 export const SELECT_MARK = 'acv:select-start';
 export const DEPTH_MARK = 'acv:depth-start';
@@ -63,9 +65,20 @@ export interface ImpactBoardProps {
   readonly onClear?: () => void;
   /** Passed to the middle card; injected in tests so the Markdown is asserted without a clipboard. */
   readonly copy?: (text: string) => void | Promise<void>;
+  /** Makes the chips operable Tags (docs/tags.md). Without it they render as inert chips. */
+  readonly tags?: TagsModel;
+  /** Choosing a Tag sets the grouping Attribute; it never changes the Center. */
+  readonly onChooseTag?: (attribute: string) => void;
 }
 
-export function ImpactBoard({ model, onSelect, onClear, copy }: ImpactBoardProps) {
+export function ImpactBoard({
+  model,
+  onSelect,
+  onClear,
+  copy,
+  tags,
+  onChooseTag,
+}: ImpactBoardProps) {
   useEffect(() => {
     // Two frames: the first runs before the paint that commits these columns, the second after it.
     const outer = requestAnimationFrame(() => {
@@ -82,8 +95,16 @@ export function ImpactBoard({ model, onSelect, onClear, copy }: ImpactBoardProps
         bands={model.needs.bands}
         note={model.needs.note}
         onSelect={onSelect}
+        tags={tags}
+        onChooseTag={onChooseTag}
       />
-      <CenterCard model={model} onClear={onClear} copy={copy} />
+      <CenterCard
+        model={model}
+        onClear={onClear}
+        copy={copy}
+        tags={tags}
+        onChooseTag={onChooseTag}
+      />
       <Column
         name="Breaks"
         testId="board-breaks"
@@ -91,6 +112,8 @@ export function ImpactBoard({ model, onSelect, onClear, copy }: ImpactBoardProps
         note={null}
         onSelect={onSelect}
         badge={`${model.breaks.total}`}
+        tags={tags}
+        onChooseTag={onChooseTag}
       />
     </section>
   );
@@ -103,6 +126,8 @@ function Column({
   note,
   onSelect,
   badge,
+  tags,
+  onChooseTag,
 }: {
   name: string;
   testId: string;
@@ -111,6 +136,8 @@ function Column({
   note: string | null;
   onSelect: (center: Center) => void;
   badge?: string;
+  tags?: TagsModel;
+  onChooseTag?: (attribute: string) => void;
 }) {
   return (
     <section class="board__column" data-testid={testId} data-column={name} aria-label={name}>
@@ -134,7 +161,14 @@ function Column({
             <h3 class="board__band-title">Depth {band.depth}</h3>
             <ul class="board__rows">
               {band.rows.map((row) => (
-                <Row key={`${row.kind}:${row.id}`} row={row} column={name} onSelect={onSelect} />
+                <Row
+                  key={`${row.kind}:${row.id}`}
+                  row={row}
+                  column={name}
+                  onSelect={onSelect}
+                  tags={tags}
+                  onChooseTag={onChooseTag}
+                />
               ))}
             </ul>
           </section>
@@ -149,20 +183,40 @@ function Column({
 }
 
 /**
- * One row is one button: a click on the label or on either chip selects the same node, so the chips
- * are live targets rather than decoration and no nested interactive element is needed for it.
+ * A row is a select control and its Tags, SIDE BY SIDE. It used to be one button with the chips
+ * inside it, which cannot survive a Tag: a `<button>` inside a `<button>` is invalid HTML, browsers
+ * reparent the inner one, and it renders while doing nothing (docs/tags.md, constraint 2).
+ *
+ * That restructure changes one behaviour, deliberately and visibly. A chip click used to select the
+ * row's node (docs/center.md, decision 3); a Tag click now sets the grouping Attribute and leaves
+ * the Center alone, because the same gesture cannot both change the Center and not change it. The
+ * PURPOSE of decision 3 survives — an External in the Needs column is still selectable, by its own
+ * row control — and `e2e/board.spec.ts` carries the one assertion this moved.
+ *
+ * `data-groups` is what a Highlight matches: one attribute holding every Tag token the node carries,
+ * so one injected CSS rule reaches every member row at once whatever the row count (budget 8).
  */
 function Row({
   row,
   column,
   onSelect,
+  tags,
+  onChooseTag,
 }: {
   row: BoardNode;
   column: string;
   onSelect: (center: Center) => void;
+  tags?: TagsModel;
+  onChooseTag?: (attribute: string) => void;
 }) {
   return (
-    <li class="board__row" data-testid="board-row" data-column={column} data-kind={row.kind}>
+    <li
+      class="board__row"
+      data-testid="board-row"
+      data-column={column}
+      data-kind={row.kind}
+      data-groups={tags?.index.tokens.get(row.id)}
+    >
       <button
         type="button"
         class="board__link"
@@ -173,7 +227,9 @@ function Row({
         <span class="board__label" data-testid="board-label">
           {row.label}
         </span>
-        {chipsOf(row).map((chip) => (
+      </button>
+      {chipsOf(row).map((chip) =>
+        tags === undefined || chip.value === undefined ? (
           <span
             key={`${chip.kind}:${chip.text}`}
             class={`board__chip board__chip--${chip.kind}`}
@@ -182,28 +238,53 @@ function Row({
           >
             {chip.text}
           </span>
-        ))}
-      </button>
+        ) : (
+          <Tag
+            key={`${chip.kind}:${chip.text}`}
+            tags={tags}
+            attribute={chip.attribute}
+            value={chip.value}
+            text={chip.text}
+            chip={chip.kind}
+            testId="board-chip"
+            onChoose={onChooseTag}
+          />
+        ),
+      )}
     </li>
   );
 }
 
-/** An Application's Repository and Team chips; an External's kind chip ("External · database"). */
-export function chipsOf(row: BoardNode): readonly { kind: string; text: string }[] {
+/**
+ * An Application's Repository and Team chips; an External's kind chip ("External · database").
+ * `attribute` and `value` are what make a chip a Tag: the Attribute value it names. An External
+ * whose record states no kind has no value to name, so it stays an inert chip rather than becoming
+ * a Tag for a Group that does not exist.
+ */
+export function chipsOf(
+  row: BoardNode,
+): readonly { kind: string; attribute: string; value?: Scalar; text: string }[] {
   if (row.kind === 'external') {
     return [
       {
         kind: 'external',
+        attribute: 'kind',
+        value: row.externalKind,
         text: row.externalKind === undefined ? 'External' : `External · ${row.externalKind}`,
       },
     ];
   }
-  const chips: { kind: string; text: string }[] = [];
+  const chips: { kind: string; attribute: string; value?: Scalar; text: string }[] = [];
   if (row.repository !== undefined) {
-    chips.push({ kind: 'repository', text: row.repository });
+    chips.push({
+      kind: 'repository',
+      attribute: 'repository',
+      value: row.repository,
+      text: row.repository,
+    });
   }
   if (row.team !== undefined) {
-    chips.push({ kind: 'team', text: row.team });
+    chips.push({ kind: 'team', attribute: 'team', value: row.team, text: row.team });
   }
   return chips;
 }

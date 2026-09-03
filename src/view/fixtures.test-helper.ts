@@ -4,7 +4,7 @@
  * "view models built from the demo Catalog"). Not exported from the module index.
  */
 import { validateCatalog } from '@/catalog';
-import type { BoardModel, Center, ChannelCardModel, Store } from '@/state';
+import type { BoardModel, Center, ChannelCardModel, Store, TagsModel } from '@/state';
 import { createStore } from '@/state';
 import demoCatalog from '../../samples/catalog.demo.json';
 
@@ -26,6 +26,11 @@ export function boardOf(center: Center, depth = 2, store = demoStore()): BoardMo
     throw new Error(`no board for ${center.kind} ${center.id}`);
   }
   return board;
+}
+
+/** The `TagsModel` the store derives: the Tag index, the qualifying Attributes and the grouping. */
+export function tagsOf(store = demoStore()): TagsModel {
+  return store.derived.tags.value;
 }
 
 /** The `ChannelCardModel` the store derives for a Channel. */

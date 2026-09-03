@@ -8,7 +8,8 @@
  */
 
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { Center, RankedModel } from '@/state';
+import type { Center, RankedModel, TagsModel } from '@/state';
+import { Tag } from './Tag';
 
 /** Rows painted before the first scroll (docs/performance-budgets.md). */
 export const FIRST_PAGE = 100;
@@ -29,6 +30,13 @@ export interface RankedTableProps {
   readonly pageSize?: number;
   /** Called after the browser has painted the current rows; the shell stamps budget 2 with it. */
   readonly onPainted?: () => void;
+  /**
+   * Puts the Tag tokens on every row, so a Highlight raised anywhere reaches this table
+   * (docs/tags.md), and makes the kind chip a Tag where it names one. Without it the table renders
+   * exactly as it did before Tags existed.
+   */
+  readonly tags?: TagsModel;
+  readonly onChooseTag?: (attribute: string) => void;
 }
 
 export function RankedTable({
@@ -38,6 +46,8 @@ export function RankedTable({
   externalKinds,
   pageSize = FIRST_PAGE,
   onPainted,
+  tags,
+  onChooseTag,
 }: RankedTableProps) {
   const [shown, setShown] = useState(pageSize);
   const rows = model.rows;
@@ -99,40 +109,69 @@ export function RankedTable({
             </tr>
           </thead>
           <tbody>
-            {visible.map((row, index) => (
-              <tr key={`${row.kind}:${row.id}`} data-testid="ranked-row" data-kind={row.kind}>
-                <td>{index + 1}</td>
-                <td>
-                  <button
-                    type="button"
-                    class="ranked__link"
-                    data-testid="ranked-link"
-                    onClick={() => onSelect({ kind: row.kind, id: row.id })}
-                  >
-                    <span class="ranked__label" data-testid="ranked-label">
-                      {row.label}
-                    </span>
-                    {/*
-                     * The id stays inside the button, not beside it, so the accessible name is
-                     * "<name> <id>" — a screen reader gets what it is and which one it is, and a
-                     * text query for the id still finds the control that selects it. Hidden when
-                     * the label already is the id, which is every Catalog whose ids read as names.
-                     */}
-                    {row.label === row.id ? null : (
-                      <span class="ranked__id" data-testid="ranked-id">
-                        {row.id}
+            {visible.map((row, index) => {
+              // Undefined when the shell supplied no kind for this External; the chip then reads
+              // "External" and names no Group, so it must not become a Tag with an empty value.
+              const externalKind = row.kind === 'external' ? externalKinds?.get(row.id) : undefined;
+              return (
+                <tr
+                  key={`${row.kind}:${row.id}`}
+                  data-testid="ranked-row"
+                  data-kind={row.kind}
+                  data-groups={tags?.index.tokens.get(row.id)}
+                >
+                  <td>{index + 1}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="ranked__link"
+                      data-testid="ranked-link"
+                      onClick={() => onSelect({ kind: row.kind, id: row.id })}
+                    >
+                      <span class="ranked__label" data-testid="ranked-label">
+                        {row.label}
                       </span>
+                      {/*
+                       * The id stays inside the button, not beside it, so the accessible name is
+                       * "<name> <id>" — a screen reader gets what it is and which one it is, and a
+                       * text query for the id still finds the control that selects it. Hidden when
+                       * the label already is the id, which is every Catalog whose ids read as names.
+                       */}
+                      {row.label === row.id ? null : (
+                        <span class="ranked__id" data-testid="ranked-id">
+                          {row.id}
+                        </span>
+                      )}
+                    </button>
+                  </td>
+                  <td>
+                    {/*
+                     * The kind chip is a Tag only where it names an Attribute VALUE. An External's
+                     * does — "External · database" is `kind=database`. An Application's reads
+                     * "Application", which is the node's kind and not an Attribute value, so it names
+                     * no Group and stays an inert chip. The row still carries `data-groups`, so it
+                     * Highlights with its Group whatever raised the Highlight.
+                     */}
+                    {tags === undefined || externalKind === undefined ? (
+                      <span class="ranked__chip" data-testid="ranked-chip">
+                        {chipText(row.kind, row.id, externalKinds)}
+                      </span>
+                    ) : (
+                      <Tag
+                        tags={tags}
+                        attribute="kind"
+                        value={externalKind}
+                        text={chipText(row.kind, row.id, externalKinds)}
+                        chip="external"
+                        testId="ranked-chip"
+                        onChoose={onChooseTag}
+                      />
                     )}
-                  </button>
-                </td>
-                <td>
-                  <span class="ranked__chip" data-testid="ranked-chip">
-                    {chipText(row.kind, row.id, externalKinds)}
-                  </span>
-                </td>
-                <td class="ranked__size">{row.size.toLocaleString('en-US')}</td>
-              </tr>
-            ))}
+                  </td>
+                  <td class="ranked__size">{row.size.toLocaleString('en-US')}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {more > 0 ? (

@@ -16,14 +16,17 @@ import type {
 } from '@/graph';
 import {
   blastRadius,
+  buildTagIndex,
   type Group,
   groupDependencies,
+  groupingAttributes,
   groupBy as groupsFor,
   labelOf,
   neighborhood,
   type PaneNeighborhood,
   paneNeighborhood,
   rankedByBlastRadius,
+  type TagIndex,
 } from '@/graph';
 import {
   type Center,
@@ -147,6 +150,21 @@ export interface OverviewModel {
   readonly dependencies: number;
 }
 
+// ---------------------------------------------------------------- Tags
+
+/**
+ * Everything a Tag needs to answer for itself (docs/tags.md), so no component traverses the Graph:
+ * the token and members of every Attribute value, which Attributes the cardinality rule allows as
+ * groupings, and which one is grouping now.
+ */
+export interface TagsModel {
+  readonly index: TagIndex;
+  /** The Attributes that may become the grouping Attribute (item N7). A Tag outside it still Highlights. */
+  readonly groupable: ReadonlySet<string>;
+  /** The current grouping Attribute, which `aria-pressed` marks on its Tags. */
+  readonly grouping: string;
+}
+
 // ---------------------------------------------------------------- Channel card
 
 export interface ChannelCardModel {
@@ -162,6 +180,7 @@ export interface Derived {
   readonly overviewModel: ReadonlySignal<OverviewModel>;
   readonly warningsCount: ReadonlySignal<number>;
   readonly channelCardModel: ReadonlySignal<ChannelCardModel | null>;
+  readonly tags: ReadonlySignal<TagsModel>;
 }
 
 export function createDerived(s: StoreSignals): Derived {
@@ -310,6 +329,18 @@ export function createDerived(s: StoreSignals): Derived {
 
   const warningsCount = computed(() => s.warnings.value.length);
 
+  // Both halves are per Graph, so pointing at a Tag never rebuilds them; only `grouping` moves when
+  // a Tag is chosen, and it is the cheap half.
+  const tagIndex = computed(() => buildTagIndex(s.graph.value));
+  const groupableAttributesSet = computed<ReadonlySet<string>>(
+    () => new Set(groupingAttributes(s.graph.value)),
+  );
+  const tags = computed<TagsModel>(() => ({
+    index: tagIndex.value,
+    groupable: groupableAttributesSet.value,
+    grouping: effectiveGrouping(s.groupBy.value),
+  }));
+
   const channelCardModel = computed<ChannelCardModel | null>(() => {
     const name = s.channelCard.value;
     if (name === null) {
@@ -328,7 +359,7 @@ export function createDerived(s: StoreSignals): Derived {
     };
   });
 
-  return { ranked, board, paneModel, overviewModel, warningsCount, channelCardModel };
+  return { ranked, board, paneModel, overviewModel, warningsCount, channelCardModel, tags };
 }
 
 function bandOf(bands: Map<number, BoardNode[]>, depth: number): BoardNode[] {
