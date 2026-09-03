@@ -10,7 +10,7 @@
  */
 
 import { useComputed } from '@preact/signals';
-import { useRef } from 'preact/hooks';
+import { useCallback, useRef } from 'preact/hooks';
 import { buildSearchIndex } from '@/graph';
 import type { Center, Store } from '@/state';
 import {
@@ -19,6 +19,7 @@ import {
   ImpactBoard,
   markDepthStart,
   markSelectStart,
+  NeighborhoodPane,
   Picker,
   RankedTable,
   Report,
@@ -97,10 +98,26 @@ export function App({ store }: AppProps) {
   // Budgets 5 and 6 (docs/performance-budgets.md): the stopwatch starts at the interaction and the
   // impact board stamps the frame after it paints. Every selection path — table, search, a board
   // chip, a report row — arrives here, so one start covers them all.
-  const select = (center: Center) => {
-    markSelectStart();
-    store.actions.select(center);
-  };
+  // `useCallback` for identity, not for speed: this reaches `Canvas`'s effect deps through the
+  // pane, and a fresh closure per render would rebuild the Cytoscape core -- see the note beside
+  // `painted` in NeighborhoodPane.tsx for why that shows up as a budget-3/4 failure.
+  //
+  // NO TEST COVERS THIS ONE, and none can today. Two seams are both shut: Cytoscape never
+  // initializes under jsdom, so a unit test has no core to compare identities against; and nothing
+  // in this shell currently re-renders `App` while leaving `paneModel` identical, so an e2e test
+  // has no way to provoke the rebuild. An e2e assertion on core identity across a ranked-filter
+  // toggle was written and then deleted, because BOTH mutants -- this `useCallback` removed, and
+  // the pane's -- survived it, and a test that passes with and without its subject is worse than
+  // no test. The pane's half of the same fix IS covered, by the Canvas-prop identity test in
+  // NeighborhoodPane.test.tsx. Keep this `useCallback`: it is correct regardless, and it becomes
+  // load-bearing the moment a signal read moves into this component's body.
+  const select = useCallback(
+    (center: Center) => {
+      markSelectStart();
+      store.actions.select(center);
+    },
+    [store],
+  );
 
   const setDepth = (depth: number) => {
     markDepthStart();
@@ -120,6 +137,7 @@ export function App({ store }: AppProps) {
   const notice = store.notice.value;
   const board = store.derived.board.value;
   const channelCard = store.derived.channelCardModel.value;
+  const pane = store.derived.paneModel.value;
 
   return (
     <div class="shell" data-testid="shell">
@@ -154,6 +172,13 @@ export function App({ store }: AppProps) {
       <main class="shell__main">
         {board === null ? null : (
           <ImpactBoard model={board} onSelect={select} onClear={() => store.actions.select(null)} />
+        )}
+        {pane === null ? null : (
+          <NeighborhoodPane
+            model={pane}
+            onSelect={select}
+            onExpandOverview={() => store.actions.expandOverview(true)}
+          />
         )}
         <RankedTable
           model={store.derived.ranked.value}

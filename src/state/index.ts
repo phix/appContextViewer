@@ -16,7 +16,9 @@ export type {
   ChannelCardModel,
   Derived,
   OverviewModel,
+  PaneGroup,
   PaneModel,
+  PaneNode,
   RankedModel,
 } from './derived';
 export { EXTERNAL_NEEDS_NOTE, paneNotice } from './derived';

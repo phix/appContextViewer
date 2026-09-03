@@ -43,6 +43,7 @@ export {
   type NeighborhoodMember,
   neighborhood,
   PANE_CAP,
+  PANE_DEPENDENCY_CAP,
   type PaneNeighborhood,
   paneNeighborhood,
 } from './neighborhood';

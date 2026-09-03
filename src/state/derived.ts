@@ -101,8 +101,28 @@ export const EXTERNAL_NEEDS_NOTE = 'An External has no Dependencies in the Catal
 // ---------------------------------------------------------------- pane
 
 export interface PaneModel extends PaneNeighborhood {
+  /** Render-ready nodes; the view never has to look records up in the Graph. */
+  readonly nodes: readonly PaneNode[];
+  /**
+   * Every current-Attribute Group represented in the pane, always drawn open -- and empty whenever
+   * `groupsDrawn` is false, which is how the flat-above-the-Dependency-cap policy reaches the view.
+   */
+  readonly groups: readonly PaneGroup[];
+  readonly grouping: string;
   /** The cap notice (docs/performance-budgets.md, "Pane cap"), or null when everything fits. */
   readonly notice: string | null;
+}
+
+export interface PaneNode extends BoardNode {
+  readonly depth: number;
+  /** Applications sit inside this open Group; Externals have no Group. */
+  readonly group?: GroupId;
+}
+
+export interface PaneGroup {
+  readonly id: GroupId;
+  readonly label: string;
+  readonly members: readonly string[];
 }
 
 // ---------------------------------------------------------------- Overview
@@ -219,8 +239,39 @@ export function createDerived(s: StoreSignals): Derived {
     if (center === null) {
       return null;
     }
-    const pane = paneNeighborhood(s.graph.value, center, s.depth.value);
-    return { ...pane, notice: paneNotice(pane) };
+    const graph = s.graph.value;
+    const pane = paneNeighborhood(graph, center, s.depth.value);
+    const grouping = effectiveGrouping(s.groupBy.value);
+    const applicationIds = new Set(pane.applications.map((member) => member.id));
+    const groupFor = new Map<string, GroupId>();
+    const groups: PaneGroup[] = [];
+    // Above the Dependency cap the pane is drawn flat (docs/performance-budgets.md, "Pane cap"):
+    // no Group boxes and no parents, which is where that policy's ~40% saving comes from. The Depth
+    // is untouched -- `paneNeighborhood` already settled it on the node cap alone.
+    if (pane.groupsDrawn) {
+      for (const group of groupsFor(graph, grouping)) {
+        const members = group.members.filter((id) => applicationIds.has(id));
+        if (members.length === 0) {
+          continue;
+        }
+        groups.push({ id: group.id, label: group.label, members });
+        for (const id of members) {
+          groupFor.set(id, group.id);
+        }
+      }
+    }
+    const nodes: PaneNode[] = [
+      ...pane.applications.map((member) => ({
+        ...nodeOf(graph, 'application', member.id),
+        depth: member.depth,
+        group: groupFor.get(member.id),
+      })),
+      ...pane.externals.map((member) => ({
+        ...nodeOf(graph, 'external', member.id),
+        depth: member.depth,
+      })),
+    ];
+    return { ...pane, nodes, groups, grouping, notice: paneNotice(pane) };
   });
 
   const overviewModel = computed<OverviewModel>(() => {
