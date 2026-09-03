@@ -31,8 +31,10 @@ export interface HeaderProps {
   readonly onOpenWarnings: () => void;
   /** Empty here; the board slice fills it with the search box. */
   readonly searchSlot?: ComponentChildren;
-  /** Absent until the Overview slice, which is what disables the button. */
+  /** Absent while the Overview is disabled over the envelope, which is what disables the button. */
   readonly onExpandCanvas?: () => void;
+  /** The Overview slice fills it with the group-by menu, Expand all, Collapse all, or its notice. */
+  readonly overviewSlot?: ComponentChildren;
 }
 
 export function Header({
@@ -45,6 +47,7 @@ export function Header({
   onOpenWarnings,
   searchSlot,
   onExpandCanvas,
+  overviewSlot,
 }: HeaderProps) {
   return (
     <header class="header" data-testid="header">
@@ -102,6 +105,11 @@ export function Header({
       >
         Expand canvas
       </button>
+
+      {/* Filled by the Overview slice (#27); empty on purpose here. */}
+      <div class="header__overview" data-testid="header-overview-slot">
+        {overviewSlot}
+      </div>
     </header>
   );
 }

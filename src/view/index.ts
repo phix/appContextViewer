@@ -6,8 +6,8 @@
  *
  * The app-shell slice (#24) landed `Header`, `Picker`, `Report` and `RankedTable`. The board slice
  * (#25) landed `ImpactBoard`, `CenterCard`, `Search` and `ChannelCard`, and deleted the placeholder
- * `CenterPanel` the shell had put above the table. `NeighborhoodPane`, `Overview` and `canvas/`
- * arrive with their own slices.
+ * `CenterPanel` the shell had put above the table. The Overview slice (#27) landed `Overview`,
+ * `GroupByMenu` and `canvas/OverviewCanvas`. `NeighborhoodPane` arrives with its own slice.
  */
 export {
   attributeText,
@@ -18,6 +18,8 @@ export {
   kindText,
 } from './CenterCard';
 export { ChannelCard, type ChannelCardProps } from './ChannelCard';
+export { ANIMATION_MS } from './canvas/OverviewCanvas';
+export { GROUP_BY_FALLBACK, GroupByMenu, type GroupByMenuProps, groupByLabel } from './GroupByMenu';
 export { DEPTH_OPTIONS, depthLabel, depthValue, Header, type HeaderProps } from './Header';
 export {
   BOARD_MARK,
@@ -39,6 +41,28 @@ export {
   PANE_PAINT_MEASURE,
   paneRenderOf,
 } from './NeighborhoodPane';
+export {
+  CANCELLED_NOTE,
+  COLLAPSED_HEIGHT,
+  COLLAPSED_WIDTH,
+  expandAllTooltip,
+  LABEL_HEIGHT,
+  LABEL_WIDTH,
+  MEMBER_HEIGHT,
+  MEMBER_WIDTH,
+  nodeIdOf,
+  OVERVIEW_ELK_MEASURE,
+  OVERVIEW_LAID_OUT_MARK,
+  OVERVIEW_LAYOUT_MARK,
+  OVERVIEW_MEASURE,
+  OVERVIEW_PAINT_MARK,
+  Overview,
+  OverviewControls,
+  type OverviewControlsProps,
+  type OverviewProps,
+  type OverviewRender,
+  overviewRenderOf,
+} from './Overview';
 export { Picker, type PickerProps } from './Picker';
 export { chipText, FIRST_PAGE, RankedTable, type RankedTableProps } from './RankedTable';
 export {
