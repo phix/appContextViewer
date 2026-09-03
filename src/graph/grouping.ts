@@ -345,3 +345,59 @@ export function buildTagIndex(graph: Graph): TagIndex {
 
   return { tokens, members };
 }
+
+/**
+ * The Overview's Group-Dependency cap (docs/performance-budgets.md, "Overview cap"). elk's cost is
+ * superlinear in *edges*, and the collapsed 1,000-Application Overview hands it 1,498 Group
+ * Dependencies over 123 Group nodes -- twelve edges per node. The cap is not a performance trade:
+ * drawing all of them costs 2.3 s to produce a hairball no reader can follow, so keeping the
+ * heaviest 700 and naming the rest in a notice makes the Overview MORE legible, exactly as the pane
+ * cap already does. It would be worth having even if budget 9 had held.
+ *
+ * 700 and not 800, and the doc records why at length: the curve the first ruling read 800 off was
+ * measured on an ARBITRARY subset of the edges, while the rule it adopted keeps the HEAVIEST ones.
+ * Those are different inputs -- heaviest-first concentrates edges on hub Groups and elk costs more
+ * for the same count (764 ms at 800 heaviest against 702 ms at 800 first-encountered), so at 800 the
+ * elk half alone was over the whole 750 ms budget before a pixel was painted.
+ */
+export const OVERVIEW_DEPENDENCY_CAP = 700;
+
+/** What `capGroupDependencies` drew, and the two numbers the Overview's cap notice has to name. */
+export interface CappedGroupEdges {
+  /** At most `cap` Group Dependencies, heaviest first, then every member edge unchanged. */
+  readonly edges: readonly GroupEdge[];
+  /** Group Dependencies before the cap. */
+  readonly total: number;
+  /** Group Dependencies not drawn: `total - cap`, or 0 when everything fits. */
+  readonly hidden: number;
+}
+
+/**
+ * Keeps the `cap` heaviest Group Dependencies by the count each stands for and drops the rest.
+ * Ties keep first-encounter order, because `Array.prototype.sort` is stable, so the same Catalog
+ * and open set always draw the same edges rather than a different arbitrary 700 each run.
+ *
+ * Member edges are NOT Group Dependencies and are never capped: they exist only between members of
+ * open Groups, and Expand all's 4,395 of them are budget 11's input, not budget 9's.
+ */
+export function capGroupDependencies(
+  edges: readonly GroupEdge[],
+  cap: number = OVERVIEW_DEPENDENCY_CAP,
+): CappedGroupEdges {
+  const groupEdges: Extract<GroupEdge, { kind: 'group' }>[] = [];
+  const memberEdges: GroupEdge[] = [];
+  for (const edge of edges) {
+    if (edge.kind === 'group') {
+      groupEdges.push(edge);
+    } else {
+      memberEdges.push(edge);
+    }
+  }
+  const total = groupEdges.length;
+  if (total <= cap) {
+    return { edges, total, hidden: 0 };
+  }
+  const heaviest = groupEdges.slice().sort((a, b) => b.count - a.count);
+  heaviest.length = cap;
+  return { edges: [...heaviest, ...memberEdges], total, hidden: total - cap };
+}

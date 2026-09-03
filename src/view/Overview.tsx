@@ -346,6 +346,16 @@ export function Overview({ model, center, onToggleGroup, onSelect, createLayout 
           {model.groups.length} {model.groups.length === 1 ? 'Group' : 'Groups'} by{' '}
           {model.attribute}
         </span>
+        {/*
+          The cap notice (docs/performance-budgets.md, "Overview cap"). It sits in the header beside
+          the Group count because it is part of what the Overview IS at this size -- the heaviest
+          Group Dependencies -- and not an error about a failed drawing.
+        */}
+        {model.capNotice === null ? null : (
+          <span class="overview__notice" data-testid="overview-cap-notice" role="status">
+            {model.capNotice}
+          </span>
+        )}
         {running ? (
           <span class="overview__progress" data-testid="overview-progress" role="status">
             Laying out {model.groups.length} Groups…
