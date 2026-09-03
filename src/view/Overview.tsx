@@ -310,6 +310,9 @@ export function Overview({ model, center, onToggleGroup, onSelect, createLayout 
     }
   }, []);
 
+  const appliedOpen =
+    applied === null ? 0 : applied.elements.nodes.filter((node) => node.kind === 'open').length;
+
   const openGroup = useCallback((id: string) => onToggleGroup(id), [onToggleGroup]);
   const collapseGroup = useCallback(
     (id: string) => {
@@ -326,7 +329,17 @@ export function Overview({ model, center, onToggleGroup, onSelect, createLayout 
   );
 
   return (
-    <section class="overview" data-testid="overview" aria-label="Overview">
+    <section
+      class="overview"
+      data-testid="overview"
+      aria-label="Overview"
+      // What the store has been ASKED to open, which is not what the canvas has drawn: the drawing
+      // only changes when elk answers, so between a click and that answer the two differ, and a
+      // cancelled run leaves them differing for good. A test that asserts nothing changed needs the
+      // request, or it passes merely because the canvas had not caught up yet.
+      data-open-groups={String(model.open.size)}
+      data-drawn-groups={applied === null ? '' : String(appliedOpen)}
+    >
       <header class="overview__header">
         <h2>Overview</h2>
         <span data-testid="overview-groups">
