@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { blastRadius, paneNeighborhood, rankedByBlastRadius } from '@/graph';
+import {
+  blastRadius,
+  groupableAttributes,
+  groupingAttributes,
+  paneNeighborhood,
+  rankedByBlastRadius,
+  tagToken,
+} from '@/graph';
 import { demoStore, validatedSample } from './fixtures.test-helper';
 import { createStore, EXTERNAL_NEEDS_NOTE, paneNotice } from './index';
 
@@ -366,5 +373,79 @@ describe('warningsCount and channelCardModel', () => {
     const card = store.derived.channelCardModel.value;
     expect(card?.publishers).toEqual([]);
     expect(card?.subscribers.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * `tags`: everything a Tag needs so no component traverses the Graph (docs/tags.md). The numbers
+ * are the demo Catalog's, pinned against the graph module's own queries rather than restated.
+ */
+describe('tags: the Tag index, what may group, and what is grouping', () => {
+  it('indexes every Application and External of the Catalog', () => {
+    const store = demoStore();
+    const model = store.derived.tags.value;
+    expect(model.index.tokens.size).toBe(34 + 19);
+    expect(model.index.members.get(tagToken('team', 'commerce'))?.size).toBe(6);
+  });
+
+  it('offers only the Attributes the cardinality rule allows (item N7)', () => {
+    const store = demoStore();
+    const model = store.derived.tags.value;
+    expect([...model.groupable]).toEqual(groupingAttributes(store.graph.value));
+    expect(model.groupable.has('team')).toBe(true);
+    // Three Applications with three values between them: a grouping of singletons, so not offered.
+    expect(model.groupable.has('sla')).toBe(false);
+    // Still a groupable KEY, though — the two questions are separate, and a Tag for it Highlights.
+    expect(groupableAttributes(store.graph.value)).toContain('sla');
+  });
+
+  it('follows the grouping Attribute, and reads `none` as Repository', () => {
+    const store = demoStore();
+    expect(store.derived.tags.value.grouping).toBe('repository');
+
+    store.actions.setGroupBy('team');
+    expect(store.derived.tags.value.grouping).toBe('team');
+
+    store.actions.setGroupBy('none');
+    expect(store.derived.tags.value.grouping).toBe('repository');
+  });
+
+  it('rebuilds the index only when the Graph does, not when the grouping moves', () => {
+    const store = demoStore();
+    const first = store.derived.tags.value.index;
+    store.actions.setGroupBy('team');
+    // Identity, not equality: choosing a Tag must not cost a rebuild of every token in the Catalog.
+    expect(store.derived.tags.value.index).toBe(first);
+  });
+});
+
+/**
+ * Item N6 of docs/retrospective-2026-09-03.md, at its source. `nodeOf` has always resolved a name
+ * through `labelOf`, but the Center card's own record dropped it for Applications — it was carried
+ * for Externals only — so the card and the Markdown export both led with an APM id and showed the
+ * record's real name nowhere. `samples/att/` is the Catalog that shape came from.
+ */
+describe('the Center card carries an Application’s name, not only an External’s', () => {
+  const store = createStore({ catalog: validatedSample('att/catalog.att.json').catalog });
+  const APM = { kind: 'application', id: 'ATT-IDP4/customer-profile/apm10099' } as const;
+
+  it('gives a named Application its name alongside its id', () => {
+    store.actions.select(APM);
+    const card = store.derived.board.value?.center;
+
+    expect(card?.id).toBe('ATT-IDP4/customer-profile/apm10099');
+    expect(card?.name).toBe('Contact Preference Service');
+    // `label` is `labelOf`, which falls back to the PROJECT, so it is not the same question.
+    expect(card?.label).toBe('Contact Preference Service');
+  });
+
+  it('leaves `name` undefined when the producer supplied none, rather than inventing one', () => {
+    const demo = demoStore();
+    demo.actions.select({ kind: 'application', id: 'acme/commerce/order-service' });
+    const card = demo.derived.board.value?.center;
+
+    expect(card?.name).toBeUndefined();
+    expect(card?.label).toBe('order-service');
+    expect(card?.id).toBe('acme/commerce/order-service');
   });
 });

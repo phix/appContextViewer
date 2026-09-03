@@ -93,17 +93,38 @@ test('an External Center shows its card and the Needs note (decision 5)', async 
   await expect.poll(() => new URL(page.url()).hash).toBe('#external=redis');
 });
 
-test('the board selects from a chip in the Needs column (decision 3)', async ({ page }) => {
+/**
+ * CHANGED BY THE TAGS SLICE (#43), deliberately and as the only assertion it moved.
+ *
+ * This used to assert that clicking a CHIP selects its row's node (docs/center.md, decision 3). A
+ * chip is now a Tag (docs/tags.md): pointing at it Highlights its Group and clicking it sets the
+ * grouping Attribute, which the spec says must NOT change the Center. One gesture cannot both
+ * change the Center and leave it alone, so the two specs collide here and the newer one wins.
+ *
+ * Decision 3's PURPOSE — that a node in the Needs column, an External included, is selectable from
+ * its row — is unchanged and is what the second half asserts. Only its mechanism moved: from "the
+ * chip too" to "the row's own control", which is also what made a Tag possible at all, because a
+ * `<button>` cannot nest inside a `<button>`.
+ */
+test('a Needs row selects its node, and its Tag groups instead (decision 3, docs/tags.md)', async ({
+  page,
+}) => {
   await page.goto('/');
   await rankedLink(page, ORDER_SERVICE).click();
   await expect(page.getByTestId('center-id')).toHaveText(ORDER_SERVICE);
 
-  // A chip is a live target, not decoration: clicking it selects the node of its row.
   const row = rows(page, 'Needs').first();
-  const id = await row.locator('[data-testid="board-link"]').getAttribute('data-id');
+  const link = row.locator('[data-testid="board-link"]');
+  const id = await link.getAttribute('data-id');
   expect(id).not.toBeNull();
-  await row.locator('[data-testid="board-chip"]').first().click();
+  expect(id).not.toBe(ORDER_SERVICE);
 
+  // The Tag does not select: the Center is still what it was.
+  await row.locator('[data-testid="board-chip"]').first().click();
+  await expect(page.getByTestId('center-id')).toHaveText(ORDER_SERVICE);
+
+  // The row's own control does, which is how the Needs column stays navigable.
+  await link.click();
   await expect(page.getByTestId('center-id')).toHaveText(id ?? '');
 });
 

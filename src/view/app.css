@@ -1,0 +1,302 @@
+/*
+ * The viewer's first stylesheet (docs/tags.md, "What a first stylesheet has to settle"). Before
+ * this file the repository had no CSS at all, which is why every screenshot so far was unstyled.
+ *
+ * It settles three things and deliberately nothing else:
+ *
+ *   WHERE styles live      one file in `src/view/`, beside the components it dresses.
+ *   HOW it is loaded       `src/view/index.ts` imports it, so the module's own interface pulls it
+ *                          in and no shell file has to remember to. Vite emits it as one CSS asset.
+ *   THE TOKEN SET          the custom properties on `:root` below. Later work extends this list
+ *                          rather than hard-coding a colour.
+ *
+ * It is NOT a visual design pass and must not become one. The bar is: a Highlight is visibly
+ * distinct from a non-Highlight, the lift on a Tag reads as a lift, and the existing surfaces stop
+ * looking broken. Anything beyond that is a separate decision.
+ *
+ * The Highlight's own rules are NOT here — `src/view/highlight.ts` injects them into a second
+ * `<style>` element at the moment a Tag is pointed at, because that is the one DOM write budget 8
+ * allows. What lives here are the tokens those rules read.
+ */
+
+:root {
+  --acv-ink: #172033;
+  --acv-ink-soft: #52627a;
+  --acv-line: #d8dee9;
+  --acv-surface: #ffffff;
+  --acv-ground: #f5f7fa;
+  --acv-accent: #2563eb;
+
+  /* Read by the rules highlight.ts injects. Changing these changes the Highlight. */
+  --acv-highlight: #fef3c7;
+  --acv-highlight-edge: #d97706;
+  --acv-dim-opacity: 0.32;
+
+  --acv-gap: 12px;
+  --acv-radius: 8px;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--acv-ink);
+  background: var(--acv-ground);
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--acv-gap);
+  padding: var(--acv-gap);
+}
+
+.shell__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--acv-gap);
+}
+
+/* ------------------------------------------------------------------ surfaces */
+
+.board,
+.ranked,
+.center,
+.pane,
+.channel-card,
+.notice {
+  background: var(--acv-surface);
+  border: 1px solid var(--acv-line);
+  border-radius: var(--acv-radius);
+  padding: var(--acv-gap);
+}
+
+.board {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--acv-gap);
+  align-items: start;
+}
+
+.board__column {
+  min-width: 0;
+}
+
+.board__column-title,
+.board__band-title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--acv-ink-soft);
+}
+
+.board__column-count {
+  margin-left: 6px;
+  color: var(--acv-ink);
+}
+
+.board__rows {
+  margin: 0 0 var(--acv-gap);
+  padding: 0;
+  list-style: none;
+}
+
+.board__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.board__link,
+.ranked__link {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--acv-accent);
+  text-align: left;
+  cursor: pointer;
+}
+
+.board__link:hover,
+.ranked__link:hover {
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------ ranked table */
+
+.ranked__scroll {
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.ranked__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ranked__table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--acv-surface);
+  border-bottom: 1px solid var(--acv-line);
+  text-align: left;
+  font-size: 12px;
+  color: var(--acv-ink-soft);
+}
+
+.ranked__table td {
+  border-bottom: 1px solid var(--acv-ground);
+  padding: 4px 6px;
+}
+
+/*
+ * The paging control is a footer BENEATH the scroll box, not the last thing inside it — see the
+ * comment in RankedTable.tsx. Full width so it reads as the end of the table rather than as a
+ * stray button.
+ */
+.ranked__more {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--acv-line);
+  border-radius: 6px;
+  background: var(--acv-ground);
+  color: var(--acv-accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ranked__more:hover {
+  border-color: var(--acv-accent);
+}
+
+.ranked__size {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The name and the id are two spans inside one button, so that the control's accessible name
+ * carries both and a text query for the id still finds the control that selects it. With no
+ * stylesheet at all they rendered as one run-on string — "Common Logging LibraryATT-IDP5/…" on the
+ * deployed site. `display: block` separates them WITHOUT touching the DOM, which is why
+ * `e2e/naming.spec.ts`, `src/view/RankedTable.test.tsx` and their pinned concatenated `textContent`
+ * all keep passing unchanged: the fix is presentational, and presentation is what this file is for.
+ */
+.ranked__id {
+  display: block;
+  color: var(--acv-ink-soft);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* ------------------------------------------------------------------ Center card */
+
+.center__label {
+  margin: 2px 0 0;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+/* The id stays readable but plainly secondary to the name above it. */
+.center__record-id {
+  margin: 2px 0 8px;
+  color: var(--acv-ink-soft);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.center__kind {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--acv-ink-soft);
+}
+
+.center__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0;
+}
+
+/* ------------------------------------------------------------------ Tags */
+
+/*
+ * A Tag and the plain chip beside it look the same on purpose — the difference a reader needs is
+ * between a Highlighted row and a dimmed one, not between two kinds of chip.
+ */
+.tag,
+.ranked__chip,
+.board__chip {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 1px 8px;
+  border: 1px solid var(--acv-line);
+  border-radius: 999px;
+  background: var(--acv-ground);
+  color: var(--acv-ink-soft);
+  font: inherit;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag {
+  cursor: pointer;
+  /* The lift. One transform and one box-shadow, per docs/tags.md constraint 4. */
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.tag:hover,
+.tag:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgb(23 32 51 / 22%);
+  border-color: var(--acv-accent);
+  color: var(--acv-ink);
+}
+
+.tag[aria-pressed="true"] {
+  border-color: var(--acv-accent);
+  background: #dbeafe;
+  color: var(--acv-ink);
+}
+
+.tag[data-groupable="false"] {
+  cursor: default;
+}
+
+:focus-visible {
+  outline: 2px solid var(--acv-accent);
+  outline-offset: 1px;
+}
+
+/*
+ * docs/tags.md constraint 4: reduced motion disables the LIFT, not the Highlight. The Highlight is
+ * injected by highlight.ts and never reaches this block, so it is unaffected by construction.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .tag {
+    transition: none;
+  }
+
+  .tag:hover,
+  .tag:focus-visible {
+    transform: none;
+    box-shadow: none;
+  }
+}

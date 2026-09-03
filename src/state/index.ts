@@ -20,6 +20,7 @@ export type {
   PaneModel,
   PaneNode,
   RankedModel,
+  TagsModel,
 } from './derived';
 export { EXTERNAL_NEEDS_NOTE, paneNotice } from './derived';
 export type {

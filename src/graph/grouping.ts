@@ -10,6 +10,7 @@ import {
   compareIds,
   type Graph,
   isScalar,
+  type Scalar,
 } from './model';
 
 /** The grouping keys that read an Application's own fields; every other key reads `attributes`. */
@@ -216,4 +217,131 @@ export function groupDependencies(
     }
   }
   return edges.concat(memberEdges);
+}
+
+// ---------------------------------------------------------------- N7: the cardinality rule
+
+/**
+ * docs/tags.md, "The cardinality rule (item N7)": `samples/att/` once carried an Attribute with 139
+ * values over 141 Applications, and the group-by menu offered it — 139 Groups of one, which is not
+ * a grouping. An Attribute qualifies when it has at least two values and at most half as many
+ * values as the Applications carrying it, so every Group averages at least this many members.
+ *
+ * The threshold is a judgement, written down once here rather than per surface. This is a queryable
+ * predicate on purpose: the group-by menu and a Tag both ask it, and neither owns it. Note what it
+ * deliberately does NOT do — it does not stop `groupBy` from grouping by a disqualified Attribute.
+ * A Tag for one still names a real set and still Highlights (docs/tags.md); it just cannot become
+ * the grouping Attribute.
+ */
+export const MIN_APPLICATIONS_PER_VALUE = 2;
+
+export interface AttributeCardinality {
+  readonly attribute: string;
+  /** Applications carrying a scalar value for it; the ones in "No <Attribute>" count for neither side. */
+  readonly applications: number;
+  /** Distinct values by string form, the same comparison `groupBy` groups by. */
+  readonly values: number;
+}
+
+/** How many Applications carry `attribute`, and how many distinct values they carry between them. */
+export function attributeCardinality(graph: Graph, attribute: string): AttributeCardinality {
+  const values = new Set<string>();
+  let applications = 0;
+  for (const application of graph.applications.values()) {
+    const value = groupingValue(application, attribute);
+    if (isScalar(value)) {
+      applications++;
+      values.add(String(value));
+    }
+  }
+  return { attribute, applications, values: values.size };
+}
+
+/** Whether `attribute` may become the grouping Attribute. A key that is not groupable never can. */
+export function qualifiesAsGrouping(graph: Graph, attribute: string): boolean {
+  if (!groupableAttributes(graph).includes(attribute)) {
+    return false;
+  }
+  const { applications, values } = attributeCardinality(graph, attribute);
+  return values >= 2 && values * MIN_APPLICATIONS_PER_VALUE <= applications;
+}
+
+/** `groupableAttributes` minus the ones the cardinality rule disqualifies, in the same order. */
+export function groupingAttributes(graph: Graph): string[] {
+  return groupableAttributes(graph).filter((attribute) => qualifiesAsGrouping(graph, attribute));
+}
+
+// ---------------------------------------------------------------- the Tag index
+
+/**
+ * A Tag's stable token: the Group id (`<attribute>=<value>`) percent-encoded, which is what makes it
+ * usable as ONE word of a `data-groups` attribute and therefore reachable by a single
+ * `[data-groups~="<token>"]` CSS rule (docs/tags.md, constraint 1 — budget 8 is held by one DOM
+ * write, not one per row). Encoding is not decoration: Team values contain spaces, and a space would
+ * split one token into two words and match the wrong rows. The output is limited to unreserved
+ * characters and `%`, so it never contains whitespace, a quote or a backslash.
+ */
+export function tagToken(attribute: string, value: Scalar): string {
+  // Each half is encoded separately and then joined by a literal `=`. Encoding the joined string
+  // instead makes `a` + `b=c` and `a=b` + `c` the same token, which grouping.test.ts pins.
+  return `${encodeURIComponent(attribute)}=${encodeURIComponent(String(value))}`;
+}
+
+export interface TagIndex {
+  /** Node id to its space-separated token list, ready to become one `data-groups` attribute. */
+  readonly tokens: ReadonlyMap<string, string>;
+  /** Token to the Applications and Externals carrying that Attribute value. */
+  readonly members: ReadonlyMap<string, ReadonlySet<string>>;
+}
+
+/**
+ * Every Tag in the Catalog, built once per Graph. Applications contribute Repository, Team, Kind and
+ * every scalar `attributes` key; Externals contribute their kind and their own scalar attributes, so
+ * an "External · cache" Tag names the caches. Kind is one namespace across both, because a Tag names
+ * an Attribute VALUE and `kind=cache` is the same value whoever carries it — note this is wider than
+ * `groupBy`, which draws Groups of Applications alone.
+ */
+export function buildTagIndex(graph: Graph): TagIndex {
+  const tokens = new Map<string, string>();
+  const members = new Map<string, Set<string>>();
+
+  const add = (id: string, into: string[], attribute: string, value: unknown): void => {
+    if (!isScalar(value)) {
+      return;
+    }
+    const token = tagToken(attribute, value);
+    into.push(token);
+    const carrying = members.get(token);
+    if (carrying === undefined) {
+      members.set(token, new Set([id]));
+    } else {
+      carrying.add(id);
+    }
+  };
+
+  for (const application of graph.applications.values()) {
+    const own: string[] = [];
+    add(application.id, own, 'repository', application.repository);
+    add(application.id, own, 'team', application.team);
+    add(application.id, own, 'kind', application.kind);
+    for (const [key, value] of Object.entries(application.attributes)) {
+      if (!BUILT_IN_ATTRIBUTES.includes(key as (typeof BUILT_IN_ATTRIBUTES)[number])) {
+        add(application.id, own, key, value);
+      }
+    }
+    tokens.set(application.id, own.join(' '));
+  }
+
+  for (const external of graph.externals.values()) {
+    const own: string[] = [];
+    add(external.id, own, 'kind', external.kind);
+    for (const [key, value] of Object.entries(external.attributes)) {
+      if (!BUILT_IN_ATTRIBUTES.includes(key as (typeof BUILT_IN_ATTRIBUTES)[number])) {
+        add(external.id, own, key, value);
+      }
+    }
+    tokens.set(external.id, own.join(' '));
+  }
+
+  return { tokens, members };
 }

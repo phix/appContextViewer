@@ -1,7 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/preact';
 import { describe, expect, it, vi } from 'vitest';
+import { tagToken } from '@/graph';
 import type { RankedModel } from '@/state';
-import { FIRST_PAGE, RankedTable } from '@/view';
+import { currentHighlight, FIRST_PAGE, RankedTable } from '@/view';
+import { tagsOf } from './fixtures.test-helper';
+import { resetHighlight } from './highlight';
 
 function modelOf(overrides: Partial<RankedModel> = {}): RankedModel {
   const rows = overrides.rows ?? [
@@ -198,5 +201,78 @@ describe('an Application whose id names nothing', () => {
     });
     expect(screen.getByTestId('ranked-label').textContent).toBe('redis');
     expect(screen.queryByTestId('ranked-id')).toBeNull();
+  });
+});
+
+/**
+ * The ranked table's half of the Highlight (docs/tags.md). What matters most here is `data-groups`:
+ * the table takes part in a Highlight raised from any surface without re-rendering, and it does so
+ * because every row already carries its tokens.
+ */
+describe('Tags in the ranked table', () => {
+  const tags = tagsOf();
+
+  it('carries the Tag tokens of every row, Applications included', () => {
+    const rows = [
+      { kind: 'application' as const, id: 'acme/commerce/order-service', label: 'x', size: 3 },
+      { kind: 'external' as const, id: 'redis', label: 'redis', size: 2 },
+    ];
+    renderTable({ model: modelOf({ rows }), tags });
+
+    const rendered = screen.getAllByTestId('ranked-row');
+    expect(rendered[0]?.dataset.groups?.split(' ')).toContain(tagToken('team', 'commerce'));
+    expect(rendered[1]?.dataset.groups?.split(' ')).toContain(tagToken('kind', 'cache'));
+  });
+
+  it('makes an External kind chip a Tag, and leaves an Application chip inert', () => {
+    renderTable({ tags, externalKinds: new Map([['redis', 'cache']]) });
+
+    const chips = screen.getAllByTestId('ranked-chip');
+    // "External · cache" names `kind=cache`; "Application" is a node kind and names no Group.
+    expect(chips[0]?.tagName).toBe('BUTTON');
+    expect(chips[1]?.tagName).toBe('SPAN');
+    // An External whose kind the shell did not supply reads "External" and names nothing either.
+    expect(chips[2]?.tagName).toBe('SPAN');
+  });
+
+  it('Highlights the caches when its kind Tag is pointed at', () => {
+    renderTable({ tags, externalKinds: new Map([['redis', 'cache']]) });
+    fireEvent.mouseEnter(screen.getAllByTestId('ranked-chip')[0] as Element);
+
+    expect(currentHighlight()?.token).toBe(tagToken('kind', 'cache'));
+    expect(currentHighlight()?.members.size).toBeGreaterThan(0);
+    resetHighlight();
+  });
+
+  it('renders exactly as before when the shell supplies no Tags', () => {
+    renderTable({ externalKinds: new Map([['redis', 'cache']]) });
+    expect(screen.getAllByTestId('ranked-chip')[0]?.tagName).toBe('SPAN');
+    expect(screen.getAllByTestId('ranked-row')[0]?.hasAttribute('data-groups')).toBe(false);
+  });
+});
+
+/**
+ * The paging control's placement, which is a correctness property and not a style one: inside the
+ * scroll box it sat below every painted row, and once rows became two lines tall that put it ~4,600
+ * px down a 535 px window — unreachable without scrolling the table to its end.
+ */
+describe('the Show-more control is reachable without scrolling the table', () => {
+  it('is a sibling of the scroll box, not a descendant of it', () => {
+    renderTable({ model: modelOf({ rows: manyRows(FIRST_PAGE + 5) }) });
+
+    const scroll = screen.getByTestId('ranked-scroll');
+    const more = screen.getByTestId('ranked-more');
+    expect(scroll.contains(more)).toBe(false);
+    // And it is still inside the table's own section, so it reads as that table's footer.
+    expect(screen.getByTestId('ranked-table').contains(more)).toBe(true);
+  });
+
+  it('still pages the same rows from where it now sits', () => {
+    renderTable({ model: modelOf({ rows: manyRows(FIRST_PAGE + 5) }) });
+    expect(screen.getAllByTestId('ranked-row')).toHaveLength(FIRST_PAGE);
+
+    fireEvent.click(screen.getByTestId('ranked-more'));
+    expect(screen.getAllByTestId('ranked-row')).toHaveLength(FIRST_PAGE + 5);
+    expect(screen.queryByTestId('ranked-more')).toBeNull();
   });
 });

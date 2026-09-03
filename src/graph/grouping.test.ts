@@ -2,11 +2,16 @@ import { describe, expect, it } from 'vitest';
 import demoCatalog from '../../samples/catalog.demo.json';
 import { catalogOf, readSampleCatalog } from './fixtures.test-helper';
 import {
+  attributeCardinality,
   buildGraph,
+  buildTagIndex,
   type GroupEdge,
   groupableAttributes,
   groupBy,
   groupDependencies,
+  groupingAttributes,
+  qualifiesAsGrouping,
+  tagToken,
 } from './index';
 
 const demo = buildGraph(demoCatalog);
@@ -229,5 +234,219 @@ describe('groupDependencies: Group Dependencies for collapsed Groups, member edg
     const open = groupDependencies(demo, byRepository, new Set(byRepository.map((g) => g.id)));
     expect(memberEdges(open)).toHaveLength(38);
     expect(groupEdges(open)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------- N7: the cardinality rule
+
+/**
+ * docs/tags.md, "The cardinality rule (item N7)". The numbers below are ground truth read off the
+ * committed fixtures, not values these tests computed for themselves; `samples/att/catalog.att.json`
+ * is the 141-Application Catalog the rule was written for.
+ */
+describe('qualifiesAsGrouping: at least two values, at most half as many as the carriers', () => {
+  const att = buildGraph(readSampleCatalog('att/catalog.att.json'));
+  const thousand = buildGraph(readSampleCatalog('catalog-1000.json'));
+
+  it('reads the carriers and the distinct values off samples/att/ (141 Applications)', () => {
+    expect(att.applications.size).toBe(141);
+    expect(attributeCardinality(att, 'repository')).toEqual({
+      attribute: 'repository',
+      applications: 141,
+      values: 31,
+    });
+    // One Application carries no Team, so 140 carry it rather than 141.
+    expect(attributeCardinality(att, 'team')).toEqual({
+      attribute: 'team',
+      applications: 140,
+      values: 16,
+    });
+    expect(attributeCardinality(att, 'tier')).toEqual({
+      attribute: 'tier',
+      applications: 139,
+      values: 4,
+    });
+  });
+
+  /**
+   * The Attribute that forced this rule — `attributes.appName`, 139 values over 141 Applications —
+   * was DELETED from the fixture by commit 6c06934, which moved the readable name onto the schema's
+   * own optional `name` key. Every Attribute `samples/att/` still carries qualifies, so pinning the
+   * disqualifying branch to that file alone would assert nothing. The offending Attribute is
+   * therefore reconstructed here, over the real 141 records, which is what the rule was measured on.
+   */
+  it('disqualifies the 139-value Attribute samples/att/ used to carry, over its real 141 records', () => {
+    const source = readSampleCatalog('att/catalog.att.json');
+    const withAppName = buildGraph({
+      ...source,
+      applications: source.applications.map((application) =>
+        application.attributes === undefined
+          ? application
+          : {
+              ...application,
+              attributes: { ...application.attributes, appName: application.name },
+            },
+      ),
+    });
+    expect(attributeCardinality(withAppName, 'appName')).toEqual({
+      attribute: 'appName',
+      applications: 139,
+      values: 139,
+    });
+    expect(qualifiesAsGrouping(withAppName, 'appName')).toBe(false);
+    // It is offered as a key and refused as a grouping: the two questions are separate.
+    expect(groupableAttributes(withAppName)).toContain('appName');
+    expect(groupingAttributes(withAppName)).not.toContain('appName');
+  });
+
+  it('qualifies every Attribute samples/att/ carries today, and says so with its own list', () => {
+    expect(groupingAttributes(att)).toEqual(groupableAttributes(att));
+    expect(groupableAttributes(att)).toHaveLength(13);
+  });
+
+  it('fails an Attribute of one value, and passes one whose values are exactly half the carriers', () => {
+    // samples/catalog.demo.json: `deprecated` is carried by 2 Applications with one value between
+    // them; `pci` is carried by 4 with two values, which is the boundary the rule allows.
+    expect(attributeCardinality(demo, 'deprecated')).toEqual({
+      attribute: 'deprecated',
+      applications: 2,
+      values: 1,
+    });
+    expect(qualifiesAsGrouping(demo, 'deprecated')).toBe(false);
+    expect(attributeCardinality(demo, 'pci')).toEqual({
+      attribute: 'pci',
+      applications: 4,
+      values: 2,
+    });
+    // Exactly at the boundary: 2 values x 2 = 4 carriers. `<` instead of `<=` turns this red.
+    expect(qualifiesAsGrouping(demo, 'pci')).toBe(true);
+  });
+
+  it('fails an Attribute whose every carrier has its own value (demo `sla`: 3 of 3)', () => {
+    expect(attributeCardinality(demo, 'sla')).toEqual({
+      attribute: 'sla',
+      applications: 3,
+      values: 3,
+    });
+    expect(qualifiesAsGrouping(demo, 'sla')).toBe(false);
+    expect(groupingAttributes(demo)).toEqual([
+      'repository',
+      'team',
+      'kind',
+      'language',
+      'pci',
+      'runtime',
+      'tier',
+    ]);
+  });
+
+  it('keeps the 1,000-Application fixture groupable by Repository, Team and Kind', () => {
+    expect(thousand.applications.size).toBe(1000);
+    expect(attributeCardinality(thousand, 'repository')).toEqual({
+      attribute: 'repository',
+      applications: 1000,
+      values: 123,
+    });
+    expect(attributeCardinality(thousand, 'oncall')).toEqual({
+      attribute: 'oncall',
+      applications: 278,
+      values: 54,
+    });
+    expect(groupingAttributes(thousand)).toEqual([
+      'repository',
+      'team',
+      'kind',
+      'language',
+      'oncall',
+      'runtime',
+      'sla',
+      'tier',
+    ]);
+    // Both dropped for having a single value across their carriers, not for their spread.
+    expect(qualifiesAsGrouping(thousand, 'deprecated')).toBe(false);
+    expect(qualifiesAsGrouping(thousand, 'pci')).toBe(false);
+  });
+
+  it('refuses a key that is not a groupable Attribute at all', () => {
+    expect(qualifiesAsGrouping(demo, 'links')).toBe(false);
+    expect(qualifiesAsGrouping(demo, 'nonesuch')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------- the Tag index
+
+/**
+ * A Tag names one Attribute value (CONTEXT.md, **Tag**). `buildTagIndex` gives every surface the
+ * two things it needs without traversing the Graph itself: the token list a row carries as one
+ * `data-groups` attribute, and the node ids behind a token.
+ */
+describe('buildTagIndex: tokens on a row, members behind a token', () => {
+  it('encodes a token so it survives as one word of a `data-groups` attribute', () => {
+    // A CSS `[data-groups~="..."]` selector matches whitespace-separated words, so a value with a
+    // space in it — which Team values routinely have — must not contribute two words.
+    expect(tagToken('team', 'Billing Platform')).toBe('team=Billing%20Platform');
+    expect(tagToken('team', 'Billing Platform')).not.toMatch(/\s/);
+    expect(tagToken('tier', 1)).toBe('tier=1');
+    expect(tagToken('pci', true)).toBe('pci=true');
+    // Distinct pairs never collide, including when a value itself contains the separator.
+    expect(tagToken('a', 'b=c')).not.toBe(tagToken('a=b', 'c'));
+  });
+
+  it('gives an Application one token per scalar Attribute it carries, and nothing for the rest', () => {
+    const graph = buildGraph(
+      catalogOf([
+        {
+          repository: 'acme/commerce',
+          project: 'order-service',
+          team: 'Billing Platform',
+          kind: 'service',
+          attributes: { tier: 1, links: ['x'], nothing: null },
+        },
+      ]),
+    );
+    const index = buildTagIndex(graph);
+    const tokens = (index.tokens.get('acme/commerce/order-service') ?? '').split(' ').sort();
+    expect(tokens).toEqual(
+      [
+        tagToken('repository', 'acme/commerce'),
+        tagToken('team', 'Billing Platform'),
+        tagToken('kind', 'service'),
+        tagToken('tier', 1),
+      ].sort(),
+    );
+  });
+
+  it('puts every node sharing one Attribute value behind that value token', () => {
+    const index = buildTagIndex(demo);
+    const team = tagToken('team', 'commerce');
+    const members = index.members.get(team);
+    expect(members).toBeDefined();
+    // The Group and the Tag name the same set: a Tag is a Group made reachable, not a new relation.
+    const group = groupBy(demo, 'team').find((candidate) => candidate.label === 'commerce');
+    expect(group).toBeDefined();
+    expect([...(members ?? [])].sort()).toEqual([...(group?.members ?? [])].sort());
+    expect(members?.size).toBeGreaterThan(1);
+  });
+
+  it('reaches Externals too, so an "External · cache" Tag names the caches', () => {
+    const index = buildTagIndex(demo);
+    const caches = index.members.get(tagToken('kind', 'cache'));
+    expect(caches).toBeDefined();
+    expect(caches?.has('redis')).toBe(true);
+    expect(index.tokens.get('redis')).toContain(tagToken('kind', 'cache'));
+  });
+
+  it('covers every node of the 1,000-Application fixture', () => {
+    const thousand = buildGraph(readSampleCatalog('catalog-1000.json'));
+    const index = buildTagIndex(thousand);
+    expect(index.tokens.size).toBe(1000 + 25);
+    // Repository is on every Application, so its 123 tokens partition all 1,000 of them.
+    let counted = 0;
+    for (const [token, members] of index.members) {
+      if (token.startsWith('repository=')) {
+        counted += members.size;
+      }
+    }
+    expect(counted).toBe(1000);
   });
 });

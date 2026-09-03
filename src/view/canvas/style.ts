@@ -71,6 +71,25 @@ export const canvasStyle: cytoscape.StylesheetJson = [
       opacity: 0.72,
     },
   },
+  /*
+   * A Highlight (docs/tags.md): members lifted, everything else de-emphasised but still drawn. The
+   * dim is opacity only, so no node moves and nothing leaves the canvas.
+   */
+  {
+    selector: '.is-tagged',
+    style: {
+      'background-color': '#fef3c7',
+      'border-color': '#d97706',
+      'border-width': 3,
+      'z-index': 25,
+    },
+  },
+  {
+    selector: '.is-dimmed',
+    style: {
+      opacity: 0.32,
+    },
+  },
   {
     selector: '.is-hovered',
     style: {
