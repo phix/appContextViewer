@@ -35,6 +35,32 @@ function shipThirdPartyNotices(): Plugin {
  * explicitly (checked with a probe on 2026-09-02: only the worker build kept them by default), and
  * e2e/smoke.spec.ts asserts the served entry chunk still carries this banner.
  */
+/**
+ * Ships the fictitious AT&T-style Catalog with the site, so the hosted viewer can demonstrate the
+ * case the sample Catalog cannot: an estate whose Applications are identified by APM number rather
+ * than by a readable id (samples/att/README.md, docs/retrospective-2026-09-03.md). Reachable at
+ * `?src=./catalog.att.json`.
+ *
+ * Only dist/ is served in production, so a Catalog that is not emitted here is not loadable there —
+ * `?src=/samples/...` works against e2e/server.mjs locally and 404s on the deployed site.
+ *
+ * This is a fixture, not real data, and it carries that notice in its own `source` field.
+ */
+function shipDemoCatalogs(): Plugin {
+  return {
+    name: 'app-context-viewer:demo-catalogs',
+    apply: 'build',
+    generateBundle() {
+      const from = new URL('./samples/att/catalog.att.json', import.meta.url);
+      this.emitFile({
+        type: 'asset',
+        fileName: 'catalog.att.json',
+        source: readFileSync(from, 'utf8'),
+      });
+    },
+  };
+}
+
 const LEGAL_BANNER = `/*! App Context Viewer, MIT licensed. The bundled third-party code and its licences are listed in ${NOTICES}, shipped beside this file. */`;
 const legalOutput = { banner: LEGAL_BANNER, comments: { legal: true } };
 
@@ -42,7 +68,7 @@ const legalOutput = { banner: LEGAL_BANNER, comments: { legal: true } };
 // sample Catalog bundled, the elk worker created through `?worker`).
 export default defineConfig({
   base: './',
-  plugins: [preact(), shipThirdPartyNotices()],
+  plugins: [preact(), shipThirdPartyNotices(), shipDemoCatalogs()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
