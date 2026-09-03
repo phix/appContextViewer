@@ -61,13 +61,27 @@ test('pointing at a Tag Highlights its Group on all three surfaces at once', asy
   // satisfy "the rule was injected" and prove nothing at all.
   await expect.poll(() => highlightedCount(page, 'ranked-row')).toBeGreaterThan(0);
   await expect.poll(() => highlightedCount(page, 'board-row')).toBeGreaterThan(0);
-  // The canvas is not reachable by CSS, so it reports what it styled instead.
-  await expect(page.getByTestId('canvas')).not.toHaveAttribute('data-tagged', '');
+  // The canvas is not reachable by CSS, so it reports how many of its own nodes it styled. This
+  // must assert a POSITIVE COUNT, not the absence of a value: `not.toHaveAttribute` also passes
+  // when the attribute was never written at all, which let a mutant that unsubscribed the canvas
+  // entirely survive this test until the assertion was tightened.
+  await expect(page.getByTestId('canvas')).toHaveAttribute('data-tagged', /^[1-9][0-9]*$/);
 
   // Non-members are de-emphasised, not removed: the row count and the counts line are untouched.
   const rowsWhileHighlighted = await page.getByTestId('ranked-row').count();
   await expect(page.getByTestId('ranked-counts')).toContainText('34 Applications');
   expect(rowsWhileHighlighted).toBeGreaterThan(await highlightedCount(page, 'ranked-row'));
+
+  // And a non-member is still ON SCREEN, not merely still in the DOM. A Highlight that hid the rest
+  // would leave every count above intact, so visibility is the assertion that separates
+  // de-emphasis from a filter (CONTEXT.md, **Highlight**).
+  const nonMember = page
+    .locator('[data-testid="ranked-row"]:not([data-groups~="team=commerce"])')
+    .first();
+  await expect(nonMember).toBeVisible();
+  const dimmed = await nonMember.evaluate((node) => Number(getComputedStyle(node).opacity));
+  expect(dimmed).toBeGreaterThan(0);
+  expect(dimmed).toBeLessThan(1);
 });
 
 test('a Highlight changes neither the Center nor the URL', async ({ page }) => {
@@ -188,6 +202,41 @@ test('the lift is there without reduced motion, so the test above is not vacuous
   await tag.hover();
   await expect(tag).not.toHaveCSS('transform', 'none');
   await expect(tag).not.toHaveCSS('box-shadow', 'none');
+});
+
+/**
+ * The first stylesheet's other job. With no CSS the ranked table rendered an Application's name and
+ * its id as one run-on string — `Common Logging LibraryATT-IDP5/shared-libraries/apm10133` on the
+ * deployed site. The id stays inside the button (the accessible name and several text queries
+ * depend on it), so only CSS can separate them, and only a browser can prove it did.
+ */
+test('a ranked row reads its name and its id as two things, not one run-on string', async ({
+  page,
+}) => {
+  await page.goto('/?src=/samples/att/catalog.att.json');
+  await expect(page.getByTestId('header-counts')).toHaveText('141 Applications, 32 Externals');
+
+  const label = page.getByTestId('ranked-label').first();
+  const id = page.getByTestId('ranked-id').first();
+  await expect(label).toHaveText('Common Logging Library');
+
+  const labelBox = await label.boundingBox();
+  const idBox = await id.boundingBox();
+  expect(labelBox).not.toBeNull();
+  expect(idBox).not.toBeNull();
+  // The id sits on its own line beneath the name. Side by side — which is what no stylesheet and
+  // what a bare `margin-left` both give — makes this fail.
+  expect(idBox?.y ?? 0).toBeGreaterThanOrEqual((labelBox?.y ?? 0) + (labelBox?.height ?? 0));
+
+  // And it reads as secondary: smaller, and a different colour from the name.
+  const sizeOf = (text: string) =>
+    Number.parseFloat(text.endsWith('px') ? text.slice(0, -2) : text);
+  const labelSize = sizeOf(await label.evaluate((node) => getComputedStyle(node).fontSize));
+  const idSize = sizeOf(await id.evaluate((node) => getComputedStyle(node).fontSize));
+  expect(idSize).toBeLessThan(labelSize);
+  expect(await id.evaluate((node) => getComputedStyle(node).color)).not.toBe(
+    await label.evaluate((node) => getComputedStyle(node).color),
+  );
 });
 
 test('budget 8: a Highlight crossing 1,000 ranked rows, painted in 50 ms', async ({ page }) => {

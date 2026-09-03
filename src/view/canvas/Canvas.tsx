@@ -149,6 +149,7 @@ export function Canvas({ elements, positions, onHover, onSelect, onPainted }: Ca
       cy.batch(() => {
         cy.elements().removeClass('is-tagged is-dimmed');
         if (highlight === null) {
+          container.dataset.tagged = '';
           return;
         }
         const tagged = cy
@@ -157,8 +158,11 @@ export function Canvas({ elements, positions, onHover, onSelect, onPainted }: Ca
         tagged.addClass('is-tagged');
         // Non-members are de-emphasised, never removed: a Highlight is not a filter (CONTEXT.md).
         cy.elements().difference(tagged).addClass('is-dimmed');
+        // Read off the very collection that was just styled, so it reports what this canvas DID
+        // rather than what it would have done. Recomputing membership here instead let a mutant
+        // that styled nothing still publish the right count, and e2e/tags.spec.ts stayed green.
+        container.dataset.tagged = String(tagged.length);
       });
-      container.dataset.tagged = highlight === null ? '' : String(highlight.members.size);
     };
     applyHighlight(currentHighlight());
     const unsubscribe = onHighlight(applyHighlight);

@@ -163,10 +163,19 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * The name and the id are two spans inside one button, so that the control's accessible name
+ * carries both and a text query for the id still finds the control that selects it. With no
+ * stylesheet at all they rendered as one run-on string — "Common Logging LibraryATT-IDP5/…" on the
+ * deployed site. `display: block` separates them WITHOUT touching the DOM, which is why
+ * `e2e/naming.spec.ts`, `src/view/RankedTable.test.tsx` and their pinned concatenated `textContent`
+ * all keep passing unchanged: the fix is presentational, and presentation is what this file is for.
+ */
 .ranked__id {
-  margin-left: 6px;
+  display: block;
   color: var(--acv-ink-soft);
   font-size: 12px;
+  font-weight: 400;
 }
 
 /* ------------------------------------------------------------------ Tags */
