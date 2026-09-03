@@ -9,6 +9,7 @@ Catalogs that conform to [schema v1](../docs/schema-v1.md), plus the scripts tha
 | `catalog-200.json`, `catalog-500.json`, `catalog-1000.json` | Performance fixtures emitted by `generate.mjs` with its default arguments. Deterministic: regenerating gives the same bytes. |
 | `generate.mjs` | The generator. Node 20+, no dependencies. |
 | `check.mjs` | Enforces every rule in `docs/schema-v1.md` (error and warning codes) and prints row counts. Exit 1 on any error. |
+| [`att/`](./att/README.md) | A fictitious AT&T-style Catalog: 141 Applications identified by APM number (`apm10000`+) across five `ATT-IDP*` organisations, plus an index and a details file. The fixture where an **opaque id** is the point — see [the retrospective](../docs/retrospective-2026-09-03.md). |
 
 All five Catalogs also validate against [`schema/catalog.v1.schema.json`](../schema/catalog.v1.schema.json) with ajv (draft 2020-12, strict mode, formats enabled).
 
