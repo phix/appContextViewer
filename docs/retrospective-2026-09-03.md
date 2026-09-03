@@ -156,10 +156,20 @@ Two corollaries worth keeping:
    *arbitrary* edge subset while the ruling adopted *heaviest-first* selection, which is a different
    input and costs more. A number read off a curve that does not describe the rule you adopted is not
    a measurement.
-2. **"It passes when I run it alone" is not a flake report; it is a result.** Half the browser suite
+2. **A measurement that flatters your existing conclusion is the one to re-run first.** Sharper than
+   "check your instrument", and it came from the worker it happened to. A warm-timing helper cleared
+   its counters while the previous layout was still in flight, so a sample spanned two runs and
+   reported ~965 ms for ~590 ms of work — landing *just above* the ceiling, exactly where a real miss
+   sits, and inflating the number in the direction that worker's own escalation had already argued
+   for. Every instinct said "this agrees with me". What caught it was an isolated probe disagreeing
+   with the in-suite run by 375 ms: two measurements of the same work that could not both be right.
+
+3. **"It passes when I run it alone" is not a flake report; it is a result.** Half the browser suite
    asserts a duration, and `playwright.config.ts` ran parallel workers locally while CI ran one, so
    timed budgets were measuring the machine's load. Budgets 3, 4 and 6 all failed intermittently in
-   whole-suite runs and passed file by file. One worker everywhere fixed it.
+   whole-suite runs and passed file by file. Playwright now runs one worker everywhere and Vitest
+   sets `fileParallelism: false`; the first fix closed only half of it, and `dagre.test.ts` reporting
+   1,343 ms against a 750 ms bound found the other half.
 
 ## The one-line lesson
 
