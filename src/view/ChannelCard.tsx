@@ -30,13 +30,13 @@ export function ChannelCard({ model, onSelectApplication, onDismiss }: ChannelCa
       </header>
 
       <Side
-        title="Publishers"
+        title="Producers"
         testId="channel-publishers"
         rows={model.publishers}
         onSelectApplication={onSelectApplication}
       />
       <Side
-        title="Subscribers"
+        title="Consumers"
         testId="channel-subscribers"
         rows={model.subscribers}
         onSelectApplication={onSelectApplication}

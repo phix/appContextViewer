@@ -32,9 +32,9 @@ describe('CenterCard', () => {
     expect(attributes).toContain('language=java');
     expect(attributes).toContain('tier=1');
     expect(screen.getByTestId('center-badge').textContent).toBe('6 break across 4 Teams');
-    expect(screen.getByTestId('center-publishes').textContent).toBe('Publishes: orders.placed');
+    expect(screen.getByTestId('center-publishes').textContent).toBe('Produces: orders.placed');
     expect(screen.getByTestId('center-subscribes').textContent).toBe(
-      'Subscribes: payments.captured',
+      'Consumes: payments.captured',
     );
   });
 
@@ -88,7 +88,7 @@ describe('CenterCard', () => {
     expect(lines[0]).toBe('# ATT-IDP4/commerce/order-service');
     expect(lines[2]).toBe('Application · service — Team commerce');
     expect(markdown).toContain('6 break across 4 Teams');
-    expect(markdown).toContain('- Publishes: orders.placed');
+    expect(markdown).toContain('- Produces: orders.placed');
     expect(markdown).toContain('- language: java');
 
     // Both columns, each with one section per Depth band and one line per row.

@@ -111,9 +111,9 @@ export function boardMarkdown(model: BoardModel): string {
 
   if (card.kind === 'application') {
     lines.push('## Flows', '');
-    lines.push(`- Publishes: ${card.publishes.length === 0 ? 'none' : card.publishes.join(', ')}`);
+    lines.push(`- Produces: ${card.publishes.length === 0 ? 'none' : card.publishes.join(', ')}`);
     lines.push(
-      `- Subscribes: ${card.subscribes.length === 0 ? 'none' : card.subscribes.join(', ')}`,
+      `- Consumes: ${card.subscribes.length === 0 ? 'none' : card.subscribes.join(', ')}`,
     );
     lines.push('');
   }
@@ -286,10 +286,10 @@ export function CenterCard({
       {card.kind === 'application' ? (
         <div class="center__flows" data-testid="center-flows">
           <p class="center__flow" data-testid="center-publishes">
-            Publishes: {card.publishes.length === 0 ? 'none' : card.publishes.join(', ')}
+            Produces: {card.publishes.length === 0 ? 'none' : card.publishes.join(', ')}
           </p>
           <p class="center__flow" data-testid="center-subscribes">
-            Subscribes: {card.subscribes.length === 0 ? 'none' : card.subscribes.join(', ')}
+            Consumes: {card.subscribes.length === 0 ? 'none' : card.subscribes.join(', ')}
           </p>
         </div>
       ) : null}

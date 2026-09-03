@@ -23,7 +23,7 @@ function renderCard(name: string, props: Partial<Parameters<typeof ChannelCard>[
   );
 }
 
-function rowIds(side: 'Publishers' | 'Subscribers'): string[] {
+function rowIds(side: 'Producers' | 'Consumers'): string[] {
   return screen
     .getAllByTestId('channel-row')
     .filter((row) => row.dataset.side === side)
@@ -35,8 +35,8 @@ describe('ChannelCard', () => {
     renderCard('orders.placed');
 
     expect(screen.getByTestId('channel-name').textContent).toBe('orders.placed');
-    expect(rowIds('Publishers')).toEqual(['ATT-IDP4/commerce/order-service']);
-    expect(rowIds('Subscribers')).toEqual([
+    expect(rowIds('Producers')).toEqual(['ATT-IDP4/commerce/order-service']);
+    expect(rowIds('Consumers')).toEqual([
       'ATT-IDP5/platform-core/notification-service',
       'ATT-IDP4/commerce/inventory-service',
       'ATT-IDP4/commerce/checkout-worker',
@@ -61,8 +61,8 @@ describe('ChannelCard', () => {
     renderCard('orders.shipped');
 
     expect(screen.getByTestId('channel-publishers-none').textContent).toBe('None in this Catalog');
-    expect(rowIds('Publishers')).toEqual([]);
-    expect(rowIds('Subscribers')).toEqual([
+    expect(rowIds('Producers')).toEqual([]);
+    expect(rowIds('Consumers')).toEqual([
       'ATT-IDP5/platform-core/notification-service',
       'ATT-IDP4/commerce/inventory-service',
     ]);

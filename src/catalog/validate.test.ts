@@ -455,14 +455,14 @@ describe('W_EMPTY_CHANNEL', () => {
         code: 'W_EMPTY_CHANNEL',
         path: 'applications[0].publishes[1]',
         id: 'ATT-IDP4/commerce/order-service',
-        message: 'Channel "orders.audited" has 1 publisher and no subscriber',
+        message: 'Channel "orders.audited" has 1 producer and no consumer',
         value: 'orders.audited',
       },
       {
         code: 'W_EMPTY_CHANNEL',
         path: 'applications[1].subscribes[1]',
         id: 'ATT-IDP4/commerce/shipping-service',
-        message: 'Channel "orders.shipped" has 2 subscribers and no publisher',
+        message: 'Channel "orders.shipped" has 2 consumers and no producer',
         value: 'orders.shipped',
       },
     ]);
@@ -484,7 +484,7 @@ describe('W_EMPTY_CHANNEL', () => {
         code: 'W_EMPTY_CHANNEL',
         path: 'applications[0].publishes[0]',
         id: 'r/a',
-        message: 'Channel "c" has 1 publisher and no subscriber',
+        message: 'Channel "c" has 1 producer and no consumer',
         value: 'c',
       },
     ]);
@@ -607,7 +607,7 @@ describe('every rule runs, whatever failed before it', () => {
       {
         code: 'W_EMPTY_CHANNEL',
         path: 'applications[0].publishes[0]',
-        message: 'Channel "lonely" has 1 publisher and no subscriber',
+        message: 'Channel "lonely" has 1 producer and no consumer',
         value: 'lonely',
       },
     ]);
@@ -655,8 +655,8 @@ describe('the committed Catalogs', () => {
   it('names the missing side of each demo Channel', () => {
     const result = validateCatalog(readJson(sample('catalog.demo.json')));
     expect(result.warnings.map((w) => w.message)).toEqual([
-      'Channel "orders.shipped" has 2 subscribers and no publisher',
-      'Channel "fraud.alerts" has 1 publisher and no subscriber',
+      'Channel "orders.shipped" has 2 consumers and no producer',
+      'Channel "fraud.alerts" has 1 producer and no consumer',
     ]);
   });
 

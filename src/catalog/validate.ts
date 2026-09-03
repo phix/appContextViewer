@@ -528,8 +528,8 @@ function checkChannels(records: ApplicationRecord[], out: Collector): void {
     }
     const message =
       channel.publishers === 0
-        ? `Channel "${name}" has ${count(channel.subscribers, 'subscriber')} and no publisher`
-        : `Channel "${name}" has ${count(channel.publishers, 'publisher')} and no subscriber`;
+        ? `Channel "${name}" has ${count(channel.subscribers, 'consumer')} and no producer`
+        : `Channel "${name}" has ${count(channel.publishers, 'producer')} and no consumer`;
     out.warn('W_EMPTY_CHANNEL', channel.path, message, channel.id, name);
   }
 }
