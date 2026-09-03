@@ -122,6 +122,32 @@ describe('overviewRenderOf', () => {
     ).toMatchObject({ label: '2', kind: 'group' });
   });
 
+  it('labels an open Group’s members with their name, not their id, when the producer supplied one', () => {
+    const { catalog } = validateCatalog({
+      schemaVersion: 1,
+      applications: [
+        { repository: 'a', project: 'apm10000', name: 'Alarm Ingest Gateway' },
+        { repository: 'a', project: 'apm10001' },
+      ],
+    });
+    if (catalog === undefined) {
+      throw new Error('the named-member fixture must validate');
+    }
+    const store = createStore({ catalog });
+    store.actions.expandOverview(true);
+    store.actions.toggleGroup('repository=a');
+    const result = overviewRenderOf(store.derived.overviewModel.value, null);
+
+    const members = result.elements.nodes.filter((node) => node.kind === 'member');
+    expect(members.find((node) => node.sourceId === 'a/apm10000')).toMatchObject({
+      label: 'Alarm Ingest Gateway',
+    });
+    // No `name`: labelOf falls back to the Project, same as the ranked table and the Center card do.
+    expect(members.find((node) => node.sourceId === 'a/apm10001')).toMatchObject({
+      label: 'apm10001',
+    });
+  });
+
   it('hides a collapsed Group’s intra-Group Dependencies and restores them when it opens', () => {
     const closed = overviewRenderOf(expanded().model, null);
     expect(closed.elements.edges.filter((edge) => edge.kind === 'member')).toHaveLength(0);
@@ -308,6 +334,7 @@ const OVER_ENVELOPE: OverviewModel = {
   groupDependencies: 0,
   hiddenGroupDependencies: 0,
   capNotice: null,
+  labels: new Map(),
 };
 
 describe('OverviewControls', () => {

@@ -278,8 +278,13 @@ describe('qualifiesAsGrouping: at least two values, at most half as many as the 
    * own optional `name` key. Every Attribute `samples/att/` still carries qualifies, so pinning the
    * disqualifying branch to that file alone would assert nothing. The offending Attribute is
    * therefore reconstructed here, over the real 141 records, which is what the rule was measured on.
+   *
+   * All 141 gain `appName` here, not 139: the fixture used to carry two Applications with no
+   * `attributes` object at all (missing `org`, which left them out of the Overview's org grouping
+   * entirely -- 2026-09-03), so this map's `attributes === undefined` guard skipped them. Giving
+   * both an `org` closed that gap and, as a side effect, made every Application eligible here too.
    */
-  it('disqualifies the 139-value Attribute samples/att/ used to carry, over its real 141 records', () => {
+  it('disqualifies the 141-value Attribute samples/att/ used to carry, over its real 141 records', () => {
     const source = readSampleCatalog('att/catalog.att.json');
     const withAppName = buildGraph({
       ...source,
@@ -294,8 +299,8 @@ describe('qualifiesAsGrouping: at least two values, at most half as many as the 
     });
     expect(attributeCardinality(withAppName, 'appName')).toEqual({
       attribute: 'appName',
-      applications: 139,
-      values: 139,
+      applications: 141,
+      values: 141,
     });
     expect(qualifiesAsGrouping(withAppName, 'appName')).toBe(false);
     // It is offered as a key and refused as a grouping: the two questions are separate.

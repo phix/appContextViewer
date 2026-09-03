@@ -174,6 +174,12 @@ export interface OverviewModel {
   readonly notice: string | null;
   readonly applications: number;
   readonly dependencies: number;
+  /**
+   * `labelOf` for every Application in `groups`, so an open Group's members can be labelled without
+   * the view traversing the Graph itself (docs/architecture.md). Empty while the Overview is
+   * collapsed or disabled, like `groups`.
+   */
+  readonly labels: ReadonlyMap<ApplicationId, string>;
 }
 
 // ---------------------------------------------------------------- Tags
@@ -337,6 +343,17 @@ export function createDerived(s: StoreSignals): Derived {
     const open = s.openGroups.value;
     const active = expanded && !overviewDisabled;
     const groups = active ? groupsFor(graph, attribute) : [];
+    const labels = new Map<ApplicationId, string>();
+    if (active) {
+      for (const group of groups) {
+        for (const member of group.members) {
+          const application = graph.applications.get(member);
+          if (application !== undefined) {
+            labels.set(member, labelOf(application));
+          }
+        }
+      }
+    }
     const drawn = capGroupDependencies(active ? groupEdgesOf(graph, groups, open) : []);
     // Gated by `active`, like `groups` above: while the Overview is collapsed or disabled this
     // never reads `s.depth`, so a Depth change costs nothing until the Overview is actually open.
@@ -358,6 +375,7 @@ export function createDerived(s: StoreSignals): Derived {
       notice,
       applications,
       dependencies,
+      labels,
     };
   });
 

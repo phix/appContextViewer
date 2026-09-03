@@ -2,5 +2,13 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/",
+      "missing": [{ "type": "query", "key": "src" }],
+      "destination": "/?src=/catalog.att.json#view=overview&group=org",
+      "permanent": false
+    }
+  ]
 }

@@ -84,8 +84,9 @@ export interface OverviewRender {
  * Neighborhood's own walk actually crosses lights up even into a collapsed Group well past the
  * Center's own.
  *
- * Member labels are Application ids: `OverviewModel` carries no display label for a Group member,
- * and looking one up would be a Graph traversal from the view.
+ * Member labels come from `model.labels` (`labelOf`, built in `derived.ts`), falling back to the id
+ * for a member the map has no entry for -- which should not happen, since it is built from the same
+ * `groups` this function draws, but a raw id beats a blank label if it ever does.
  */
 export function overviewRenderOf(model: OverviewModel, center: Center | null): OverviewRender {
   const highlighted = new Set(model.highlighted);
@@ -126,7 +127,7 @@ export function overviewRenderOf(model: OverviewModel, center: Center | null): O
         nodes.push({
           id: memberId,
           sourceId: member,
-          label: member,
+          label: model.labels.get(member) ?? member,
           kind: 'member',
           parent: id,
           width: MEMBER_WIDTH,

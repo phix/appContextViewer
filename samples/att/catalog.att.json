@@ -1903,7 +1903,10 @@
       "name": "Proration Calculator",
       "kind": "library",
       "team": "Billing Platform",
-      "description": "Computes mid-cycle proration for plan and feature changes."
+      "description": "Computes mid-cycle proration for plan and feature changes.",
+      "attributes": {
+        "org": "ATT-IDP3"
+      }
     },
     {
       "repository": "ATT-IDP3/billing-core",
@@ -3677,7 +3680,10 @@
       "name": "Retry Policy Library",
       "kind": "library",
       "team": "API Platform",
-      "description": "Standard backoff, jitter and circuit-breaker policy."
+      "description": "Standard backoff, jitter and circuit-breaker policy.",
+      "attributes": {
+        "org": "ATT-IDP5"
+      }
     },
     {
       "repository": "ATT-IDP5/shared-libraries",
