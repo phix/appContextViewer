@@ -90,6 +90,10 @@ _Avoid_: aggregated edge, meta-edge, bundle, summary edge
 The transient emphasis of a set of nodes without changing the Center: the Group behind a pointed-at Tag, or the Neighborhood at the header Depth. A Highlight never changes what the board reads, never writes to the URL, and clears when the pointer or focus leaves.
 _Avoid_: selection (that is the Center), filter (that removes rows; a Highlight removes nothing), focus (that is the browser's)
 
+**Space**:
+The whole Catalog drawn as a force layout in three dimensions, ungrouped and continuous, for seeing shape — clusters, hubs, how tightly a Group holds together. Structural only: nothing is read precisely off it and nothing is reachable only through it.
+_Avoid_: 3D view (in prose; fine informally), globe, scene, world
+
 **Overview**:
 The whole Catalog drawn at once: every Application inside its Group, with the Dependencies between them. Secondary to the Neighborhood, which is where a selected Application is read.
 _Avoid_: full graph, global view, big picture, map
