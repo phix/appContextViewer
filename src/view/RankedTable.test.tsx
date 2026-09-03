@@ -5,10 +5,15 @@ import { FIRST_PAGE, RankedTable } from '@/view';
 
 function modelOf(overrides: Partial<RankedModel> = {}): RankedModel {
   const rows = overrides.rows ?? [
-    { kind: 'external' as const, id: 'redis', size: 12 },
-    { kind: 'application' as const, id: 'acme/platform-core/auth-service', size: 9 },
-    { kind: 'external' as const, id: 'postgres', size: 4 },
-    { kind: 'application' as const, id: 'acme/tools/cli', size: 0 },
+    { kind: 'external' as const, id: 'redis', label: 'redis', size: 12 },
+    {
+      kind: 'application' as const,
+      id: 'acme/platform-core/auth-service',
+      label: 'acme/platform-core/auth-service',
+      size: 9,
+    },
+    { kind: 'external' as const, id: 'postgres', label: 'postgres', size: 4 },
+    { kind: 'application' as const, id: 'acme/tools/cli', label: 'acme/tools/cli', size: 0 },
   ];
   return {
     rows,
@@ -31,6 +36,7 @@ function manyRows(count: number) {
   return Array.from({ length: count }, (_, index) => ({
     kind: 'application' as const,
     id: `acme/repo/app-${index}`,
+    label: `app-${index}`,
     size: count - index,
   }));
 }
@@ -65,7 +71,14 @@ describe('RankedTable', () => {
     rerender(
       <RankedTable
         model={modelOf({
-          rows: [{ kind: 'application', id: 'acme/platform-core/auth-service', size: 9 }],
+          rows: [
+            {
+              kind: 'application',
+              id: 'acme/platform-core/auth-service',
+              label: 'acme/platform-core/auth-service',
+              size: 9,
+            },
+          ],
           applicationsOnly: true,
         })}
         onSelect={noop}
@@ -141,5 +154,49 @@ describe('RankedTable', () => {
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     await new Promise((resolve) => requestAnimationFrame(resolve));
     expect(onPainted).toHaveBeenCalled();
+  });
+});
+
+describe('an Application whose id names nothing', () => {
+  // docs/retrospective-2026-09-03.md, N6. Under an APM scheme the id is `…/apm10133`, so a table
+  // that renders the id renders nothing a reader can act on. The label reads; the id stays visible
+  // beside it, because an operator still needs to copy the identity.
+  const apmRows = [
+    {
+      kind: 'application' as const,
+      id: 'ATT-IDP5/shared-libraries/apm10133',
+      label: 'Common Logging Library',
+      size: 118,
+    },
+    { kind: 'external' as const, id: 'kafka-event-bus', label: 'Kafka', size: 83 },
+  ];
+
+  it('renders the name, not the APM id', () => {
+    renderTable({ model: modelOf({ rows: apmRows }) });
+    const labels = screen.getAllByTestId('ranked-label');
+    expect(labels[0]?.textContent).toBe('Common Logging Library');
+    expect(labels[1]?.textContent).toBe('Kafka');
+  });
+
+  it('still shows the id, so identity is never hidden', () => {
+    renderTable({ model: modelOf({ rows: apmRows }) });
+    expect(screen.getAllByTestId('ranked-id').map((node) => node.textContent)).toEqual([
+      'ATT-IDP5/shared-libraries/apm10133',
+      'kafka-event-bus',
+    ]);
+    // Both live inside the button, so the control's own accessible name carries the identity.
+    expect(screen.getAllByTestId('ranked-link')[0]?.textContent).toBe(
+      'Common Logging LibraryATT-IDP5/shared-libraries/apm10133',
+    );
+  });
+
+  it('does not repeat itself when the label already is the id', () => {
+    renderTable({
+      model: modelOf({
+        rows: [{ kind: 'external' as const, id: 'redis', label: 'redis', size: 4 }],
+      }),
+    });
+    expect(screen.getByTestId('ranked-label').textContent).toBe('redis');
+    expect(screen.queryByTestId('ranked-id')).toBeNull();
   });
 });

@@ -10,6 +10,7 @@ import {
   compareIds,
   dependentsOf,
   type Graph,
+  labelOf,
   type NodeKind,
   resolveCenter,
 } from './model';
@@ -63,17 +64,29 @@ function collectUnseen(
 export interface RankedRow {
   readonly kind: NodeKind;
   readonly id: ApplicationId | string;
+  /** What to render: `labelOf`, so a table of APM ids still reads. The id stays for identity. */
+  readonly label: string;
   readonly size: number;
 }
 
 /** Every Application and External, largest Blast radius first, ties broken by id. */
 export function rankedByBlastRadius(graph: Graph): RankedRow[] {
   const rows: RankedRow[] = [];
-  for (const id of graph.applications.keys()) {
-    rows.push({ kind: 'application', id, size: sizeFrom(graph, { kind: 'application', id }) });
+  for (const [id, application] of graph.applications) {
+    rows.push({
+      kind: 'application',
+      id,
+      label: labelOf(application),
+      size: sizeFrom(graph, { kind: 'application', id }),
+    });
   }
-  for (const id of graph.externals.keys()) {
-    rows.push({ kind: 'external', id, size: sizeFrom(graph, { kind: 'external', id }) });
+  for (const [id, external] of graph.externals) {
+    rows.push({
+      kind: 'external',
+      id,
+      label: labelOf(external),
+      size: sizeFrom(graph, { kind: 'external', id }),
+    });
   }
   return rows.sort((a, b) => b.size - a.size || compareIds(a.id, b.id));
 }

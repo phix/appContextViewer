@@ -156,6 +156,25 @@ interface TeamBuilder extends Team {
  * modelled wrongly; a duplicated list entry is kept once, as the validator's `W_DUPLICATE_ENTRY`
  * downgrade does. Adjacency lists follow Catalog order, so every query is deterministic.
  */
+/**
+ * What to render for a node, so no view has to branch on whether the producer supplied a `name`.
+ *
+ * An id is only a name by luck. `acme/commerce/order-service` reads as one; the same Application
+ * under an APM scheme is `ATT-IDP3/billing-core/apm10064`, which names nothing a reader recognises
+ * (docs/schema-v1.md, "When the id names nothing"). So `name` wins where it exists, and the fallback
+ * is the narrowest part of the id that still identifies the node: the Project for an Application,
+ * which is what a reader scanning one Repository wants, and the id itself for an External.
+ *
+ * This never returns the full Application id. A caller that wants it has it already — the label is
+ * for reading, the id is for identity, and a surface that needs both should show both.
+ */
+export function labelOf(node: Application | External): string {
+  if ('project' in node) {
+    return node.name ?? node.project;
+  }
+  return node.name ?? node.id;
+}
+
 export function buildGraph(catalog: CatalogInput): Graph {
   const applications = new Map<ApplicationId, ApplicationBuilder>();
   const externals = new Map<ExternalId, ExternalBuilder>();

@@ -29,6 +29,7 @@ export {
   type ExternalInput,
   type Graph,
   isScalar,
+  labelOf,
   type NodeKind,
   type NodeRef,
   type Scalar,

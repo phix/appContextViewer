@@ -11,7 +11,12 @@ describe('ranked: the default screen', () => {
     const store = demoStore();
     const model = store.derived.ranked.value;
     expect(model.rows).toEqual(rankedByBlastRadius(store.graph.value));
-    expect(model.rows[0]).toEqual({ kind: 'external', id: 'redis', size: 23 });
+    expect(model.rows[0]).toEqual({
+      kind: 'external',
+      id: 'redis',
+      label: 'Redis (shared cluster)',
+      size: 23,
+    });
     expect(model.rows).toHaveLength(34 + 19);
     expect(model.applicationsOnly).toBe(false);
     expect(model).toMatchObject({ applications: 34, externals: 19 });
@@ -27,6 +32,7 @@ describe('ranked: the default screen', () => {
     expect(model.rows[0]).toEqual({
       kind: 'application',
       id: 'acme/commerce/product-service',
+      label: 'product-service',
       size: 12,
     });
   });

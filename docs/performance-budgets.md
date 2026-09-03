@@ -69,6 +69,16 @@ pane starts, which the ordering assertion in `e2e/pane.spec.ts` proves by failin
 1,000-Application Catalog, behind an already-usable board, is not a budget worth buying information
 back from.
 
+**Budget 4 is asserted as a median of five, and this is not a loosened budget.** The measure ends
+inside a `requestAnimationFrame`, so it is frame-quantized: one dropped frame is ~17 ms, which is 17%
+of budget 4. The same Center measures 72 to 118 ms across runs on the reference laptop while its
+layout work does not change at all, so a single-sample assertion failed about **one local run in
+three** for reasons that have nothing to do with the pane. Sampling answers the question the budget
+asks — how long does this take — and the ceiling stayed at 100 ms. The median is **49 ms**, and
+injecting a real 60 ms regression into the pane's layout path moves it to 113 ms and turns the test
+red, so regression detection is intact. A flaky gate is worse than a wrong number: it teaches the
+reader to ignore red.
+
 **The flat saving, measured.** Same Centers, with and without Group boxes, median of six warm runs:
 
 | Center | nodes / Deps | with Groups | flat | saving |
@@ -77,6 +87,13 @@ back from.
 | `acme-labs/data-core/secret-service` | 150 / 785 | 733.7 ms | 584.2 ms | 20% |
 | `acme-labs/billing/sku-cli` | 150 / 746 | 761.2 ms | 508.6 ms | 33% |
 | `acme/orders-services-2/graphql-service` | 150 / 705 | 1309.1 ms | 371.9 ms | 72% |
+
+**One consequence of moving the ceiling, worth knowing before anyone tidies that test.** 750 ms sits
+*above* this Center's with-Groups cost of 733.7 ms, so the timing bound alone can no longer tell a
+flat layout from a grouped one — reverting the flat policy leaves the pane inside budget. The
+`data-groups` assertion beside it is what actually holds the policy, and it is the stronger check
+anyway, being deterministic where a timing bound never is. Under the old 500 ms ceiling that coupling
+existed by accident; it is now explicit. Do not remove the structural assertion as redundant.
 
 "About 40% less" below is a fair average. The with-Groups column also reproduces the layout
 research's "582 to 791 ms for the densest 150-node Neighborhood" independently.

@@ -93,7 +93,7 @@ export function RankedTable({
           <thead>
             <tr>
               <th scope="col">#</th>
-              <th scope="col">Id</th>
+              <th scope="col">Name</th>
               <th scope="col">Kind</th>
               <th scope="col">Blast radius</th>
             </tr>
@@ -109,7 +109,20 @@ export function RankedTable({
                     data-testid="ranked-link"
                     onClick={() => onSelect({ kind: row.kind, id: row.id })}
                   >
-                    {row.id}
+                    <span class="ranked__label" data-testid="ranked-label">
+                      {row.label}
+                    </span>
+                    {/*
+                     * The id stays inside the button, not beside it, so the accessible name is
+                     * "<name> <id>" — a screen reader gets what it is and which one it is, and a
+                     * text query for the id still finds the control that selects it. Hidden when
+                     * the label already is the id, which is every Catalog whose ids read as names.
+                     */}
+                    {row.label === row.id ? null : (
+                      <span class="ranked__id" data-testid="ranked-id">
+                        {row.id}
+                      </span>
+                    )}
                   </button>
                 </td>
                 <td>

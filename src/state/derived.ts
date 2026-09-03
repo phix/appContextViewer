@@ -19,6 +19,7 @@ import {
   type Group,
   groupDependencies,
   groupBy as groupsFor,
+  labelOf,
   neighborhood,
   type PaneNeighborhood,
   paneNeighborhood,
@@ -50,7 +51,7 @@ export interface RankedModel {
 export interface BoardNode {
   readonly kind: NodeKind;
   readonly id: string;
-  /** The Project for an Application, the name (or id) for an External. */
+  /** `labelOf`: the producer's `name` when there is one, else the Project or the External id. */
   readonly label: string;
   /** Application chips. */
   readonly repository?: string;
@@ -348,7 +349,7 @@ function nodeOf(graph: Graph, kind: NodeKind, id: string): BoardNode {
     return {
       kind,
       id,
-      label: application.project,
+      label: labelOf(application),
       repository: application.repository,
       team: application.team,
     };
@@ -357,7 +358,7 @@ function nodeOf(graph: Graph, kind: NodeKind, id: string): BoardNode {
   if (external === undefined) {
     throw new Error(`unknown External: ${id}`);
   }
-  return { kind, id, label: external.name ?? external.id, externalKind: external.kind };
+  return { kind, id, label: labelOf(external), externalKind: external.kind };
 }
 
 function centerCardOf(graph: Graph, center: Center): CenterCard {

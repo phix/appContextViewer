@@ -89,11 +89,19 @@ describe('rankedByBlastRadius: the default screen’s rows', () => {
     const rows = rankedByBlastRadius(demo);
     expect(rows).toHaveLength(34 + 19);
     // docs/center.md, decision 4: Externals will often top the list; that is the table doing its job.
-    expect(rows[0]).toEqual({ kind: 'external', id: 'redis', size: 23 });
+    // The label is what a view renders: the External's `name`, not its id (labelOf).
+    expect(rows[0]).toEqual({
+      kind: 'external',
+      id: 'redis',
+      label: 'Redis (shared cluster)',
+      size: 23,
+    });
     expect(rows[0].size).toBe(blastRadius(demo, 'redis').flat().length);
+    // The demo Catalog names no Application, so an Application falls back to its Project.
     expect(rows.find((row) => row.kind === 'application')).toEqual({
       kind: 'application',
       id: 'acme/commerce/product-service',
+      label: 'product-service',
       size: 12,
     });
   });
@@ -123,10 +131,11 @@ describe('rankedByBlastRadius: the default screen’s rows', () => {
     expect(rows.find((row) => row.kind === 'application')).toEqual({
       kind: 'application',
       id: 'acme/billing-platform/auth-service',
+      label: 'auth-service',
       size: 780,
     });
     // rabbitmq reaches auth-service, so its Blast radius is strictly larger and it tops the table.
-    expect(rows[0]).toEqual({ kind: 'external', id: 'rabbitmq', size: 783 });
+    expect(rows[0]).toEqual({ kind: 'external', id: 'rabbitmq', label: 'rabbitmq', size: 783 });
     expect(blastRadius(thousand, 'rabbitmq').flat()).toContain(
       'acme/billing-platform/auth-service',
     );

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import demoCatalog from '../../samples/catalog.demo.json';
 import { catalogOf, readSampleCatalog } from './fixtures.test-helper';
-import { buildGraph, type CatalogInput } from './index';
+import { buildGraph, type CatalogInput, labelOf } from './index';
 
 // Row counts and the named records come from samples/README.md and `node samples/check.mjs`.
 const demo = buildGraph(demoCatalog);
@@ -217,5 +217,45 @@ describe('buildGraph: the input is structural (assumed interface with the catalo
       0,
     );
     expect(dependencies).toBe(5395);
+  });
+});
+
+describe('labelOf: what a view renders', () => {
+  // docs/schema-v1.md, "When the id names nothing". An id is only a name by luck, and every fixture
+  // in this repo but samples/att/ is lucky, which is exactly why this needs pinning on its own.
+  const graph = buildGraph(
+    catalogOf(
+      [
+        {
+          repository: 'ATT-IDP5/shared-libraries',
+          project: 'apm10133',
+          name: 'Common Logging Library',
+        },
+        { repository: 'acme/commerce', project: 'order-service' },
+      ],
+      [
+        { id: 'kafka-event-bus', kind: 'queue', name: 'Kafka' },
+        { id: 'redis', kind: 'cache' },
+      ],
+    ),
+  );
+  const application = (id: string) =>
+    graph.applications.get(id) as NonNullable<ReturnType<typeof graph.applications.get>>;
+  const external = (id: string) =>
+    graph.externals.get(id) as NonNullable<ReturnType<typeof graph.externals.get>>;
+
+  it('prefers an Application’s name over its Project', () => {
+    expect(labelOf(application('ATT-IDP5/shared-libraries/apm10133'))).toBe(
+      'Common Logging Library',
+    );
+  });
+
+  it('falls back to the Project, never the whole id', () => {
+    expect(labelOf(application('acme/commerce/order-service'))).toBe('order-service');
+  });
+
+  it('prefers an External’s name over its id, and falls back to the id', () => {
+    expect(labelOf(external('kafka-event-bus'))).toBe('Kafka');
+    expect(labelOf(external('redis'))).toBe('redis');
   });
 });
