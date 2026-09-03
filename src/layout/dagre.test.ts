@@ -8,7 +8,7 @@ import {
 import { type LayoutSpec, layoutNeighborhood } from './index';
 import { NODE_HEIGHT, NODE_WIDTH, paneSpec } from './sample-specs';
 
-/** Scales a Node timing like e2e/budget.ts scales the browser ones; CI sets BUDGET_FACTOR=2. */
+/** Scales a Node timing like e2e/budget.ts scales the browser ones; CI sets BUDGET_FACTOR=4. */
 const budget = (ms: number) => ms * Number(process.env.BUDGET_FACTOR ?? 1);
 
 const node = (id: string) => ({ id, width: NODE_WIDTH, height: NODE_HEIGHT });

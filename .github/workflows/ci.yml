@@ -9,8 +9,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # docs/performance-budgets.md: CI asserts every budget at 2x, in both runners.
-  BUDGET_FACTOR: '2'
+  # docs/performance-budgets.md: CI asserts every budget at 4x, in both runners. The factor is
+  # measured, not chosen: budget 4's pane layout-to-paint is 54-59 ms on the reference laptop and
+  # 214 ms on this runner, so the runner is ~3.9x. At the old 2x it failed one of two runs at the
+  # same commit, which is a flake, not a regression signal.
+  BUDGET_FACTOR: '4'
 
 jobs:
   check:

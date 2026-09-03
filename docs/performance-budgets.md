@@ -6,7 +6,7 @@ Resolves [Set performance budgets to 1,000 apps](https://github.com/phix/appCont
 
 - **Fixture:** [`samples/catalog-1000.json`](../samples/catalog-1000.json): 1,000 Applications, 5,395 Dependencies (4,395 between Applications), 123 Repositories, 25 Externals, 100 Channels, 406 KB.
 - **Where:** headless Chromium driven by Playwright on an Apple-silicon laptop, cold load, no cache. Pure functions are timed in Node under Vitest.
-- **CI:** the same assertions run with **2x** every number below, so a slow runner does not block a merge and a real regression still does.
+- **CI:** the same assertions run with **4x** every number below, so a slow runner does not block a merge and a real regression still does. The factor is measured, not chosen: budget 4 is 54 to 59 ms on the reference laptop and 214 ms on a GitHub `ubuntu-latest` runner, so the runner is about **3.9x** on single-threaded layout and paint. At the 2x the doc first named, budget 4 failed one of two CI runs at the same commit — a flake, not a regression signal. Read a CI budget failure as "roughly 4x worse than reference", and confirm any real regression against the reference environment before changing a number here.
 - **Smaller Catalogs are never slower.** Every number is a ceiling at the fixture size; the 34-Application demo must feel instant.
 
 ## Budgets
@@ -29,6 +29,17 @@ Resolves [Set performance budgets to 1,000 apps](https://github.com/phix/appCont
 | 14 | **Overview layout chunk**: the layout engine loaded on first expand (elkjs today; fcose if the licence ticket says so) | <= 500 KB gzipped | build manifest |
 
 The ranked table paints its first 100 rows and the rest on scroll or a show-more, so 1,000 rows never sit between the user and first paint; Externals are rows in the same table (Center decision), so the count includes them.
+
+## Measured on the reference environment
+
+Every browser figure below was taken with Playwright on the reference laptop against `samples/catalog-1000.json`, three runs each, reading the `acv:pane-layout-to-paint` measure the pane writes around layout and paint.
+
+| budget | case | nodes / Dependencies | measured | ceiling |
+|---|---|---|---|---|
+| 4 | typical Neighborhood, `acme/video/inference` at Depth 2 | 23 / 60 | 53.7 to 59.1 ms | 100 ms |
+| 3 | the densest Neighborhood the cap admits, `acme/video/config-service` | 111 / 325 | 279.9 to 293.6 ms | 500 ms |
+
+**Budget 3 holds with dagre, in a browser, with paint**, at roughly 1.7x headroom — the first end-to-end measurement of it, and the answer to the question the layout research could only estimate from Node timings. The dense case is bound by the **350-Dependency** half of the cap, not the node half: it draws 111 nodes, well under 150, because its Dependencies reach 325 first. That is the cap policy below doing exactly what it was written to do.
 
 ## Policies
 

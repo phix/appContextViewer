@@ -6,7 +6,7 @@ const baseURL = `http://127.0.0.1:${port}`;
 /**
  * Browser suite per docs/architecture.md: headless Chromium against a static server that serves the
  * built site at / and the repository's fixtures at /samples/ (e2e/server.mjs). Timed budgets are
- * scaled through e2e/budget.ts; CI sets BUDGET_FACTOR=2 (docs/performance-budgets.md).
+ * scaled through e2e/budget.ts; CI sets BUDGET_FACTOR=4 (docs/performance-budgets.md).
  */
 export default defineConfig({
   testDir: './e2e',

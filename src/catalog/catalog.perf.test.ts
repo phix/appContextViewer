@@ -5,7 +5,7 @@ import { readJson, sample } from './test-fixtures';
 /**
  * Budget 1 (docs/performance-budgets.md): parse, validate, build the graph and compute every Blast
  * radius in 100 ms at 1,000 Applications. This slice asserts the validation half at 50 ms; the graph
- * slice asserts its half and the state slice the whole pipeline. CI runs with BUDGET_FACTOR=2.
+ * slice asserts its half and the state slice the whole pipeline. CI runs with BUDGET_FACTOR=4.
  */
 const BUDGET_MS = 50;
 const factor = (() => {

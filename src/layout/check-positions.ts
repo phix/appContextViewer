@@ -5,7 +5,7 @@ import type { Id, LayoutSpec, Position, Positions } from './spec';
 /**
  * Per-test timeout for the tests that run a real engine on a catalog-1000 fixture or a Vite
  * build. Vitest's default is 5 s; a GitHub runner took 9.7 s for elk on the collapsed Overview and
- * 22.7 s on Expand all. Scaled like the budgets: CI sets BUDGET_FACTOR=2.
+ * 22.7 s on Expand all. Scaled like the budgets: CI sets BUDGET_FACTOR=4.
  */
 export const HEAVY_TEST_TIMEOUT = 60_000 * Number(process.env.BUDGET_FACTOR ?? 1);
 

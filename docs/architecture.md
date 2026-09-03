@@ -77,7 +77,7 @@ appContextViewer/
 ├── package.json                    npm scripts: dev, build, preview, test, test:e2e, lint, check
 ├── vite.config.ts                  base './', preact preset, '@/' alias, worker format 'es'
 ├── vitest.config.ts                projects: node (catalog, graph, layout, state), jsdom (view)
-├── playwright.config.ts            webServer: vite build then e2e/server.mjs; BUDGET_FACTOR=2 on CI
+├── playwright.config.ts            webServer: vite build then e2e/server.mjs; BUDGET_FACTOR=4 on CI
 ├── biome.json                      lint + format, import restrictions
 ├── tsconfig.json
 ├── THIRD-PARTY-NOTICES.md          elkjs under EPL-2.0 and every bundled licence
@@ -105,7 +105,7 @@ appContextViewer/
 | `view` except canvas | Vitest, jsdom, Testing Library for Preact | components render fixed view models and dispatch actions; the report renders the 1,000-row cap | view models built from the demo Catalog |
 | canvas, load path, budgets 2 to 11, file:// guard | Playwright against `e2e/server.mjs`, a static server over `dist/` that also mounts `samples/` at `/samples/` and generated fixtures at `/fixtures/` | real Cytoscape and Worker; timings from `performance.mark` read through `page.evaluate`; the guard renders from disk | `samples/catalog-1000.json` served statically, `samples/catalog.demo.json` for behaviour |
 
-Rules: tests cross the same seam callers do (no imports past a module's index); every schema code has a fixture and a test; every budget row has exactly one assertion, in the runner the budgets doc names; CI runs both runners with `BUDGET_FACTOR=2`.
+Rules: tests cross the same seam callers do (no imports past a module's index); every schema code has a fixture and a test; every budget row has exactly one assertion, in the runner the budgets doc names; CI runs both runners with `BUDGET_FACTOR=4`.
 
 ## Import rules, enforced by lint
 
