@@ -131,6 +131,33 @@ is a new capability, not a recovery of a lost one, and it should be judged as on
 - A Highlight must never write to the URL — [`url-state.md`](./url-state.md) says the hash names the
   view, and a transient emphasis is not view state.
 
+## Postscript: the Space, and a race I caused
+
+After the ten items above were closed, Nick asked "where is the 3D view i asked for" — a request I
+had misread at the time as tags that lift on hover. That was a genuinely new feature, not a gap in
+the ten, and it is now built: `view=space`, a third canvas beside the pane and the Overview,
+specified in [`space-view.md`](./space-view.md) and shipped as
+[PR #49](https://github.com/phix/appContextViewer/pull/49).
+
+**One more case of the same lesson.** The slice measured `settled()` — an internal readiness flag —
+across six fixture sizes and found it climbing to 15.5 seconds at 1,000 Applications, close enough
+to a real number that ruling a node cap from it would have looked responsible. Watched directly
+instead, the scene is a legible clustered shape within 1 to 3 seconds even at that size; `settled()`
+describes work continuing invisibly in the background, not what the reader sees. No cap was set. The
+error avoided is the same one budget 9's first cap made: reading a policy off a number without
+checking what the number actually measures.
+
+**A process failure worth naming plainly, because it was mine.** The build attempt on this slice hit
+two consecutive server-side 529 errors on Opus. I resumed the same agent a second time and, without
+waiting to confirm that resume had actually ended, launched a fresh agent on the same worktree. The
+two very likely overlapped: the second agent's PR body reports several of its own files "changing
+content between successive reads with no visible edit and no other process visible via `ps`" — the
+exact shape a second writer on the same tree produces. No harm reached `main` (the second agent
+verified its final on-disk state before building on it, and everything shipped was checked again
+here), but it was luck that verification caught it, not a rule that prevented it. **A relaunch onto
+a worktree an earlier attempt might still be touching needs positive confirmation the earlier one
+has stopped, not just a failure notification for a resume that was itself asynchronous.**
+
 ## The pattern behind every defect found this session
 
 Named by the tags slice, and it fits every one of them: **an assertion that never touched its
