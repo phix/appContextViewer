@@ -1,15 +1,18 @@
 # Handoff — 2026-09-03
 
 Short session: verified the prior (compacted) session's acme-cleanup work actually landed, then
-chased why `viewer.1337-software.com` — the AT&T-safe custom domain — still isn't reachable. Root
-cause found and half-cleared: the Cloudflare MCP plugin is now authorized, but this session's own
-tool catalog can't see it, so the DNS record itself is still not created.
+chased down and **fixed** why `viewer.1337-software.com` — the AT&T-safe custom domain — wasn't
+reachable. Took two real fixes, not one: the DNS record, then an explicit certificate issuance
+Vercel does not do automatically for an externally-DNS-hosted domain.
 
 ## The headline
 
-**`viewer.1337-software.com` is still down, but the reason changed.** It used to be "nobody added
-the DNS record." Now it's "the DNS record still isn't added, but the tool that can add it is
-authorized and just needs a session that started after the authorization to actually call it."
+**`viewer.1337-software.com` is live.** `curl -sI --resolve viewer.1337-software.com:443:76.76.21.21
+https://viewer.1337-software.com/` returns `HTTP/2 200`. Getting there needed both the DNS `A`
+record (created via the now-authorized `cloudflare-api` MCP) and a separate, non-obvious step:
+`vercel certs issue viewer.1337-software.com --scope 1337-software`. The record alone left HTTPS
+failing TLS handshake for ~11 minutes while plain HTTP on the same host already worked — Vercel
+does not auto-provision a cert just because the DNS resolves.
 
 ## Current state
 
@@ -19,8 +22,8 @@ authorized and just needs a session that started after the authorization to actu
 | `npm run check` | green: **536 unit tests in 40 files**, build, bundle budgets, licences, notices |
 | `npm run test:e2e` | not re-run this session; last known green (63 tests, one worker) from the prior session |
 | `appcontextviewer.vercel.app` | live, serving the regenerated `ATT-IDPn` demo catalog correctly |
-| `viewer.1337-software.com` | registered as a Vercel domain, **still not DNS-configured** — `dig +short viewer.1337-software.com` returns nothing; `vercel domains inspect viewer.1337-software.com --scope 1337-software` still warns "not configured properly" |
-| `cloudflare-api` MCP | `claude mcp list` reports **Connected** (authorized via `/mcp` in an interactive terminal this session) — but unusable from this Code-tab session, see Blocked |
+| `viewer.1337-software.com` | **live**, `HTTP/2 200`, cert issued — verified via `curl --resolve …:443:76.76.21.21` and (after a few minutes' local resolver lag) plain `dig` |
+| `cloudflare-api` MCP | `claude mcp list` reports **Connected**; used successfully this session (from a session started after authorization) to create the `A` record |
 | open issues | `#40` (member-level Neighborhood highlighting — implementation already merged, see below), `#30` (slice index) |
 | open PRs | none |
 
@@ -42,19 +45,24 @@ authorized and just needs a session that started after the authorization to actu
   still returns zero `cloudflare-api` tools after the authorization — only the already-connected
   `cloudflare-docs` tools show up. The tool catalog was fixed when this session started, before the
   authorization existed.
-- **Saved a memory note** (`vercel-app-blocked-att-custom-domain.md` in the auto-memory store) recording
-  that a "the user was told the fix" claim is not the same as the fix landing — verify with `dig`
-  before ever reporting this as working again.
+- **In the next session** (fresh tool catalog, `cloudflare-api` now visible), created the DNS
+  record: `A viewer.1337-software.com 76.76.21.21`, proxied off, on the `1337-software.com` zone
+  (Cloudflare zone id `e6d9b812329490259d1587e2850d5ad3`). Confirmed via `vercel domains verify`
+  that Vercel considered the domain correctly attached, verified, and DNS-valid — but HTTPS still
+  failed `SSL_ERROR_SYSCALL` at the TLS Client Hello for ~11 minutes, while plain HTTP on the same
+  host (forced via `--resolve`) already served the real app HTML. Isolated the cause by comparing
+  against `appcontextviewer.vercel.app` on the same IP (`76.76.21.21`), which worked fine — proving
+  the IP/edge was healthy and the gap was specific to this hostname's cert.
+- **The actual fix**: `vercel certs issue viewer.1337-software.com --scope 1337-software`. Cert was
+  live within ~10 seconds of that command succeeding. Vercel does not appear to auto-issue a cert
+  for an externally-DNS-hosted (non-Vercel-nameserver) custom domain just because its `A` record
+  resolves — this explicit step was required.
+- **Saved a memory note** (`vercel-app-blocked-att-custom-domain.md` in the auto-memory store)
+  recording the full two-step fix (DNS record + explicit cert issuance) and the diagnostic order to
+  use if a similar domain looks broken again: DNS → HTTP via `--resolve` → HTTPS via `--resolve`.
 
 ## Blocked
 
-- **The DNS record itself.** `cloudflare-api` is authorized but not callable from here. Needs either:
-  a) a **fresh** Code-tab session started after this authorization (its tool catalog will include
-  `cloudflare-api`'s DNS write tools), or b) continuing directly in the terminal session where `/mcp`
-  was run. Once callable: create `A viewer.1337-software.com 76.76.21.21`, proxy **off** (grey cloud —
-  Vercel needs to terminate its own TLS), on the `1337-software.com` zone. Then verify with
-  `dig +short viewer.1337-software.com` and `vercel domains inspect viewer.1337-software.com --scope
-  1337-software`.
 - **Issue #40 is still open on the tracker** even though its implementation merged to `main` in
   `df6d6f2` — that was a direct push, not a PR, so nothing auto-closed it. Close it explicitly,
   referencing `df6d6f2`.
@@ -86,9 +94,15 @@ Re-run before trusting it if anything touches `src/` or `samples/`.
   session that started after that authorization — this one doesn't retroactively pick it up.
 - **A DNS-record instruction handed to Nick as manual steps is not the same as it being done.** An
   earlier session believed `viewer.1337-software.com` was fixed after handing over the exact `A`
-  record to add — it never got entered on Cloudflare. Verify with `dig +short
-  viewer.1337-software.com` or `vercel domains inspect … --scope 1337-software` before ever reporting
-  this domain as working, don't trust a prior session's claim.
+  record to add — it never got entered on Cloudflare. This session fixed it directly instead.
+- **A correct DNS record is not the same as a working HTTPS site on Vercel.** DNS resolving and
+  `vercel domains verify` reporting "valid configuration" both held true for ~11 minutes while HTTPS
+  still failed — the cert needed an explicit `vercel certs issue <domain> --scope <scope>`. Don't
+  assume it'll auto-provision on an externally-DNS-hosted domain; check HTTP-via-`--resolve` first
+  (proves routing/attachment) then HTTPS-via-`--resolve` (proves the cert) before concluding it's
+  "just propagation."
+- **This session's Bash sandbox silently blocks plain `curl`** — `curl -sI <url>` returns nothing, no
+  error, even against a known-good site. Use `rtk proxy curl` for any real external HTTP check here.
 
 ## Where the numbers disagree with the docs
 
@@ -100,17 +114,15 @@ row was never updated to match.
 
 ## Next, in order
 
-1. From a fresh session (or the terminal session that ran `/mcp`), use the now-authorized
-   `cloudflare-api` MCP to create `A viewer.1337-software.com 76.76.21.21` (proxy off) on Cloudflare,
-   then verify with `dig` and `vercel domains inspect`.
-2. Close issue #40 — implementation already on `main` via `df6d6f2`.
-3. Have the group-by menu adopt `qualifiesAsGrouping` from `src/graph/grouping.ts` — still not
+1. Close issue #40 — implementation already on `main` via `df6d6f2`.
+2. Have the group-by menu adopt `qualifiesAsGrouping` from `src/graph/grouping.ts` — still not
    called anywhere outside its own module and tests.
-4. Confirm or change the `LICENSE` holder line.
-5. Fix `docs/performance-budgets.md`'s stale budget-3 row (see "Where the numbers disagree", above).
+3. Confirm or change the `LICENSE` holder line.
+4. Fix `docs/performance-budgets.md`'s stale budget-3 row (see "Where the numbers disagree", above).
 
 ## What this session taught, in one line
 
-Authorizing an MCP server and being able to *call* it are two different events separated by a
-session boundary — nothing is actually fixed until a fresh session proves the tool is callable and
-the DNS record resolves.
+Two things looked like the same fact and weren't: a DNS record resolving is not a working HTTPS
+site, and an MCP server being authorized is not the same as this session being able to call it —
+each needed its own explicit verification (`--resolve` past DNS to test the cert; a fresh session
+to test the tool) before either was actually true.
