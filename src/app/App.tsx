@@ -11,7 +11,7 @@
 
 import { useComputed } from '@preact/signals';
 import { useCallback, useRef } from 'preact/hooks';
-import { buildSearchIndex } from '@/graph';
+import { buildSearchIndex, groupableAttributes } from '@/graph';
 import type { Center, Store } from '@/state';
 import {
   ChannelCard,
@@ -20,6 +20,8 @@ import {
   markDepthStart,
   markSelectStart,
   NeighborhoodPane,
+  Overview,
+  OverviewControls,
   Picker,
   RankedTable,
   Report,
@@ -84,6 +86,9 @@ export function App({ store }: AppProps) {
    */
   const searchIndex = useComputed(() => buildSearchIndex(store.graph.value));
 
+  /** The group-by menu's options, read the same way as `externalKinds` above: a query, not a walk. */
+  const groupable = useComputed(() => groupableAttributes(store.graph.value));
+
   const load = (source: File | string) => {
     markLoadStart();
     void store.actions.load(source).then((result) => {
@@ -138,6 +143,7 @@ export function App({ store }: AppProps) {
   const board = store.derived.board.value;
   const channelCard = store.derived.channelCardModel.value;
   const pane = store.derived.paneModel.value;
+  const overview = store.derived.overviewModel.value;
 
   return (
     <div class="shell" data-testid="shell">
@@ -149,6 +155,21 @@ export function App({ store }: AppProps) {
         depth={store.depth.value}
         onDepthChange={setDepth}
         onOpenWarnings={store.actions.openWarnings}
+        onExpandCanvas={
+          overview.overviewDisabled
+            ? undefined
+            : () => store.actions.expandOverview(!overview.expanded)
+        }
+        overviewSlot={
+          <OverviewControls
+            model={overview}
+            attributes={groupable.value}
+            groupBy={store.groupBy.value}
+            onGroupBy={store.actions.setGroupBy}
+            onExpandAll={store.actions.expandAll}
+            onCollapseAll={store.actions.collapseAll}
+          />
+        }
         searchSlot={
           <Search
             index={searchIndex.value}
@@ -170,6 +191,14 @@ export function App({ store }: AppProps) {
       )}
 
       <main class="shell__main">
+        {overview.expanded && !overview.overviewDisabled ? (
+          <Overview
+            model={overview}
+            center={store.center.value}
+            onToggleGroup={store.actions.toggleGroup}
+            onSelect={select}
+          />
+        ) : null}
         {board === null ? null : (
           <ImpactBoard model={board} onSelect={select} onClear={() => store.actions.select(null)} />
         )}
