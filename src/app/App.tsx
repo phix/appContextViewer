@@ -1,7 +1,8 @@
 /**
- * The app shell: header, picker, the ranked Blast-radius table, the minimal Center panel, the
- * missing-Center notice and the report (dialog or side sheet). It wires `@/view` components to the
- * store's signals and actions and owns nothing else — the derived models decide what is on screen.
+ * The app shell: header with search, picker, the impact board, the ranked Blast-radius table, the
+ * Channel card, the missing-Center notice and the report (dialog or side sheet). It wires `@/view`
+ * components to the store's signals and actions and owns nothing else — the derived models decide
+ * what is on screen.
  *
  * Budget 2 (docs/performance-budgets.md): `markLoadStart` stamps the moment a Catalog source is
  * chosen — picker, drop or `?src=` — and the ranked table's post-paint callback stamps the moment
@@ -10,8 +11,19 @@
 
 import { useComputed } from '@preact/signals';
 import { useRef } from 'preact/hooks';
+import { buildSearchIndex } from '@/graph';
 import type { Center, Store } from '@/state';
-import { CenterPanel, Header, Picker, RankedTable, Report } from '@/view';
+import {
+  ChannelCard,
+  Header,
+  ImpactBoard,
+  markDepthStart,
+  markSelectStart,
+  Picker,
+  RankedTable,
+  Report,
+  Search,
+} from '@/view';
 
 export const LOAD_MARK = 'acv:load-start';
 export const TABLE_MARK = 'acv:table-painted';
@@ -64,6 +76,13 @@ export function App({ store }: AppProps) {
     return kinds;
   });
 
+  /**
+   * The search index, built once per Graph. `@/state` derives no search view model, so the shell
+   * builds it here exactly as it builds `externalKinds` above (issue #25's PR proposes moving it
+   * into `derived`); `search` then runs per keystroke over prepared terms, not over the Graph.
+   */
+  const searchIndex = useComputed(() => buildSearchIndex(store.graph.value));
+
   const load = (source: File | string) => {
     markLoadStart();
     void store.actions.load(source).then((result) => {
@@ -75,8 +94,17 @@ export function App({ store }: AppProps) {
     });
   };
 
+  // Budgets 5 and 6 (docs/performance-budgets.md): the stopwatch starts at the interaction and the
+  // impact board stamps the frame after it paints. Every selection path — table, search, a board
+  // chip, a report row — arrives here, so one start covers them all.
   const select = (center: Center) => {
+    markSelectStart();
     store.actions.select(center);
+  };
+
+  const setDepth = (depth: number) => {
+    markDepthStart();
+    store.actions.setDepth(depth);
   };
 
   const chooseAnother = () => {
@@ -90,7 +118,8 @@ export function App({ store }: AppProps) {
 
   const report = store.report.value;
   const notice = store.notice.value;
-  const center = store.center.value;
+  const board = store.derived.board.value;
+  const channelCard = store.derived.channelCardModel.value;
 
   return (
     <div class="shell" data-testid="shell">
@@ -100,8 +129,15 @@ export function App({ store }: AppProps) {
         externals={store.graph.value.externals.size}
         warnings={store.derived.warningsCount.value}
         depth={store.depth.value}
-        onDepthChange={store.actions.setDepth}
+        onDepthChange={setDepth}
         onOpenWarnings={store.actions.openWarnings}
+        searchSlot={
+          <Search
+            index={searchIndex.value}
+            onSelect={select}
+            onOpenChannel={store.actions.openChannel}
+          />
+        }
       />
 
       <Picker onPick={load} inputRef={pickerInput} />
@@ -116,8 +152,8 @@ export function App({ store }: AppProps) {
       )}
 
       <main class="shell__main">
-        {center === null ? null : (
-          <CenterPanel center={center} onClear={() => store.actions.select(null)} />
+        {board === null ? null : (
+          <ImpactBoard model={board} onSelect={select} onClear={() => store.actions.select(null)} />
         )}
         <RankedTable
           model={store.derived.ranked.value}
@@ -127,6 +163,14 @@ export function App({ store }: AppProps) {
           onPainted={markTablePainted}
         />
       </main>
+
+      {channelCard === null ? null : (
+        <ChannelCard
+          model={channelCard}
+          onSelectApplication={(id) => select({ kind: 'application', id })}
+          onDismiss={() => store.actions.openChannel(null)}
+        />
+      )}
 
       {report === null ? null : (
         <Report
