@@ -15,9 +15,16 @@ const defaults: ViewState = {
   depth: DEFAULT_DEPTH,
   groupBy: DEFAULT_GROUP,
   overviewExpanded: false,
+  spaceExpanded: false,
 };
 
 describe('readUrl (docs/url-state.md)', () => {
+  it('opens Space as the mutually exclusive canvas view', () => {
+    expect(readUrl('#view=space')).toEqual({
+      ...defaults,
+      spaceExpanded: true,
+    });
+  });
   it('reads every key, with or without the leading #', () => {
     const state = readUrl('#app=acme/commerce/order-service&depth=3&group=team&view=overview');
     expect(state).toEqual({
@@ -25,6 +32,7 @@ describe('readUrl (docs/url-state.md)', () => {
       depth: 3,
       groupBy: 'team',
       overviewExpanded: true,
+      spaceExpanded: false,
     });
     expect(readUrl('app=acme/commerce/order-service&depth=3&group=team&view=overview')).toEqual(
       state,
@@ -76,6 +84,9 @@ describe('readUrl (docs/url-state.md)', () => {
 });
 
 describe('writeUrl', () => {
+  it('writes Space as the canvas view', () => {
+    expect(writeUrl({ ...defaults, spaceExpanded: true })).toBe('#view=space');
+  });
   it('writes the keys in the fixed order, defaults omitted, raw slashes', () => {
     expect(
       writeUrl({

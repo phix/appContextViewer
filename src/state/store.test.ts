@@ -18,6 +18,7 @@ describe('createStore: the initial state', () => {
     expect(store.groupBy.value).toBe(DEFAULT_GROUP);
     expect(store.openGroups.value.size).toBe(0);
     expect(store.overviewExpanded.value).toBe(false);
+    expect(store.spaceExpanded.value).toBe(false);
     expect(store.report.value).toBeNull();
     expect(store.channelCard.value).toBeNull();
     expect(store.notice.value).toBeNull();
@@ -332,6 +333,17 @@ describe('the report, the Channel card and the filter', () => {
     store.actions.filterApplicationsOnly(true);
     expect(store.applicationsOnly.value).toBe(true);
     expect(store.derived.ranked.value.applicationsOnly).toBe(true);
+  });
+
+  it('keeps Overview and Space mutually exclusive', () => {
+    const store = demoStore();
+    store.actions.expandOverview(true);
+    store.actions.expandSpace(true);
+    expect(store.overviewExpanded.value).toBe(false);
+    expect(store.spaceExpanded.value).toBe(true);
+    store.actions.expandOverview(true);
+    expect(store.overviewExpanded.value).toBe(true);
+    expect(store.spaceExpanded.value).toBe(false);
   });
 });
 

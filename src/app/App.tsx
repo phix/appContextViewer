@@ -15,6 +15,7 @@ import { buildSearchIndex, groupableAttributes } from '@/graph';
 import type { Center, Store } from '@/state';
 import {
   ChannelCard,
+  GroupByMenu,
   Header,
   ImpactBoard,
   markDepthStart,
@@ -26,6 +27,7 @@ import {
   RankedTable,
   Report,
   Search,
+  Space,
 } from '@/view';
 
 export const LOAD_MARK = 'acv:load-start';
@@ -160,15 +162,27 @@ export function App({ store }: AppProps) {
             ? undefined
             : () => store.actions.expandOverview(!overview.expanded)
         }
+        overviewExpanded={overview.expanded}
+        onExpandSpace={() => store.actions.expandSpace(!store.spaceExpanded.value)}
+        spaceExpanded={store.spaceExpanded.value}
         overviewSlot={
-          <OverviewControls
-            model={overview}
-            attributes={groupable.value}
-            groupBy={store.groupBy.value}
-            onGroupBy={store.actions.setGroupBy}
-            onExpandAll={store.actions.expandAll}
-            onCollapseAll={store.actions.collapseAll}
-          />
+          store.spaceExpanded.value ? (
+            <GroupByMenu
+              attributes={groupable.value}
+              value={store.groupBy.value}
+              effective={store.groupBy.value === 'none' ? 'repository' : store.groupBy.value}
+              onChange={store.actions.setGroupBy}
+            />
+          ) : (
+            <OverviewControls
+              model={overview}
+              attributes={groupable.value}
+              groupBy={store.groupBy.value}
+              onGroupBy={store.actions.setGroupBy}
+              onExpandAll={store.actions.expandAll}
+              onCollapseAll={store.actions.collapseAll}
+            />
+          )
         }
         searchSlot={
           <Search
@@ -196,6 +210,15 @@ export function App({ store }: AppProps) {
             model={overview}
             center={store.center.value}
             onToggleGroup={store.actions.toggleGroup}
+            onSelect={select}
+          />
+        ) : null}
+        {store.spaceExpanded.value ? (
+          <Space
+            graph={store.graph.value}
+            center={store.center.value}
+            depth={store.depth.value}
+            grouping={store.groupBy.value === 'none' ? 'repository' : store.groupBy.value}
             onSelect={select}
           />
         ) : null}
