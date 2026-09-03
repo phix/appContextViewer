@@ -69,6 +69,14 @@ pane starts, which the ordering assertion in `e2e/pane.spec.ts` proves by failin
 1,000-Application Catalog, behind an already-usable board, is not a budget worth buying information
 back from.
 
+**Budgets 4 and 9 are asserted as medians of warm runs, and neither ceiling moved.** Budget 9's
+first-ever open also pays for fetching the elk chunk and booting its worker: 872 ms cold against
+588 ms warm at the 700-edge cap. That ~284 ms is module loading, which budget 9 does not name — its
+row is "laid out and painted" — and which **no budget covers as a duration**; budget 14 governs the
+chunk's *size*, not the time to fetch it. So it is measured warm, and the cold figure is kept in the
+test's annotation so it cannot grow unnoticed behind a green budget 9. If first-open latency ever
+matters as a number, it needs a row of its own rather than being smuggled into this one.
+
 **Budget 4 is asserted as a median of five, and this is not a loosened budget.** The measure ends
 inside a `requestAnimationFrame`, so it is frame-quantized: one dropped frame is ~17 ms, which is 17%
 of budget 4. The same Center measures 72 to 118 ms across runs on the reference laptop while its
