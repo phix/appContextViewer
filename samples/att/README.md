@@ -20,7 +20,7 @@ node samples/att/generate-att.mjs
 | `details.att.json` | 129,597 | Operational context schema v1 has no home for, keyed by APM id. |
 
 The split exists because of the naming rule. Schema v1 has no `name` key on an Application — the id
-*was* the name, back when it read `acme/commerce/order-service`. With `project` reduced to an APM
+*was* the name, back when it read `ATT-IDP4/commerce/order-service`. With `project` reduced to an APM
 number the id says nothing, so the readable name has to live somewhere, and the two somewheres the
 schema allows are `description` (display only) and `attributes` (scalar, so searchable and
 groupable). Both are used. The index then exists for everything that is not the viewer: a human

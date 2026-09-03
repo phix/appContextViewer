@@ -15,8 +15,8 @@ describe('buildGraph: the normalized model', () => {
   });
 
   it('derives an Application id from repository and project, splitting at the last slash', () => {
-    const gateway = demo.applications.get('acme/platform-core/api-gateway');
-    expect(gateway?.repository).toBe('acme/platform-core');
+    const gateway = demo.applications.get('ATT-IDP5/platform-core/api-gateway');
+    expect(gateway?.repository).toBe('ATT-IDP5/platform-core');
     expect(gateway?.project).toBe('api-gateway');
     const monolith = demo.applications.get('legacy-monolith/monolith');
     expect(monolith?.repository).toBe('legacy-monolith');
@@ -25,23 +25,25 @@ describe('buildGraph: the normalized model', () => {
   });
 
   it('resolves Dependencies to typed refs and derives Dependents in Catalog order', () => {
-    const product = demo.applications.get('acme/commerce/product-service');
+    const product = demo.applications.get('ATT-IDP4/commerce/product-service');
     expect(product?.dependencies).toEqual([
       { kind: 'external', id: 'postgres-commerce' },
       { kind: 'external', id: 's3-assets' },
     ]);
     expect(product?.dependents).toEqual([
-      'acme/platform-core/api-gateway',
-      'acme/commerce/pricing-service',
-      'acme/commerce/cart-service',
-      'acme/data/ml-recommender',
-      'acme/search/search-indexer',
+      'ATT-IDP5/platform-core/api-gateway',
+      'ATT-IDP4/commerce/pricing-service',
+      'ATT-IDP4/commerce/cart-service',
+      'ATT-IDP5/data/ml-recommender',
+      'ATT-IDP5/search/search-indexer',
     ]);
   });
 
   it('gives Externals their Dependents', () => {
     expect(demo.externals.get('redis')?.dependents).toHaveLength(10);
-    expect(demo.externals.get('rabbitmq')?.dependents).toEqual(['acme/commerce/checkout-worker']);
+    expect(demo.externals.get('rabbitmq')?.dependents).toEqual([
+      'ATT-IDP4/commerce/checkout-worker',
+    ]);
     expect(demo.externals.get('postgres-main')?.name).toBe('Postgres (main cluster)');
   });
 
@@ -49,31 +51,34 @@ describe('buildGraph: the normalized model', () => {
     expect(demo.channels.get('orders.shipped')).toEqual({
       name: 'orders.shipped',
       publishers: [],
-      subscribers: ['acme/platform-core/notification-service', 'acme/commerce/inventory-service'],
+      subscribers: [
+        'ATT-IDP5/platform-core/notification-service',
+        'ATT-IDP4/commerce/inventory-service',
+      ],
     });
     expect(demo.channels.get('sessions.created')).toEqual({
       name: 'sessions.created',
-      publishers: ['acme/platform-core/auth-service'],
-      subscribers: ['acme/data/events-pipeline'],
+      publishers: ['ATT-IDP5/platform-core/auth-service'],
+      subscribers: ['ATT-IDP5/data/events-pipeline'],
     });
   });
 
   it('creates Teams implicitly, across Repositories', () => {
     expect(demo.teams.get('growth')?.applications).toEqual([
-      'acme/platform-core/notification-service',
-      'acme/commerce/promotions',
+      'ATT-IDP5/platform-core/notification-service',
+      'ATT-IDP4/commerce/promotions',
     ]);
     const owned = [...demo.teams.values()].reduce((n, team) => n + team.applications.length, 0);
     expect(owned).toBe(34 - 4);
   });
 
   it('keeps every Attribute, scalar or not, and defaults the sparse record', () => {
-    const gateway = demo.applications.get('acme/platform-core/api-gateway');
+    const gateway = demo.applications.get('ATT-IDP5/platform-core/api-gateway');
     expect(gateway?.attributes.links).toEqual({
       dashboard: 'https://grafana.example.com/d/gateway',
       runbook: 'https://runbooks.example.com/gateway',
     });
-    const docSite = demo.applications.get('acme/tools/doc-site');
+    const docSite = demo.applications.get('ATT-IDP5/tools/doc-site');
     expect(docSite).toMatchObject({
       attributes: {},
       dependencies: [],
@@ -86,7 +91,7 @@ describe('buildGraph: the normalized model', () => {
 
 describe('buildGraph: immutability', () => {
   it('freezes the Graph, every record and every adjacency list', () => {
-    const product = demo.applications.get('acme/commerce/product-service');
+    const product = demo.applications.get('ATT-IDP4/commerce/product-service');
     expect(Object.isFrozen(demo)).toBe(true);
     expect(Object.isFrozen(product)).toBe(true);
     expect(Object.isFrozen(product?.dependents)).toBe(true);
@@ -101,7 +106,7 @@ describe('buildGraph: immutability', () => {
   });
 
   it('freezes nested Attribute values too, all the way down', () => {
-    const links = demo.applications.get('acme/platform-core/api-gateway')?.attributes
+    const links = demo.applications.get('ATT-IDP5/platform-core/api-gateway')?.attributes
       .links as Record<string, unknown>;
     expect(Object.isFrozen(links)).toBe(true);
     expect(() => {
@@ -211,12 +216,12 @@ describe('buildGraph: the input is structural (assumed interface with the catalo
     expect(graph.applications.size).toBe(1000);
     expect(graph.externals.size).toBe(25);
     expect(graph.channels.size).toBe(100);
-    expect(graph.teams.size).toBe(74);
+    expect(graph.teams.size).toBe(75);
     const dependencies = [...graph.applications.values()].reduce(
       (n, app) => n + app.dependencies.length,
       0,
     );
-    expect(dependencies).toBe(5395);
+    expect(dependencies).toBe(5235);
   });
 });
 
@@ -231,7 +236,7 @@ describe('labelOf: what a view renders', () => {
           project: 'apm10133',
           name: 'Common Logging Library',
         },
-        { repository: 'acme/commerce', project: 'order-service' },
+        { repository: 'ATT-IDP4/commerce', project: 'order-service' },
       ],
       [
         { id: 'kafka-event-bus', kind: 'queue', name: 'Kafka' },
@@ -251,7 +256,7 @@ describe('labelOf: what a view renders', () => {
   });
 
   it('falls back to the Project, never the whole id', () => {
-    expect(labelOf(application('acme/commerce/order-service'))).toBe('order-service');
+    expect(labelOf(application('ATT-IDP4/commerce/order-service'))).toBe('order-service');
   });
 
   it('prefers an External’s name over its id, and falls back to the id', () => {

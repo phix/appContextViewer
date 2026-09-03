@@ -17,7 +17,7 @@ const rank = (code: FindingCode): number => FINDING_CODES.indexOf(code);
 /** A valid document of `n` Applications, each mutated by `tweak`. */
 function documentOf(n: number, tweak: (app: Record<string, unknown>, i: number) => void): unknown {
   const applications = Array.from({ length: n }, (_, i) => {
-    const app: Record<string, unknown> = { repository: 'acme/repo', project: `app-${i}` };
+    const app: Record<string, unknown> = { repository: 'example/repo', project: `app-${i}` };
     tweak(app, i);
     return app;
   });
@@ -87,43 +87,43 @@ describe('E_INVALID', () => {
       {
         code: 'E_INVALID',
         path: 'applications[0].team',
-        id: 'acme/platform-core/api-gateway',
+        id: 'ATT-IDP5/platform-core/api-gateway',
         value: '',
       },
       {
         code: 'E_INVALID',
         path: 'applications[0].dependsOn[0]',
-        id: 'acme/platform-core/api-gateway',
+        id: 'ATT-IDP5/platform-core/api-gateway',
         value: 'auth-service',
       },
       {
         code: 'E_INVALID',
         path: 'applications[0].dependsOn[1]',
-        id: 'acme/platform-core/api-gateway',
+        id: 'ATT-IDP5/platform-core/api-gateway',
         value: 'external:postgres main',
       },
       {
         code: 'E_INVALID',
         path: 'applications[0].publishes[0]',
-        id: 'acme/platform-core/api-gateway',
+        id: 'ATT-IDP5/platform-core/api-gateway',
         value: 'orders placed',
       },
       {
         code: 'E_INVALID',
         path: 'applications[1].repository',
-        id: '/acme/platform-core/auth service',
-        value: '/acme/platform-core',
+        id: '/ATT-IDP5/platform-core/auth service',
+        value: '/ATT-IDP5/platform-core',
       },
       {
         code: 'E_INVALID',
         path: 'applications[1].project',
-        id: '/acme/platform-core/auth service',
+        id: '/ATT-IDP5/platform-core/auth service',
         value: 'auth service',
       },
       {
         code: 'E_INVALID',
         path: 'applications[1].attributes',
-        id: '/acme/platform-core/auth service',
+        id: '/ATT-IDP5/platform-core/auth service',
         value: ['tier'],
       },
       { code: 'E_INVALID', path: 'applications[2].repository', id: undefined, value: undefined },
@@ -180,10 +180,10 @@ describe('E_DUPLICATE_APPLICATION', () => {
       {
         code: 'E_DUPLICATE_APPLICATION',
         path: 'applications[2]',
-        id: 'acme/platform-core/auth-service',
+        id: 'ATT-IDP5/platform-core/auth-service',
         message:
-          'another Application already has the id "acme/platform-core/auth-service" (applications[0])',
-        value: 'acme/platform-core/auth-service',
+          'another Application already has the id "ATT-IDP5/platform-core/auth-service" (applications[0])',
+        value: 'ATT-IDP5/platform-core/auth-service',
       },
     ]);
     expect(result.warnings).toEqual([]);
@@ -224,14 +224,14 @@ describe('E_UNRESOLVED_REF', () => {
       {
         code: 'E_UNRESOLVED_REF',
         path: 'applications[0].dependsOn[1]',
-        id: 'acme/platform-core/api-gateway',
-        message: 'acme/platform-core/user-service names no Application in the Catalog',
-        value: 'acme/platform-core/user-service',
+        id: 'ATT-IDP5/platform-core/api-gateway',
+        message: 'ATT-IDP5/platform-core/user-service names no Application in the Catalog',
+        value: 'ATT-IDP5/platform-core/user-service',
       },
       {
         code: 'E_UNRESOLVED_REF',
         path: 'applications[0].dependsOn[3]',
-        id: 'acme/platform-core/api-gateway',
+        id: 'ATT-IDP5/platform-core/api-gateway',
         message: 'external:postgres-main names no declared External',
         value: 'external:postgres-main',
       },
@@ -248,9 +248,9 @@ describe('E_SELF_DEPENDENCY', () => {
       {
         code: 'E_SELF_DEPENDENCY',
         path: 'applications[0].dependsOn[1]',
-        id: 'acme/platform-core/auth-service',
-        message: 'acme/platform-core/auth-service lists itself in dependsOn',
-        value: 'acme/platform-core/auth-service',
+        id: 'ATT-IDP5/platform-core/auth-service',
+        message: 'ATT-IDP5/platform-core/auth-service lists itself in dependsOn',
+        value: 'ATT-IDP5/platform-core/auth-service',
       },
     ]);
     expect(result.warnings).toEqual([]);
@@ -260,7 +260,7 @@ describe('E_SELF_DEPENDENCY', () => {
   it('allows a Dependency cycle', () => {
     const result = validateCatalog(
       documentOf(2, (app, i) => {
-        app.dependsOn = [`acme/repo/app-${1 - i}`];
+        app.dependsOn = [`example/repo/app-${1 - i}`];
       }),
     );
     expect(result.errors).toEqual([]);
@@ -278,19 +278,19 @@ describe('W_UNKNOWN_KEY', () => {
       {
         code: 'W_UNKNOWN_KEY',
         path: 'applications[0].owner',
-        id: 'acme/platform-core/auth-service',
+        id: 'ATT-IDP5/platform-core/auth-service',
         value: 'owner',
       },
       {
         code: 'W_UNKNOWN_KEY',
         path: 'applications[0].tier',
-        id: 'acme/platform-core/auth-service',
+        id: 'ATT-IDP5/platform-core/auth-service',
         value: 'tier',
       },
       { code: 'W_UNKNOWN_KEY', path: 'externals[0].vendor', id: 'redis', value: 'vendor' },
     ]);
     expect(result.warnings[1]?.message).toBe(
-      'unknown key "owner" on Application acme/platform-core/auth-service; the schema does not define it and the viewer ignores it (custom data goes under attributes)',
+      'unknown key "owner" on Application ATT-IDP5/platform-core/auth-service; the schema does not define it and the viewer ignores it (custom data goes under attributes)',
     );
     expect(result.errors).toEqual([]);
   });
@@ -321,24 +321,24 @@ describe('W_DUPLICATE_ENTRY', () => {
       {
         code: 'W_DUPLICATE_ENTRY',
         path: 'applications[0].dependsOn[2]',
-        id: 'acme/platform-core/api-gateway',
-        value: 'acme/platform-core/auth-service',
+        id: 'ATT-IDP5/platform-core/api-gateway',
+        value: 'ATT-IDP5/platform-core/auth-service',
       },
       {
         code: 'W_DUPLICATE_ENTRY',
         path: 'applications[0].publishes[1]',
-        id: 'acme/platform-core/api-gateway',
+        id: 'ATT-IDP5/platform-core/api-gateway',
         value: 'requests.logged',
       },
       {
         code: 'W_DUPLICATE_ENTRY',
         path: 'applications[1].subscribes[2]',
-        id: 'acme/platform-core/auth-service',
+        id: 'ATT-IDP5/platform-core/auth-service',
         value: 'requests.logged',
       },
     ]);
     expect(result.warnings[0]?.message).toBe(
-      '"acme/platform-core/auth-service" appears more than once in dependsOn; the viewer keeps the first occurrence',
+      '"ATT-IDP5/platform-core/auth-service" appears more than once in dependsOn; the viewer keeps the first occurrence',
     );
     expect(result.errors).toEqual([]);
   });
@@ -346,7 +346,7 @@ describe('W_DUPLICATE_ENTRY', () => {
   it('keeps the first occurrence and removes the duplicate from the returned Catalog', () => {
     const catalog = result.catalog as Catalog;
     expect(catalog.applications[0]?.dependsOn).toEqual([
-      'acme/platform-core/auth-service',
+      'ATT-IDP5/platform-core/auth-service',
       'external:redis',
     ]);
     expect(catalog.applications[0]?.publishes).toEqual(['requests.logged']);
@@ -367,14 +367,14 @@ describe('W_INVALID_FORMAT', () => {
       {
         code: 'W_INVALID_FORMAT',
         path: 'applications[0].url',
-        id: 'acme/platform-core/api-gateway',
+        id: 'ATT-IDP5/platform-core/api-gateway',
         value: 'gw.example.com',
       },
       {
         code: 'W_INVALID_FORMAT',
         path: 'externals[0].url',
         id: 'okta',
-        value: 'acme dot okta dot com',
+        value: 'example dot okta dot com',
       },
     ]);
     expect(result.warnings.map((w) => w.message)).toEqual([
@@ -387,7 +387,7 @@ describe('W_INVALID_FORMAT', () => {
     expect(catalog.generatedAt).toBe('2026-09-02 18:00');
     expect(catalog.applications[0]?.url).toBe('gw.example.com');
     expect(catalog.applications[1]?.url).toBe('https://auth.example.com/login');
-    expect(catalog.externals?.[0]?.url).toBe('acme dot okta dot com');
+    expect(catalog.externals?.[0]?.url).toBe('example dot okta dot com');
   });
 
   const generatedAtWarnings = (generatedAt: string) =>
@@ -454,14 +454,14 @@ describe('W_EMPTY_CHANNEL', () => {
       {
         code: 'W_EMPTY_CHANNEL',
         path: 'applications[0].publishes[1]',
-        id: 'acme/commerce/order-service',
+        id: 'ATT-IDP4/commerce/order-service',
         message: 'Channel "orders.audited" has 1 publisher and no subscriber',
         value: 'orders.audited',
       },
       {
         code: 'W_EMPTY_CHANNEL',
         path: 'applications[1].subscribes[1]',
-        id: 'acme/commerce/shipping-service',
+        id: 'ATT-IDP4/commerce/shipping-service',
         message: 'Channel "orders.shipped" has 2 subscribers and no publisher',
         value: 'orders.shipped',
       },
@@ -541,7 +541,7 @@ describe('collection and the cap', () => {
   it('collects every finding, then caps the report at MAX_FINDINGS rows with errors first', () => {
     const result = validateCatalog(
       documentOf(1500, (app) => {
-        app.dependsOn = ['acme/repo/missing'];
+        app.dependsOn = ['example/repo/missing'];
         app.owner = 'x';
       }),
     );
@@ -553,7 +553,7 @@ describe('collection and the cap', () => {
   it('gives warnings the rows the errors leave', () => {
     const result = validateCatalog(
       documentOf(600, (app) => {
-        app.dependsOn = ['acme/repo/missing'];
+        app.dependsOn = ['example/repo/missing'];
         app.owner = 'x';
       }),
     );
@@ -564,7 +564,7 @@ describe('collection and the cap', () => {
   it('keeps the highest-ranked codes when capping', () => {
     const result = validateCatalog(
       documentOf(1200, (app, i) => {
-        app.dependsOn = [`acme/repo/app-${i}`];
+        app.dependsOn = [`example/repo/app-${i}`];
         if (i >= 1000) {
           app.project = 'app-0';
         }
@@ -639,12 +639,8 @@ describe('the committed Catalogs', () => {
     ['catalog.example.json', 9, []],
     ['catalog.demo.json', 34, ['fraud.alerts', 'orders.shipped']],
     ['catalog-200.json', 200, []],
-    ['catalog-500.json', 500, []],
-    [
-      'catalog-1000.json',
-      1000,
-      ['affiliate.requested', 'checkout.updated', 'data.shipped', 'risk.captured'],
-    ],
+    ['catalog-500.json', 500, ['bss.captured']],
+    ['catalog-1000.json', 1000, []],
   ])(
     '%s loads with exactly the warnings samples/README.md lists',
     (file, applications, channels) => {

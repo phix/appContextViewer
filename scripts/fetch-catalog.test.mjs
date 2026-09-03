@@ -89,7 +89,7 @@ test('fetches with a bearer token and writes dist/catalog.json', async () => {
   const target = outFile();
 
   const result = await fetchCatalog({
-    url: 'https://catalogs.example.com/acme.json',
+    url: 'https://catalogs.example.com/catalog.json',
     token: TOKEN,
     fetch: fetchImpl,
     outFile: target,
@@ -97,7 +97,7 @@ test('fetches with a bearer token and writes dist/catalog.json', async () => {
 
   assert.equal(result.written, true);
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, 'https://catalogs.example.com/acme.json');
+  assert.equal(calls[0].url, 'https://catalogs.example.com/catalog.json');
   assert.equal(calls[0].init.headers.Authorization, `Bearer ${TOKEN}`);
   assert.equal(readFileSync(target, 'utf8'), body, 'the body is written through byte for byte');
 });
@@ -106,7 +106,7 @@ test('sends no Authorization header when CATALOG_TOKEN is unset', async () => {
   const { fetchImpl, calls } = stubFetch(jsonResponse('{}'));
 
   await fetchCatalog({
-    url: 'https://catalogs.example.com/acme.json',
+    url: 'https://catalogs.example.com/catalog.json',
     token: undefined,
     fetch: fetchImpl,
     outFile: outFile(),
@@ -123,7 +123,7 @@ test('an empty CATALOG_TOKEN counts as unset', async () => {
   const { fetchImpl, calls } = stubFetch(jsonResponse('{}'));
 
   await fetchCatalog({
-    url: 'https://catalogs.example.com/acme.json',
+    url: 'https://catalogs.example.com/catalog.json',
     token: '',
     fetch: fetchImpl,
     outFile: outFile(),
@@ -139,7 +139,7 @@ test('a non-ok response fails the build, naming the status', async () => {
   const target = outFile();
 
   const error = await fetchCatalog({
-    url: 'https://catalogs.example.com/acme.json',
+    url: 'https://catalogs.example.com/catalog.json',
     token: TOKEN,
     fetch: fetchImpl,
     outFile: target,
@@ -159,7 +159,7 @@ test('a network error fails the build, naming the cause', async () => {
   const { fetchImpl } = stubFetch(new TypeError('getaddrinfo ENOTFOUND catalogs.example.com'));
 
   const error = await fetchCatalog({
-    url: 'https://catalogs.example.com/acme.json',
+    url: 'https://catalogs.example.com/catalog.json',
     fetch: fetchImpl,
     outFile: outFile(),
   }).then(
@@ -178,7 +178,7 @@ test('a network error names the real cause, not just "fetch failed"', async () =
   const { fetchImpl } = stubFetch(shallow);
 
   const error = await fetchCatalog({
-    url: 'https://catalogs.example.com/acme.json',
+    url: 'https://catalogs.example.com/catalog.json',
     fetch: fetchImpl,
     outFile: outFile(),
   }).then(
@@ -215,7 +215,7 @@ test('a body that is not JSON fails the build', async () => {
   const target = outFile();
 
   const error = await fetchCatalog({
-    url: 'https://catalogs.example.com/acme.json',
+    url: 'https://catalogs.example.com/catalog.json',
     fetch: fetchImpl,
     outFile: target,
   }).then(
@@ -233,7 +233,7 @@ test('the token never reaches the log or an error message', async () => {
   const collect = (line) => log.push(line);
 
   await fetchCatalog({
-    url: `https://catalogs.example.com/acme.json?debug=${TOKEN}`,
+    url: `https://catalogs.example.com/catalog.json?debug=${TOKEN}`,
     token: TOKEN,
     fetch: stubFetch(jsonResponse('{}')).fetchImpl,
     outFile: outFile(),
@@ -241,7 +241,7 @@ test('the token never reaches the log or an error message', async () => {
   });
 
   const failure = await fetchCatalog({
-    url: 'https://catalogs.example.com/acme.json',
+    url: 'https://catalogs.example.com/catalog.json',
     token: TOKEN,
     fetch: stubFetch(jsonResponse('no', { ok: false, status: 401, statusText: 'Unauthorized' }))
       .fetchImpl,

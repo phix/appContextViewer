@@ -11,7 +11,7 @@ import { budget } from './budget.ts';
  * what says it is measuring something rather than passing vacuously.
  */
 
-const ORDER_SERVICE = 'acme/commerce/order-service';
+const ORDER_SERVICE = 'ATT-IDP4/commerce/order-service';
 const THOUSAND = '/?src=/samples/catalog-1000.json';
 
 /** Budget 8: pointing at a Tag to the Highlight painted. */

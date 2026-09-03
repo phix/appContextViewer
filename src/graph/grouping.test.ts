@@ -86,8 +86,8 @@ describe('groupBy: Groups with the synthetic "No <Attribute>" Group last', () =>
       label: 'No team',
       missing: true,
       members: [
-        'acme/commerce/shared-models',
-        'acme/tools/doc-site',
+        'ATT-IDP4/commerce/shared-models',
+        'ATT-IDP5/tools/doc-site',
         'legacy-monolith/monolith',
         'legacy-monolith/reports-cron',
       ],
@@ -98,7 +98,7 @@ describe('groupBy: Groups with the synthetic "No <Attribute>" Group last', () =>
       attribute: 'team',
       label: 'growth',
       missing: false,
-      members: ['acme/commerce/promotions', 'acme/platform-core/notification-service'],
+      members: ['ATT-IDP4/commerce/promotions', 'ATT-IDP5/platform-core/notification-service'],
     });
   });
 
@@ -114,7 +114,7 @@ describe('groupBy: Groups with the synthetic "No <Attribute>" Group last', () =>
     expect(byKind.find((group) => group.label === 'service')?.members).toHaveLength(19);
     expect(byKind[byKind.length - 1]).toMatchObject({ label: 'No kind', missing: true });
     expect(byKind[byKind.length - 1].members).toEqual([
-      'acme/tools/doc-site',
+      'ATT-IDP5/tools/doc-site',
       'legacy-monolith/monolith',
     ]);
 
@@ -122,8 +122,10 @@ describe('groupBy: Groups with the synthetic "No <Attribute>" Group last', () =>
     expect(byRepository).toHaveLength(10);
     expect(byRepository.some((group) => group.missing)).toBe(false);
     expect(byRepository.reduce((n, group) => n + group.members.length, 0)).toBe(34);
-    expect(byRepository.find((group) => group.label === 'acme/commerce')?.members).toHaveLength(8);
-    expect(byRepository.map((group) => group.id)).toContain('repository=acme/commerce');
+    expect(byRepository.find((group) => group.label === 'ATT-IDP4/commerce')?.members).toHaveLength(
+      8,
+    );
+    expect(byRepository.map((group) => group.id)).toContain('repository=ATT-IDP4/commerce');
   });
 
   it('covers every Application exactly once', () => {
@@ -160,7 +162,7 @@ describe('groupBy: Groups with the synthetic "No <Attribute>" Group last', () =>
   it('keeps the missing-value Group for a groupable key that is sparse', () => {
     const groups = groupBy(demo, 'gpu');
     expect(groups.map((group) => group.label)).toEqual(['true', 'No gpu']);
-    expect(groups[0].members).toEqual(['acme/data/ml-recommender']);
+    expect(groups[0].members).toEqual(['ATT-IDP5/data/ml-recommender']);
     expect(groups[1]).toMatchObject({ missing: true });
     expect(groups[1].members).toHaveLength(33);
   });
@@ -351,8 +353,8 @@ describe('qualifiesAsGrouping: at least two values, at most half as many as the 
     });
     expect(attributeCardinality(thousand, 'oncall')).toEqual({
       attribute: 'oncall',
-      applications: 278,
-      values: 54,
+      applications: 277,
+      values: 56,
     });
     expect(groupingAttributes(thousand)).toEqual([
       'repository',
@@ -398,7 +400,7 @@ describe('buildTagIndex: tokens on a row, members behind a token', () => {
     const graph = buildGraph(
       catalogOf([
         {
-          repository: 'acme/commerce',
+          repository: 'ATT-IDP4/commerce',
           project: 'order-service',
           team: 'Billing Platform',
           kind: 'service',
@@ -407,10 +409,10 @@ describe('buildTagIndex: tokens on a row, members behind a token', () => {
       ]),
     );
     const index = buildTagIndex(graph);
-    const tokens = (index.tokens.get('acme/commerce/order-service') ?? '').split(' ').sort();
+    const tokens = (index.tokens.get('ATT-IDP4/commerce/order-service') ?? '').split(' ').sort();
     expect(tokens).toEqual(
       [
-        tagToken('repository', 'acme/commerce'),
+        tagToken('repository', 'ATT-IDP4/commerce'),
         tagToken('team', 'Billing Platform'),
         tagToken('kind', 'service'),
         tagToken('tier', 1),
@@ -529,27 +531,27 @@ describe('capGroupDependencies: the Overview cap (docs/performance-budgets.md, "
   });
 
   /**
-   * The real input budget 9 was written against, and the reason for the cap: 1,498 Group
+   * The real input budget 9 was written against, and the reason for the cap: 1,308 Group
    * Dependencies over 123 Group nodes (docs/performance-budgets.md, "Overview cap"). This asserts
    * heaviest-first on the actual Catalog rather than on a constructed one -- no drawn edge may be
    * lighter than any hidden edge.
    */
-  it('keeps the 700 heaviest of the 1,000-Application Catalog 1,498 Group Dependencies', () => {
+  it('keeps the 700 heaviest of the 1,000-Application Catalog 1,308 Group Dependencies', () => {
     const thousand = buildGraph(readSampleCatalog('catalog-1000.json'));
     const groups = groupBy(thousand, 'repository');
     expect(groups).toHaveLength(123);
 
     const all = groupDependencies(thousand, groups, new Set());
-    expect(counts(all)).toHaveLength(1498);
+    expect(counts(all)).toHaveLength(1308);
 
     const capped = capGroupDependencies(all);
-    expect(capped.total).toBe(1498);
+    expect(capped.total).toBe(1308);
     expect(capped.edges).toHaveLength(700);
-    expect(capped.hidden).toBe(798);
+    expect(capped.hidden).toBe(608);
 
     const drawn = new Set(capped.edges);
     const hiddenCounts = counts(all.filter((edge) => !drawn.has(edge)));
-    expect(hiddenCounts).toHaveLength(798);
+    expect(hiddenCounts).toHaveLength(608);
     expect(Math.min(...counts(capped.edges))).toBeGreaterThanOrEqual(Math.max(...hiddenCounts));
   });
 });

@@ -15,9 +15,9 @@ describe('search: case-insensitive substrings with typed hits', () => {
     expect(search(index, 'AUTH-SERVICE')).toEqual([
       {
         kind: 'application',
-        id: 'acme/platform-core/auth-service',
+        id: 'ATT-IDP5/platform-core/auth-service',
         field: 'id',
-        value: 'acme/platform-core/auth-service',
+        value: 'ATT-IDP5/platform-core/auth-service',
       },
     ]);
   });
@@ -50,20 +50,20 @@ describe('search: case-insensitive substrings with typed hits', () => {
   it('finds Applications by scalar Attribute values, Team and Kind', () => {
     const airflow = search(index, 'airflow');
     expect(airflow.map((hit) => hit.id)).toEqual([
-      'acme/data/events-pipeline',
-      'acme/data/warehouse-loader',
+      'ATT-IDP5/data/events-pipeline',
+      'ATT-IDP5/data/warehouse-loader',
     ]);
     expect(airflow[0]).toMatchObject({ field: 'attributes.runtime', value: 'airflow' });
     expect(search(index, 'data-science').map((hit) => hit.id)).toEqual([
-      'acme/data/ml-recommender',
+      'ATT-IDP5/data/ml-recommender',
     ]);
     expect(search(index, 'mobile-app').map((hit) => hit.id)).toEqual([
-      'acme/mobile/android-app',
-      'acme/mobile/ios-app',
+      'ATT-IDP4/mobile/android-app',
+      'ATT-IDP4/mobile/ios-app',
     ]);
     const booleans = search(index, 'true', 100).map((hit) => hit.id);
-    expect(booleans).toContain('acme/data/ml-recommender');
-    expect(booleans).toContain('acme/payments/ledger-service');
+    expect(booleans).toContain('ATT-IDP5/data/ml-recommender');
+    expect(booleans).toContain('ATT-IDP3/payments/ledger-service');
     expect(booleans).toContain('mysql-legacy');
   });
 
@@ -129,7 +129,7 @@ describe('an Application name', () => {
         project: 'apm10003',
         name: 'Fault Correlation Engine',
       },
-      { repository: 'acme/commerce', project: 'order-service' },
+      { repository: 'ATT-IDP4/commerce', project: 'order-service' },
     ]),
   );
   const namedIndex = buildSearchIndex(named);
@@ -175,6 +175,6 @@ describe('an Application name', () => {
   });
 
   it('leaves an Application without a name matching by id', () => {
-    expect(search(namedIndex, 'order-service')[0]?.id).toBe('acme/commerce/order-service');
+    expect(search(namedIndex, 'order-service')[0]?.id).toBe('ATT-IDP4/commerce/order-service');
   });
 });

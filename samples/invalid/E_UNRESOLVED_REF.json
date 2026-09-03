@@ -2,16 +2,16 @@
   "schemaVersion": 1,
   "applications": [
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "api-gateway",
       "dependsOn": [
-        "acme/platform-core/auth-service",
-        "acme/platform-core/user-service",
+        "ATT-IDP5/platform-core/auth-service",
+        "ATT-IDP5/platform-core/user-service",
         "external:redis",
         "external:postgres-main"
       ]
     },
-    { "repository": "acme/platform-core", "project": "auth-service" }
+    { "repository": "ATT-IDP5/platform-core", "project": "auth-service" }
   ],
   "externals": [{ "id": "redis", "kind": "cache" }]
 }

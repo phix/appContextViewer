@@ -27,11 +27,11 @@ describe('spaceStyleOf', () => {
       if (found === undefined) throw new Error(`missing test node ${id}`);
       return found;
     };
-    const center = { kind: 'application', id: 'acme/commerce/order-service' } as const;
+    const center = { kind: 'application', id: 'ATT-IDP4/commerce/order-service' } as const;
     const style = spaceStyleOf(graph, center, 1, 'repository', null);
     const centerNode = node(center.id);
     const nearNode = node('postgres-commerce');
-    const farNode = node('acme/platform-core/auth-service');
+    const farNode = node('ATT-IDP5/platform-core/auth-service');
     expect(style.nodeSize(centerNode)).toBe(12);
     expect(style.nodeSize(nearNode)).toBe(4);
     expect(style.nodeSize(farNode)).toBe(0.7);

@@ -11,12 +11,17 @@ function modelOf(overrides: Partial<RankedModel> = {}): RankedModel {
     { kind: 'external' as const, id: 'redis', label: 'redis', size: 12 },
     {
       kind: 'application' as const,
-      id: 'acme/platform-core/auth-service',
-      label: 'acme/platform-core/auth-service',
+      id: 'ATT-IDP5/platform-core/auth-service',
+      label: 'ATT-IDP5/platform-core/auth-service',
       size: 9,
     },
     { kind: 'external' as const, id: 'postgres', label: 'postgres', size: 4 },
-    { kind: 'application' as const, id: 'acme/tools/cli', label: 'acme/tools/cli', size: 0 },
+    {
+      kind: 'application' as const,
+      id: 'ATT-IDP5/tools/cli',
+      label: 'ATT-IDP5/tools/cli',
+      size: 0,
+    },
   ];
   return {
     rows,
@@ -38,7 +43,7 @@ function renderTable(props: Partial<Parameters<typeof RankedTable>[0]> = {}) {
 function manyRows(count: number) {
   return Array.from({ length: count }, (_, index) => ({
     kind: 'application' as const,
-    id: `acme/repo/app-${index}`,
+    id: `example/repo/app-${index}`,
     label: `app-${index}`,
     size: count - index,
   }));
@@ -77,8 +82,8 @@ describe('RankedTable', () => {
           rows: [
             {
               kind: 'application',
-              id: 'acme/platform-core/auth-service',
-              label: 'acme/platform-core/auth-service',
+              id: 'ATT-IDP5/platform-core/auth-service',
+              label: 'ATT-IDP5/platform-core/auth-service',
               size: 9,
             },
           ],
@@ -103,7 +108,7 @@ describe('RankedTable', () => {
     fireEvent.click(screen.getAllByTestId('ranked-link')[1]);
     expect(onSelect).toHaveBeenLastCalledWith({
       kind: 'application',
-      id: 'acme/platform-core/auth-service',
+      id: 'ATT-IDP5/platform-core/auth-service',
     });
   });
 
@@ -214,7 +219,7 @@ describe('Tags in the ranked table', () => {
 
   it('carries the Tag tokens of every row, Applications included', () => {
     const rows = [
-      { kind: 'application' as const, id: 'acme/commerce/order-service', label: 'x', size: 3 },
+      { kind: 'application' as const, id: 'ATT-IDP4/commerce/order-service', label: 'x', size: 3 },
       { kind: 'external' as const, id: 'redis', label: 'redis', size: 2 },
     ];
     renderTable({ model: modelOf({ rows }), tags });

@@ -102,7 +102,7 @@ test('a github.com ?src= that fails adds the GitHub hint (docs/catalog-sources.m
 }) => {
   await page.route('https://github.com/**', (route) => route.abort());
 
-  await page.goto('/?src=https://github.com/acme/private/raw/main/catalog.json');
+  await page.goto('/?src=https://github.com/example-org/private/raw/main/catalog.json');
 
   const report = page.getByTestId('report');
   await expect(report).toHaveAttribute('data-mode', 'rejected');
@@ -115,10 +115,10 @@ test('a github.com ?src= that fails adds the GitHub hint (docs/catalog-sources.m
 test('a deep link to a missing Center shows the notice and strips the key (rule 5)', async ({
   page,
 }) => {
-  await page.goto('/#app=acme/none/nothing');
+  await page.goto('/#app=example/none/nothing');
 
   const notice = page.getByTestId('notice');
-  await expect(notice).toContainText('acme/none/nothing is not in this Catalog.');
+  await expect(notice).toContainText('example/none/nothing is not in this Catalog.');
   // The sample is what is loaded, so rule 5's second sentence applies.
   await expect(notice).toContainText('Load your Catalog to open it.');
   // The default screen is the ranked table, and the hash is left clean.

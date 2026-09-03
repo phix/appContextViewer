@@ -17,27 +17,27 @@ All five Catalogs also validate against [`schema/catalog.v1.schema.json`](../sch
 
 | file | Applications | Repositories | Teams (Applications without one) | Externals | Channels (one-sided) | Dependencies: total = to Applications + to Externals (cross-Repository) | Flows | cycles | largest Blast radius (per Depth) | max Depth | bytes |
 |---|---:|---:|---:|---:|---:|---|---:|---|---|---:|---:|
-| `catalog.example.json` | 9 | 5 | 5 (0) | 5 | 2 (0) | 13 = 5 + 8 (3) | 6 | none | 3 [2, 1] | 2 | 3,211 |
-| `catalog.demo.json` | 34 | 10 | 9 (4) | 19 | 11 (2) | 82 = 38 + 44 (22) | 31 | one of 3 | 12 [5, 6, 1] | 4 | 14,519 |
-| `catalog-200.json` | 200 | 20 | 16 (16) | 5 | 20 (0) | 900 = 758 + 142 (355) | 153 | 2 of 2 | 134 [53, 63, 17, 1] | 6 | 75,397 |
-| `catalog-500.json` | 500 | 57 | 37 (40) | 13 | 50 (0) | 2,579 = 2,086 + 493 (1,100) | 431 | 5 of 2 | 384 [74, 234, 65, 10, 1] | 8 | 207,285 |
-| `catalog-1000.json` | 1,000 | 123 | 74 (67) | 25 | 100 (4) | 5,395 = 4,395 + 1,000 (2,539) | 798 | 10 of 2 | 780 [97, 444, 201, 36, 2] | 9 | 415,910 |
+| `catalog.example.json` | 9 | 5 | 5 (0) | 5 | 2 (0) | 13 = 5 + 8 (3) | 6 | none | 3 [2, 1] | 2 | 3,270 |
+| `catalog.demo.json` | 34 | 10 | 9 (4) | 19 | 11 (2) | 82 = 38 + 44 (22) | 31 | one of 3 | 12 [5, 6, 1] | 4 | 14,802 |
+| `catalog-200.json` | 200 | 20 | 16 (16) | 5 | 20 (0) | 900 = 758 + 142 (355) | 153 | 2 of 2 | 134 [53, 63, 17, 1] | 6 | 72,352 |
+| `catalog-500.json` | 500 | 57 | 37 (41) | 13 | 50 (1) | 2,735 = 2,189 + 546 (1,167) | 442 | 5 of 2 | 389 [92, 227, 62, 8] | 11 | 216,072 |
+| `catalog-1000.json` | 1,000 | 123 | 75 (70) | 25 | 100 (0) | 5,235 = 4,258 + 977 (2,429) | 801 | 9, 20 apps (largest 3) | 749 [92, 403, 215, 33, 6] | 9 | 413,559 |
 
-Flows count `publishes` plus `subscribes` entries. A cycle is a strongly connected component of Application Dependencies; "10 of 2" means ten components of two Applications each. Blast radius is the transitive set of Dependents; the bracket is how many Applications join at each Depth. `node samples/check.mjs <file>` prints the full set, including kinds, top Dependents, the most-depended-on Externals, and which Attribute keys qualify for grouping.
+Flows count `publishes` plus `subscribes` entries. A cycle is a strongly connected component of Application Dependencies; "5 of 2" means five components of two Applications each. `catalog-1000.json`'s nine components are not uniform -- 20 Applications total, the largest at 3 -- so its cell names both instead. Blast radius is the transitive set of Dependents; the bracket is how many Applications join at each Depth. `node samples/check.mjs <file>` prints the full set, including kinds, top Dependents, the most-depended-on Externals, and which Attribute keys qualify for grouping.
 
-Facts worth knowing before setting budgets: the 1,000-Application file is 416 KB; `check.mjs` parses it, enforces every rule and computes the Blast radius of all 1,000 Applications in about 40 ms in Node 24 on an M-series laptop; the largest Blast radius is 78% of the Catalog and reaches Depth 5; the most-depended-on External has 197 direct Dependents, which is why the Overview omits Externals; Repositories, the default grouping, number 123 with the largest holding 50 Applications and 51 holding one.
+Facts worth knowing before setting budgets: the 1,000-Application file is 414 KB; `check.mjs` parses it, enforces every rule and computes the Blast radius of all 1,000 Applications in about 40 ms in Node 24 on an M-series laptop; the largest Blast radius is 75% of the Catalog and reaches Depth 5; the most-depended-on External has 151 direct Dependents, which is why the Overview omits Externals; Repositories, the default grouping, number 123 with the largest holding 50 Applications and 51 holding one.
 
 ## What the demo Catalog exercises
 
 - All three relation kinds: `dependsOn` (Dependencies), `publishes` / `subscribes` (Flows through 11 Channels), `team` (Ownership by 9 Teams).
 - Cross-Repository references (22 of 38 Application Dependencies) and External references (44, to 19 Externals covering every convention kind plus two non-convention kinds, `search` and `secrets`).
-- Repository names with an org prefix (`acme/platform-core`) and without (`legacy-monolith`), so ids split at the last slash in both shapes.
-- Sparse records: `acme/tools/doc-site` has only `repository` and `project`; `legacy-monolith/monolith` has no `kind` and no `team`; `acme/commerce/shared-models` and `acme/tools/cli` have no Dependencies and no `attributes`; eight Applications lack `tier` (five with other Attributes, three with none) and form the "No tier" Group.
+- Repository names with an org prefix (`ATT-IDP5/platform-core`) and without (`legacy-monolith`), so ids split at the last slash in both shapes.
+- Sparse records: `ATT-IDP5/tools/doc-site` has only `repository` and `project`; `legacy-monolith/monolith` has no `kind` and no `team`; `ATT-IDP4/commerce/shared-models` and `ATT-IDP5/tools/cli` have no Dependencies and no `attributes`; eight Applications lack `tier` (five with other Attributes, three with none) and form the "No tier" Group.
 - A Dependency cycle: `auth-service` → `config-service` → `secrets-broker` → `auth-service`.
 - Both `W_EMPTY_CHANNEL` cases: `orders.shipped` has subscribers and no publisher, `fraud.alerts` a publisher and no subscriber.
 - Libraries nothing depends on at runtime (`rate-limiter`, `shared-models`) and a non-convention kind (`cli`).
 - Attribute values of every scalar type (`tier` numbers, `pci` and `deprecated` booleans, strings) and two non-scalar values that stay display-only (`links` object, `tags` array), so the grouping menu discovers eleven groupable keys and skips two.
-- A Team that owns Applications in a Repository it does not own (`growth` inside `acme/platform-core` and `acme/commerce`), and a Dependency chain six hops long from a mobile app to a database.
+- A Team that owns Applications in a Repository it does not own (`growth` inside `ATT-IDP5/platform-core` and `ATT-IDP4/commerce`), and a Dependency chain six hops long from a mobile app to a database.
 
 ## Regenerate
 
@@ -54,7 +54,7 @@ Options: `--apps N` (default 1000), `--seed S` (1), `--deps MEAN` requested Depe
 
 The generator draws a Catalog the way a company of that size tends to look, from a seeded PRNG (mulberry32) so the output is reproducible.
 
-- **Repositories** are sized by a skewed draw: 40% hold one Application, 25% two to five, 20% six to fifteen, 15% sixteen to fifty. Names combine a domain word and a suffix under `acme/`, `acme-labs/`, or no org prefix (5%).
+- **Repositories** are sized by a skewed draw: 40% hold one Application, 25% two to five, 20% six to fifteen, 15% sixteen to fifty. Names combine a domain word and a suffix under one of five `ATT-IDPn/` prefixes, or no org prefix (15%).
 - **Teams** number one per twelve Applications. Each Repository has a home Team; 85% of its Applications belong to it, 8% to another Team, 7% to none.
 - **Kinds**: service 53%, library 12%, job 10%, pipeline 8%, web-app 5%, mobile-app 3%, `cli` 1%, `function` 1%, none 7%. Libraries are cataloged but carry no runtime edges in either direction.
 - **Tiers** layer the Dependency graph: 0 clients (web and mobile apps), 1 edges and BFFs, 2 and 3 domain services, 4 platform services, 5 hubs. One Application in fifty is a hub, renamed to a platform-style project such as `auth-service` or `config-service`. Every Dependency runs from a lower rank to a higher one, so the graph is a DAG until the cycle pass.

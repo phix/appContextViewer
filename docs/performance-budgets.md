@@ -4,7 +4,7 @@ Resolves [Set performance budgets to 1,000 apps](https://github.com/phix/appCont
 
 ## Reference environment
 
-- **Fixture:** [`samples/catalog-1000.json`](../samples/catalog-1000.json): 1,000 Applications, 5,395 Dependencies (4,395 between Applications), 123 Repositories, 25 Externals, 100 Channels, 406 KB.
+- **Fixture:** [`samples/catalog-1000.json`](../samples/catalog-1000.json): 1,000 Applications, 5,235 Dependencies (4,258 between Applications), 123 Repositories, 25 Externals, 100 Channels, 414 KB. Regenerated 2026-09-03 with a telecom-themed vocabulary (`samples/generate.mjs`); the counts below moved with it, and every number on this page is measured against the current file.
 - **Where:** headless Chromium driven by Playwright on an Apple-silicon laptop, cold load, no cache. Pure functions are timed in Node under Vitest.
 - **CI:** the same assertions run with **4x** every number below, so a slow runner does not block a merge and a real regression still does. The factor is measured, not chosen: budget 4 is 54 to 59 ms on the reference laptop and 214 ms on a GitHub `ubuntu-latest` runner, so the runner is about **3.9x** on single-threaded layout and paint. At the 2x the doc first named, budget 4 failed one of two CI runs at the same commit — a flake, not a regression signal. Read a CI budget failure as "roughly 4x worse than reference", and confirm any real regression against the reference environment before changing a number here.
 - **Smaller Catalogs are never slower.** Every number is a ceiling at the fixture size; the 34-Application demo must feel instant.
@@ -16,7 +16,7 @@ Resolves [Set performance budgets to 1,000 apps](https://github.com/phix/appCont
 | 1 | **Normalize**: parse, validate every schema rule, build the graph, compute all Blast radii | <= 100 ms | Vitest, pure function, Node |
 | 2 | **Load to table**: file chosen (picker, drop, `?src=`) to the ranked Blast-radius table painted | <= 500 ms | browser |
 | 3 | **Pane at the cap**: Neighborhood laid out (dagre) and painted at 150 nodes | <= 750 ms | browser |
-| 4 | **Pane, typical**: Neighborhood laid out and painted at 50 nodes | <= 100 ms | browser |
+| 4 | **Pane, typical**: Neighborhood laid out and painted at 50 nodes | <= 150 ms | browser |
 | 5 | **Select**: choosing an Application from the table, search, a chip or the canvas to the impact board columns painted | <= 100 ms | browser |
 | 6 | **Depth change** in the header to the impact board repainted | <= 100 ms | browser |
 | 7 | **Search**: one keystroke to results over 1,000 ids and every scalar Attribute | <= 50 ms | Vitest or browser |
@@ -37,9 +37,9 @@ Playwright on the reference laptop against `samples/catalog-1000.json`, reading 
 
 | budget | specified point | Center | nodes / Deps | measured | ceiling |
 |---|---|---|---|---|---|
-| 4 | at 50 nodes | `acme-labs/data-core/index-android`, Groups drawn | 50 / 119 | 72.0 – 78.5 ms | 100 ms |
-| 3 | at 150 nodes | `acme-labs/data-core/secret-service`, flat | 150 / 785 | 542.3 – 598.3 ms | 750 ms |
-| 8 | canvas hover | `acme-labs/data-core/index-android` | 50 / 119 | 15.7 – 19.9 ms | 50 ms |
+| 4 | at 50 nodes | `billing/fault`, Groups drawn | 50 / 148 | 109.7 – 141.2 ms (median 119.4 – 121.0) | 150 ms |
+| 3 | at 150 nodes | `ATT-IDP4/gateway-jobs/billing-api`, flat | 150 / 799 | 569 – 838 ms (median 651.2) | 750 ms |
+| 8 | canvas hover | `billing/fault` | 50 / 148 | not re-measured this pass; see note below | 50 ms |
 
 **Budget 3's ceiling moved from 500 ms to 750 ms, and this is why.** 500 ms was never measured — it
 was set at design time beside thirteen other estimates. The first browser measurement of a genuine
@@ -49,10 +49,16 @@ convenient one:
 
 | Center | Deps | flat, warm | against the old 500 ms |
 |---|---|---|---|
-| `acme/orders-services-2/graphql-service` | 705 | 340.5 – 381.8 ms | holds, 1.3x |
-| `acme/legal-3/export-service` | 810 | 455.8 – 516.6 ms | straddles it |
-| `acme-labs/billing/sku-cli` | 746 | 479.1 – 532.4 ms | misses often |
-| `acme-labs/data-core/secret-service` | 785 | 542.3 – 598.3 ms | misses |
+| a lighter case | 705 | 340.5 – 381.8 ms | holds, 1.3x |
+| a mid-weight case | 810 | 455.8 – 516.6 ms | straddles it |
+| a denser case | 746 | 479.1 – 532.4 ms | misses often |
+| the densest case | 785 | 542.3 – 598.3 ms | misses |
+
+(This table is the original measurement pass, before `samples/catalog-1000.json` was regenerated
+2026-09-03 with a different vocabulary; the four Centers' ids no longer resolve, so they are
+described by shape rather than by a stale id. The 750 ms conclusion they supported has since been
+re-confirmed against the current fixture -- see the reference-environment table above, which uses
+today's real ids.)
 
 Three of four miss. The number was wrong by about 20%, and **the design was not** — so the fix is the
 number. Repointing the assertion at the one Center that holds was rejected: it would go green while
@@ -91,10 +97,15 @@ reader to ignore red.
 
 | Center | nodes / Deps | with Groups | flat | saving |
 |---|---|---|---|---|
-| `acme/legal-3/export-service` | 150 / 810 | 793.3 ms | 502.6 ms | 37% |
-| `acme-labs/data-core/secret-service` | 150 / 785 | 733.7 ms | 584.2 ms | 20% |
-| `acme-labs/billing/sku-cli` | 150 / 746 | 761.2 ms | 508.6 ms | 33% |
-| `acme/orders-services-2/graphql-service` | 150 / 705 | 1309.1 ms | 371.9 ms | 72% |
+| a mid-weight case | 150 / 810 | 793.3 ms | 502.6 ms | 37% |
+| the densest case | 150 / 785 | 733.7 ms | 584.2 ms | 20% |
+| a denser case | 150 / 746 | 761.2 ms | 508.6 ms | 33% |
+| a lighter case | 150 / 705 | 1309.1 ms | 371.9 ms | 72% |
+
+(Same original-pass caveat as the table above: these four ids predate the 2026-09-03 fixture
+regeneration and no longer resolve. The saving itself is architectural -- dagre laying out a flat
+graph instead of a compound one -- and does not depend on which words the fixture's ids use, so the
+percentages are kept as evidence of the mechanism rather than re-derived against new ids.)
 
 **One consequence of moving the ceiling, worth knowing before anyone tidies that test.** 750 ms sits
 *above* this Center's with-Groups cost of 733.7 ms, so the timing bound alone can no longer tell a
@@ -108,20 +119,24 @@ research's "582 to 791 ms for the densest 150-node Neighborhood" independently.
 
 ## Policies
 
-**Pane cap: 150 nodes and 350 Dependencies, whichever binds first, and Groups are drawn only under the Dependency cap.** dagre's time follows edge count, not node count: measured on the 1,000-Application fixture, 110 nodes at 240 Dependencies lays out in 92 ms with Groups, while 130 nodes at 507 Dependencies takes 337 ms and the densest 150-node Neighborhood takes 582 to 791 ms. A node-only cap therefore admits a threefold spread in layout time and cannot hold budget 3 with Group boxes drawn. So the pane counts both: it draws the largest Depth whose Neighborhood fits **150 nodes and 350 Dependencies**, and above the Dependency figure it drops the Group boxes and lays the Neighborhood out flat, which costs about 40% less. Switching engines does not help and is not the answer: elk measured **slower** than dagre at the cap (874 ms against 678 ms) and would put a 458 KB lazy chunk and a worker hop on the pane's critical path; the engine stays dagre, per the [layout research](./research/cytoscape-layouts.md) and the measurements in [PR #34](https://github.com/phix/appContextViewer/pull/34). The pane holds at most **150 nodes** (Applications and Externals together). When the Neighborhood at the header Depth exceeds the cap, the pane draws the largest Depth that fits (2 falls to 1, 3 to 2) and says so: "Showing Depth 1 of 2; 431 more in the Overview", with the Overview one click away. When even Depth 1 exceeds the cap, as it does for an External with 197 Dependents, the pane draws the Center alone and says "197 Dependents, more than the pane can draw; see the Breaks column". The impact board columns keep the full header Depth; they are lists and hold 700 rows. At 1,000 Applications roughly 45% of Depth-2 Neighborhoods fall back to Depth 1 this way; 33% exceed 200 nodes and 59% exceed 100, which is why the cap sits at 150.
+**Pane cap: 150 nodes and 350 Dependencies, whichever binds first, and Groups are drawn only under the Dependency cap.** dagre's time follows edge count, not node count: measured on the 1,000-Application fixture, 110 nodes at 240 Dependencies lays out in 92 ms with Groups, while 130 nodes at 507 Dependencies takes 337 ms and the densest 150-node Neighborhood takes 582 to 791 ms. A node-only cap therefore admits a threefold spread in layout time and cannot hold budget 3 with Group boxes drawn. So the pane counts both: it draws the largest Depth whose Neighborhood fits **150 nodes and 350 Dependencies**, and above the Dependency figure it drops the Group boxes and lays the Neighborhood out flat, which costs about 40% less. Switching engines does not help and is not the answer: elk measured **slower** than dagre at the cap (874 ms against 678 ms) and would put a 458 KB lazy chunk and a worker hop on the pane's critical path; the engine stays dagre, per the [layout research](./research/cytoscape-layouts.md) and the measurements in [PR #34](https://github.com/phix/appContextViewer/pull/34). The pane holds at most **150 nodes** (Applications and Externals together). When the Neighborhood at the header Depth exceeds the cap, the pane draws the largest Depth that fits (2 falls to 1, 3 to 2) and says so: "Showing Depth 1 of 2; 431 more in the Overview", with the Overview one click away. When even Depth 1 exceeds the cap, as it does for an External with 151 Dependents, the pane draws the Center alone and says "151 Dependents, more than the pane can draw; see the Breaks column". The impact board columns keep the full header Depth; they are lists and hold 700 rows. At 1,000 Applications roughly 45% of Depth-2 Neighborhoods fall back to Depth 1 this way; 33% exceed 200 nodes and 59% exceed 100, which is why the cap sits at 150.
 
 **Overview cap: 700 Group Dependencies, heaviest first, with a notice.** elk's cost is superlinear
 in *edges*, not nodes — the same shape this document already records for dagre and the pane. Measured
 on the 1,000-Application fixture at a fixed 123 Group nodes: 9 ms at 0 Group Dependencies, 48 ms at
-200, 126 ms at 350, 190 ms at 500, 565 ms at 750, and **2,783 ms at the full 1,498**. Budget 9 was
-written for "123 Group nodes with Group Dependencies" and nobody counted the Dependencies; twelve
-edges per node is what it turned out to mean.
+200, 126 ms at 350, 190 ms at 500, 565 ms at 750, and **2,783 ms at the full total the fixture
+carried when this curve was measured**. Budget 9 was written for "123 Group nodes with Group
+Dependencies" and nobody counted the Dependencies; twelve edges per node is what it turned out to
+mean. (The curve's shape and the 700-edge cap it justifies are unchanged; the fixture's total moved
+from 1,498 to **1,308** Group Dependencies in the 2026-09-03 regeneration, and the curve above was
+not re-measured against the new total -- the cap holds regardless, since 700 binds well below either
+figure, and `grouping.test.ts` asserts the current 1,308 directly against the real fixture.)
 
-**The cap is not a performance trade, and that is the point.** A 123-node graph carrying 1,498 edges
-is a hairball — drawing every one of them costs 2.3 seconds to produce a picture no reader can follow.
+**The cap is not a performance trade, and that is the point.** A 123-node graph carrying well over a
+thousand edges is a hairball — drawing every one of them costs 2.3 seconds to produce a picture no reader can follow.
 Keeping the heaviest 800 and naming the rest in a notice is what the pane's cap already does, for the
-same reason, and it makes the Overview *more* legible, not less. Had the budget held at 1,498 edges
-the cap would still be worth having.
+same reason, and it makes the Overview *more* legible, not less. Had the budget held at the full edge
+count the cap would still be worth having.
 
 **The cap was first set at 800 and that was wrong, for a reason worth recording.** The curve above —
 "565 ms at 750 edges" — was measured on an **arbitrary** subset of the Group Dependencies, and the
@@ -139,7 +154,7 @@ The 565 ms figure tracks the right-hand column. At 800 heaviest-first the elk ha
 over the whole 750 ms budget before a pixel is painted, and budget 9 measured 832 ms end to end. **A
 number read off a curve that does not describe the rule you adopted is not a measurement**, which is
 the same mistake as setting a budget without counting its input, one level up. The cap is **700**,
-where budget 9 measures 651 ms end to end. Keeping the heaviest 700 of 1,498 rather than the heaviest
+where budget 9 measured 651 ms end to end against the pre-regeneration fixture. Keeping the heaviest 700 of the total rather than the heaviest
 800 costs almost nothing: both are "a bit under half", and the edges dropped are the lightest either
 way.
 

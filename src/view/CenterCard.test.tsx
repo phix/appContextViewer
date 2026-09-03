@@ -10,7 +10,7 @@ import { boardOf, tagsOf } from './fixtures.test-helper';
  * what an Application shows, what an External shows instead, the badge, and the Markdown.
  */
 
-const ORDER_SERVICE = { kind: 'application', id: 'acme/commerce/order-service' } as const;
+const ORDER_SERVICE = { kind: 'application', id: 'ATT-IDP4/commerce/order-service' } as const;
 const REDIS = { kind: 'external', id: 'redis' } as const;
 
 describe('CenterCard', () => {
@@ -18,13 +18,13 @@ describe('CenterCard', () => {
     const model = boardOf(ORDER_SERVICE);
     render(<CenterCard model={model} />);
 
-    expect(screen.getByTestId('center-id').textContent).toBe('acme/commerce/order-service');
+    expect(screen.getByTestId('center-id').textContent).toBe('ATT-IDP4/commerce/order-service');
     expect(screen.getByTestId('center-kind').textContent).toBe('Application · service');
     expect(screen.getByTestId('center-team').textContent).toBe('Team commerce');
     // order-service declares no description in the demo Catalog, so the line is absent, not empty.
     expect(screen.queryByTestId('center-description')).toBeNull();
     expect(screen.getByTestId('center-url').getAttribute('href')).toBe(
-      'https://github.com/acme/commerce/tree/main/order-service',
+      'https://github.com/ATT-IDP4/commerce/tree/main/order-service',
     );
     const attributes = screen
       .getAllByTestId('center-attribute')
@@ -40,7 +40,9 @@ describe('CenterCard', () => {
 
   it('shows the description of a record that declares one', () => {
     render(
-      <CenterCard model={boardOf({ kind: 'application', id: 'acme/platform-core/api-gateway' })} />,
+      <CenterCard
+        model={boardOf({ kind: 'application', id: 'ATT-IDP5/platform-core/api-gateway' })}
+      />,
     );
 
     expect(screen.getByTestId('center-description').textContent).toBe(
@@ -83,7 +85,7 @@ describe('CenterCard', () => {
     const markdown = boardMarkdown(model);
     const lines = markdown.split('\n');
 
-    expect(lines[0]).toBe('# acme/commerce/order-service');
+    expect(lines[0]).toBe('# ATT-IDP4/commerce/order-service');
     expect(lines[2]).toBe('Application · service — Team commerce');
     expect(markdown).toContain('6 break across 4 Teams');
     expect(markdown).toContain('- Publishes: orders.placed');
@@ -98,7 +100,9 @@ describe('CenterCard', () => {
     expect(breaks).toContain('### Depth 2');
     expect(needs.match(/^- /gm) ?? []).toHaveLength(15);
     expect(breaks.match(/^- /gm) ?? []).toHaveLength(6);
-    expect(breaks).toContain('- `acme/platform-core/api-gateway` — acme/platform-core · platform');
+    expect(breaks).toContain(
+      '- `ATT-IDP5/platform-core/api-gateway` — ATT-IDP5/platform-core · platform',
+    );
   });
 
   it('puts the External note in the Markdown where the Needs bands would be', () => {
@@ -199,8 +203,8 @@ describe('Tags on the Center card', () => {
     const listed = centerTags(card);
     expect(listed[0]).toEqual({
       attribute: 'repository',
-      value: 'acme/commerce',
-      text: 'acme/commerce',
+      value: 'ATT-IDP4/commerce',
+      text: 'ATT-IDP4/commerce',
     });
     expect(listed[1]).toEqual({ attribute: 'team', value: 'commerce', text: 'Team: commerce' });
     expect(listed[2]).toEqual({
@@ -257,7 +261,7 @@ describe('the card leads with the name and keeps the id', () => {
     render(<CenterCard model={model} />);
 
     // order-service names itself, so there is one line, and it is the one carrying the id.
-    expect(screen.getByTestId('center-id').textContent).toBe('acme/commerce/order-service');
+    expect(screen.getByTestId('center-id').textContent).toBe('ATT-IDP4/commerce/order-service');
     expect(screen.getByTestId('center-id').tagName).toBe('H2');
     expect(screen.queryByTestId('center-name')).toBeNull();
   });

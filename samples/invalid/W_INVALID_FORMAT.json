@@ -2,12 +2,12 @@
   "schemaVersion": 1,
   "generatedAt": "2026-09-02 18:00",
   "applications": [
-    { "repository": "acme/platform-core", "project": "api-gateway", "url": "gw.example.com" },
+    { "repository": "ATT-IDP5/platform-core", "project": "api-gateway", "url": "gw.example.com" },
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "auth-service",
       "url": "https://auth.example.com/login"
     }
   ],
-  "externals": [{ "id": "okta", "kind": "identity", "url": "acme dot okta dot com" }]
+  "externals": [{ "id": "okta", "kind": "identity", "url": "example dot okta dot com" }]
 }

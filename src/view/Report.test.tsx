@@ -51,9 +51,9 @@ const MIXED_ERRORS: Finding[] = [
   {
     code: 'E_DUPLICATE_APPLICATION',
     path: 'applications[2]',
-    id: 'acme/platform-core/auth-service',
-    message: 'another Application already has the id "acme/platform-core/auth-service"',
-    value: 'acme/platform-core/auth-service',
+    id: 'ATT-IDP5/platform-core/auth-service',
+    message: 'another Application already has the id "ATT-IDP5/platform-core/auth-service"',
+    value: 'ATT-IDP5/platform-core/auth-service',
   },
   {
     code: 'E_DUPLICATE_EXTERNAL',
@@ -65,23 +65,23 @@ const MIXED_ERRORS: Finding[] = [
   {
     code: 'E_UNRESOLVED_REF',
     path: 'applications[0].dependsOn[2]',
-    id: 'acme/platform-core/api-gateway',
-    message: 'acme/platform-core/user-service names no Application in the Catalog',
-    value: 'acme/platform-core/user-service',
+    id: 'ATT-IDP5/platform-core/api-gateway',
+    message: 'ATT-IDP5/platform-core/user-service names no Application in the Catalog',
+    value: 'ATT-IDP5/platform-core/user-service',
   },
   {
     code: 'E_UNRESOLVED_REF',
     path: 'applications[0].dependsOn[3]',
-    id: 'acme/platform-core/api-gateway',
+    id: 'ATT-IDP5/platform-core/api-gateway',
     message: 'external:okta names no declared External',
     value: 'external:okta',
   },
   {
     code: 'E_SELF_DEPENDENCY',
     path: 'applications[1].dependsOn[0]',
-    id: 'acme/platform-core/auth-service',
-    message: 'acme/platform-core/auth-service lists itself in dependsOn',
-    value: 'acme/platform-core/auth-service',
+    id: 'ATT-IDP5/platform-core/auth-service',
+    message: 'ATT-IDP5/platform-core/auth-service lists itself in dependsOn',
+    value: 'ATT-IDP5/platform-core/auth-service',
   },
 ];
 
@@ -95,7 +95,7 @@ const MIXED_WARNINGS: Finding[] = [
   {
     code: 'W_EMPTY_CHANNEL',
     path: 'applications[0].publishes[0]',
-    id: 'acme/platform-core/api-gateway',
+    id: 'ATT-IDP5/platform-core/api-gateway',
     message: 'Channel "requests.logged" has 1 publisher and no subscriber',
     value: 'requests.logged',
   },
@@ -150,9 +150,9 @@ describe('Report', () => {
     const errors: Finding[] = Array.from({ length: 137 }, (_, index) => ({
       code: 'E_UNRESOLVED_REF',
       path: `applications[${index}].dependsOn[0]`,
-      id: `acme/repo/app-${index}`,
+      id: `example/repo/app-${index}`,
       message: 'names no Application in the Catalog',
-      value: `acme/repo/missing-${index}`,
+      value: `example/repo/missing-${index}`,
     }));
     renderReport(reportOf({ errors }));
 
@@ -166,7 +166,7 @@ describe('Report', () => {
     const warnings: Finding[] = Array.from({ length: 12 }, (_, index) => ({
       code: 'W_UNKNOWN_KEY',
       path: `applications[${index}].owner`,
-      id: `acme/repo/app-${index}`,
+      id: `example/repo/app-${index}`,
       message: 'unknown key "owner"',
       value: 'owner',
     }));
@@ -191,7 +191,7 @@ describe('Report', () => {
     });
 
     fireEvent.click(screen.getAllByTestId('report-application')[0]);
-    expect(onSelectApplication).toHaveBeenCalledWith('acme/platform-core/auth-service');
+    expect(onSelectApplication).toHaveBeenCalledWith('ATT-IDP5/platform-core/auth-service');
 
     fireEvent.click(screen.getByTestId('report-channel'));
     expect(onOpenChannel).toHaveBeenCalledWith('requests.logged');
@@ -237,7 +237,7 @@ describe('Report', () => {
     expect(markdown).toContain('## E_UNRESOLVED_REF (2)');
     expect(markdown).toContain('| Location | Path | Message | Value |');
     expect(markdown).toContain(
-      '| acme/platform-core/api-gateway | applications[0].dependsOn[3] | external:okta names no declared External | external:okta |',
+      '| ATT-IDP5/platform-core/api-gateway | applications[0].dependsOn[3] | external:okta names no declared External | external:okta |',
     );
     // One table per code present, and no table for a code with no rows.
     expect(markdown.match(/^## /gm)).toHaveLength(6);
@@ -259,7 +259,7 @@ describe('Report', () => {
       const errors: Finding[] = Array.from({ length: 1_000 }, (_, index) => ({
         code: codes[index % codes.length],
         path: `applications[${index}].dependsOn[0]`,
-        id: `acme/repo/app-${index}`,
+        id: `example/repo/app-${index}`,
         message: `row ${index}`,
         value: `value-${index}`,
       }));

@@ -24,7 +24,7 @@ const ELK_MEASURE = 'acv:overview-elk';
 /**
  * Budgets 9, 10 and 11 are real assertions here, and the Overview cap (#44, ruling on #41) is what
  * makes budget 9 one. elk's cost is superlinear in the EDGE count, and the collapsed Overview used
- * to hand it every one of the 1,498 Group Dependencies over 123 Groups, costing 2,783 ms. It now
+ * to hand it every Group Dependency over 123 Groups (1,308 in the current fixture), costing seconds. It now
  * draws the heaviest 700 and says how many it did not, which is a legibility decision first
  * (docs/performance-budgets.md, "Overview cap").
  *
@@ -68,8 +68,12 @@ function canvas(page: Page) {
   return page.getByTestId('overview-canvas');
 }
 
-/** The 75 Teams of samples/catalog-1000.json, the other grouping the warm runs below bounce off. */
-const THOUSAND_TEAMS = '75';
+/**
+ * The 76 Team Groups of samples/catalog-1000.json when grouped by team -- 75 distinct team
+ * values plus the 'No team' Group the 70 team-less Applications form (CONTEXT.md, Group). The
+ * other grouping the warm runs below bounce off.
+ */
+const THOUSAND_TEAMS = '76';
 
 /**
  * Waits for the Overview to be genuinely idle: no run in flight, and the canvas has finished the
@@ -256,14 +260,14 @@ test('budget 9: the collapsed Overview paints 123 Groups and the 700 heaviest Gr
   expect(drawn.pairs).toBe(drawn.groupEdges);
   /**
    * The cap, drawn. This is the assertion that holds the constant rather than the timing below: the
-   * Catalog offers 1,498 Group Dependencies, so moving `OVERVIEW_DEPENDENCY_CAP` by one in either
+   * Catalog offers 1,308 Group Dependencies, so moving `OVERVIEW_DEPENDENCY_CAP` by one in either
    * direction changes this number and turns this test red. A timing bound could not: 699 and 701
    * edges lay out in indistinguishable time.
    */
   expect(drawn.groupEdges).toBe(700);
   // And the notice names the rest, in the pane cap notice's shape and vocabulary.
   await expect(page.getByTestId('overview-cap-notice')).toHaveText(
-    'Showing the heaviest 700 Group Dependencies of 1,498; 798 not drawn',
+    'Showing the heaviest 700 Group Dependencies of 1,308; 608 not drawn',
   );
 
   // The first load, reported but NOT asserted: it carries budget 14's chunk fetch and worker boot.
@@ -350,7 +354,7 @@ test('budget 11: Expand all lays out in 10 s, with progress, cancel and a live m
   await expect(canvas(page)).toHaveAttribute('data-members', '1000', EXPANDED);
   await expect(canvas(page)).toHaveAttribute('data-open', THOUSAND_GROUPS);
   // The input that blows budget 11, pinned beside the members it belongs to (#41).
-  await expect(canvas(page)).toHaveAttribute('data-edges', '4395');
+  await expect(canvas(page)).toHaveAttribute('data-edges', '4258');
   await expect(page.getByTestId('overview-progress')).toHaveCount(0);
 
   const total = await longestMs(page, OVERVIEW_MEASURE);
@@ -383,14 +387,14 @@ test('cancelling Expand all aborts the run and keeps the previous positions', as
   expect(await nodePositions(page)).toEqual(before);
 });
 
-const BILLING = 'repository=acme/billing-platform';
+const BILLING = 'repository=billing';
 const BILLING_CHIP = `[sourceId = "${BILLING}"][kind = "label"]`;
 
 test('an Application Centre auto-opens its Group, which cannot be collapsed, and members select', async ({
   page,
 }) => {
-  await page.goto(`${THOUSAND}#app=acme/billing-platform/auth-service&view=overview`);
-  await expect(page.getByTestId('center-id')).toHaveText('acme/billing-platform/auth-service');
+  await page.goto(`${THOUSAND}#app=billing/auth-service&view=overview`);
+  await expect(page.getByTestId('center-id')).toHaveText('billing/auth-service');
   await expect(canvas(page)).toHaveAttribute('data-open', '1', LAID_OUT);
 
   const highlighted = await page.evaluate(
@@ -422,7 +426,7 @@ test('an Application Centre auto-opens its Group, which cannot be collapsed, and
 test('the same Group closes from the same chip once it no longer holds the Centre', async ({
   page,
 }) => {
-  // An External Centre locks nothing, so acme/billing-platform is an ordinary Group here.
+  // An External Centre locks nothing, so billing is an ordinary Group here.
   await page.goto(`${THOUSAND}#external=postgres-main&view=overview`);
   await expect(canvas(page)).toHaveAttribute('data-open', '0', LAID_OUT);
 

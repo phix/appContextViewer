@@ -203,8 +203,8 @@ describe('layoutNeighborhood (dagre)', () => {
   it(
     'finishes the 150-node compound Neighborhood inside the Node sanity budget',
     () => {
-      // Issue #22 asked for 500 ms here. Measured on this fixture (acme/checkout-services/invoice,
-      // 684 edges, 52 Repositories) dagre takes 650 to 770 ms on an M-series laptop, and 400 to 950
+      // Issue #22 asked for 500 ms here. Measured on a 150-node compound Neighborhood (684 edges,
+      // 52 Repositories) dagre takes 650 to 770 ms on an M-series laptop, and 400 to 950
       // across the twelve densest at-cap Neighborhoods; the research's 696 ms for 200 compound nodes
       // was at 3 edges per node. Dagre's time follows edge count and cluster count, and single-member
       // Repositories are already flattened (dagre.ts). The ceiling below is the measured one with a

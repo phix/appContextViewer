@@ -62,7 +62,7 @@ describe('loadCatalog from a File', () => {
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toMatchObject({ code: 'E_PARSE', path: '' });
     expect(result.errors[0]?.message).toMatch(
-      /^not valid JSON at line 4, column 69: Expected double-quoted property name/,
+      /^not valid JSON at line 4, column 73: Expected double-quoted property name/,
     );
     expect(result.errors[0]?.message).not.toContain('(line');
     expect(result.warnings).toEqual([]);
@@ -194,8 +194,8 @@ describe('loadCatalog from a URL', () => {
   });
 
   it.each([
-    'https://raw.githubusercontent.com/acme/catalog/main/catalog.json',
-    'https://github.com/acme/catalog/blob/main/catalog.json',
+    'https://raw.githubusercontent.com/example-org/catalog/main/catalog.json',
+    'https://github.com/example-org/catalog/blob/main/catalog.json',
   ])('appends the GitHub hint when %s fails', async (href) => {
     const notFound = await loadCatalog(href, {
       fetch: fetching(() => new Response('', { status: 404, statusText: 'Not Found' })).fetch,
@@ -209,7 +209,7 @@ describe('loadCatalog from a URL', () => {
     expect(refused.errors[0]?.message.endsWith(`. ${GITHUB_HINT}`)).toBe(true);
   });
 
-  it.each(['https://gist.githubusercontent.com/acme/1/raw/catalog.json', DATA])(
+  it.each(['https://gist.githubusercontent.com/example-org/1/raw/catalog.json', DATA])(
     'adds no hint for %s',
     async (href) => {
       const result = await loadCatalog(href, {
@@ -287,7 +287,7 @@ describe('loadCatalog from a URL', () => {
     const { fetch } = fetching(() => new Response(readText(invalid('E_PARSE'))));
     const result = await loadCatalog(DATA, { fetch });
     expect(result.errors.map((e) => e.code)).toEqual(['E_PARSE']);
-    expect(result.errors[0]?.message).toContain('at line 4, column 69');
+    expect(result.errors[0]?.message).toContain('at line 4, column 73');
     expect(result.source).toEqual({ kind: 'url', name: DATA });
   });
 });

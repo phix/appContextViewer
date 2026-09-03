@@ -2,17 +2,17 @@
   "schemaVersion": 1,
   "applications": [
     {
-      "repository": "acme/commerce",
+      "repository": "ATT-IDP4/commerce",
       "project": "order-service",
       "publishes": ["orders.placed", "orders.audited"]
     },
     {
-      "repository": "acme/commerce",
+      "repository": "ATT-IDP4/commerce",
       "project": "shipping-service",
       "subscribes": ["orders.placed", "orders.shipped"]
     },
     {
-      "repository": "acme/commerce",
+      "repository": "ATT-IDP4/commerce",
       "project": "billing-service",
       "subscribes": ["orders.shipped"]
     }

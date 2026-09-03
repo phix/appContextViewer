@@ -4,9 +4,9 @@
   "bogus": true,
   "applications": [
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "api-gateway",
-      "dependsOn": ["acme/platform-core/nope"]
+      "dependsOn": ["ATT-IDP5/platform-core/nope"]
     }
   ]
 }

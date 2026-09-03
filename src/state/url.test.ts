@@ -26,15 +26,15 @@ describe('readUrl (docs/url-state.md)', () => {
     });
   });
   it('reads every key, with or without the leading #', () => {
-    const state = readUrl('#app=acme/commerce/order-service&depth=3&group=team&view=overview');
+    const state = readUrl('#app=ATT-IDP4/commerce/order-service&depth=3&group=team&view=overview');
     expect(state).toEqual({
-      center: { kind: 'application', id: 'acme/commerce/order-service' },
+      center: { kind: 'application', id: 'ATT-IDP4/commerce/order-service' },
       depth: 3,
       groupBy: 'team',
       overviewExpanded: true,
       spaceExpanded: false,
     });
-    expect(readUrl('app=acme/commerce/order-service&depth=3&group=team&view=overview')).toEqual(
+    expect(readUrl('app=ATT-IDP4/commerce/order-service&depth=3&group=team&view=overview')).toEqual(
       state,
     );
   });
@@ -46,17 +46,17 @@ describe('readUrl (docs/url-state.md)', () => {
 
   it('reads an External Center, and lets app win when both keys appear', () => {
     expect(readUrl('#external=redis').center).toEqual({ kind: 'external', id: 'redis' });
-    expect(readUrl('#app=acme/x/y&external=redis').center).toEqual({
+    expect(readUrl('#app=example/x/y&external=redis').center).toEqual({
       kind: 'application',
-      id: 'acme/x/y',
+      id: 'example/x/y',
     });
     expect(readUrl('#app=&external=redis').center).toEqual({ kind: 'external', id: 'redis' });
   });
 
   it('accepts raw and percent-encoded slashes alike (rule 9)', () => {
-    expect(readUrl('#app=acme%2Fcommerce%2Forder-service').center).toEqual({
+    expect(readUrl('#app=ATT-IDP4%2Fcommerce%2Forder-service').center).toEqual({
       kind: 'application',
-      id: 'acme/commerce/order-service',
+      id: 'ATT-IDP4/commerce/order-service',
     });
   });
 
@@ -90,12 +90,12 @@ describe('writeUrl', () => {
   it('writes the keys in the fixed order, defaults omitted, raw slashes', () => {
     expect(
       writeUrl({
-        center: { kind: 'application', id: 'acme/commerce/order-service' },
+        center: { kind: 'application', id: 'ATT-IDP4/commerce/order-service' },
         depth: 3,
         groupBy: 'team',
         overviewExpanded: true,
       }),
-    ).toBe('#app=acme/commerce/order-service&depth=3&group=team&view=overview');
+    ).toBe('#app=ATT-IDP4/commerce/order-service&depth=3&group=team&view=overview');
   });
 
   it('writes an empty string when everything is at its default', () => {
@@ -120,10 +120,10 @@ describe('writeUrl', () => {
   it('round-trips an id with slashes and unusual characters', () => {
     const state: ViewState = {
       ...defaults,
-      center: { kind: 'application', id: 'acme/team a/svc&1' },
+      center: { kind: 'application', id: 'example/team a/svc&1' },
     };
     const hash = writeUrl(state);
-    expect(hash).toBe('#app=acme/team+a/svc%261');
+    expect(hash).toBe('#app=example/team+a/svc%261');
     expect(readUrl(hash)).toEqual(state);
   });
 });
@@ -177,10 +177,13 @@ describe('bindUrl', () => {
   it('applies the hash to the store on start', () => {
     const store = demoStore();
     const { window, calls } = fakeWindow(
-      '#app=acme/commerce/order-service&depth=3&group=team&view=overview',
+      '#app=ATT-IDP4/commerce/order-service&depth=3&group=team&view=overview',
     );
     bindUrl(store, window);
-    expect(store.center.value).toEqual({ kind: 'application', id: 'acme/commerce/order-service' });
+    expect(store.center.value).toEqual({
+      kind: 'application',
+      id: 'ATT-IDP4/commerce/order-service',
+    });
     expect(store.depth.value).toBe(3);
     expect(store.groupBy.value).toBe('team');
     expect(store.overviewExpanded.value).toBe(true);
@@ -192,22 +195,22 @@ describe('bindUrl', () => {
     const store = demoStore();
     const { window, calls, location } = fakeWindow();
     bindUrl(store, window);
-    store.actions.select({ kind: 'application', id: 'acme/commerce/order-service' });
+    store.actions.select({ kind: 'application', id: 'ATT-IDP4/commerce/order-service' });
     expect(calls.at(-1)).toEqual({
       method: 'push',
-      url: '/?src=./catalog.json#app=acme/commerce/order-service',
+      url: '/?src=./catalog.json#app=ATT-IDP4/commerce/order-service',
     });
     store.actions.setDepth(3);
     expect(calls.at(-1)).toEqual({
       method: 'replace',
-      url: '/?src=./catalog.json#app=acme/commerce/order-service&depth=3',
+      url: '/?src=./catalog.json#app=ATT-IDP4/commerce/order-service&depth=3',
     });
     store.actions.setGroupBy('team');
     expect(calls.at(-1)?.method).toBe('replace');
     store.actions.expandOverview(true);
     expect(calls.at(-1)).toEqual({
       method: 'replace',
-      url: '/?src=./catalog.json#app=acme/commerce/order-service&depth=3&group=team&view=overview',
+      url: '/?src=./catalog.json#app=ATT-IDP4/commerce/order-service&depth=3&group=team&view=overview',
     });
     store.actions.select({ kind: 'external', id: 'redis' });
     expect(calls.at(-1)).toEqual({
@@ -231,12 +234,15 @@ describe('bindUrl', () => {
     const store = demoStore();
     const { window, calls, navigate } = fakeWindow();
     bindUrl(store, window);
-    store.actions.select({ kind: 'application', id: 'acme/commerce/order-service' });
+    store.actions.select({ kind: 'application', id: 'ATT-IDP4/commerce/order-service' });
     store.actions.select({ kind: 'external', id: 'redis' });
     const before = calls.length;
     // Back: the browser restores the previous entry and fires popstate then hashchange.
-    navigate('#app=acme/commerce/order-service');
-    expect(store.center.value).toEqual({ kind: 'application', id: 'acme/commerce/order-service' });
+    navigate('#app=ATT-IDP4/commerce/order-service');
+    expect(store.center.value).toEqual({
+      kind: 'application',
+      id: 'ATT-IDP4/commerce/order-service',
+    });
     expect(calls.length).toBe(before);
     navigate('');
     expect(store.center.value).toBeNull();
@@ -245,11 +251,11 @@ describe('bindUrl', () => {
 
   it('strips an unknown Center from the hash and raises the notice (rule 5)', () => {
     const store = demoStore();
-    const { window, calls, location } = fakeWindow('#app=acme/x/y&depth=3');
+    const { window, calls, location } = fakeWindow('#app=example/x/y&depth=3');
     bindUrl(store, window);
     expect(store.center.value).toBeNull();
     expect(store.notice.value?.text).toBe(
-      'acme/x/y is not in this Catalog. Load your Catalog to open it.',
+      'example/x/y is not in this Catalog. Load your Catalog to open it.',
     );
     expect(store.depth.value).toBe(3);
     expect(calls).toEqual([{ method: 'replace', url: '/?src=./catalog.json#depth=3' }]);
@@ -259,13 +265,13 @@ describe('bindUrl', () => {
   it('strips invalid depth and group values, unknown keys and encodings (rules 6 and 9)', () => {
     const store = demoStore();
     const { window, calls } = fakeWindow(
-      '#app=acme%2Fcommerce%2Forder-service&depth=zero&group=links&foo=bar',
+      '#app=ATT-IDP4%2Fcommerce%2Forder-service&depth=zero&group=links&foo=bar',
     );
     bindUrl(store, window);
     expect(store.depth.value).toBe(DEFAULT_DEPTH);
     expect(store.groupBy.value).toBe(DEFAULT_GROUP);
     expect(calls).toEqual([
-      { method: 'replace', url: '/?src=./catalog.json#app=acme/commerce/order-service' },
+      { method: 'replace', url: '/?src=./catalog.json#app=ATT-IDP4/commerce/order-service' },
     ]);
   });
 
@@ -279,11 +285,11 @@ describe('bindUrl', () => {
   });
 
   it('follows the store when a new Catalog loses the Center (rules 5 and 7)', async () => {
-    // The 200-Application fixture has no acme/commerce/order-service.
+    // The 200-Application fixture has no ATT-IDP4/commerce/order-service.
     const store = demoStore({
       loadDeps: { fetch: fetchServing(readSampleText('catalog-200.json')) },
     });
-    const { window, location, calls } = fakeWindow('#app=acme/commerce/order-service&depth=3');
+    const { window, location, calls } = fakeWindow('#app=ATT-IDP4/commerce/order-service&depth=3');
     bindUrl(store, window);
     expect(store.center.value).not.toBeNull();
     await store.actions.load('https://example.test/catalog-200.json');

@@ -212,7 +212,7 @@ export function CenterCard({
        * there is no second line repeating it.
        *
        * Note this asks `card.name`, not `labelOf`: `labelOf` falls back to the PROJECT, so
-       * `order-service` differs from `acme/commerce/order-service` without the producer having
+       * `order-service` differs from `ATT-IDP4/commerce/order-service` without the producer having
        * named anything, and leading with it would have quietly dropped the Repository from a
        * heading that is supposed to identify the record.
        */}

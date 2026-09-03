@@ -13,8 +13,8 @@ import { budget } from './budget.ts';
  * measuring something rather than passing vacuously.
  */
 
-const PRODUCT_SERVICE = 'acme/commerce/product-service';
-const ORDER_SERVICE = 'acme/commerce/order-service';
+const PRODUCT_SERVICE = 'ATT-IDP4/commerce/product-service';
+const ORDER_SERVICE = 'ATT-IDP4/commerce/order-service';
 const THOUSAND = '/?src=/samples/catalog-1000.json';
 
 /** Budget 5: a selection to the board painted. */

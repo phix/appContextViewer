@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/preact';
 import { describe, expect, it, vi } from 'vitest';
+import { validateCatalog } from '@/catalog';
 import type { OverviewLayout, OverviewSpec, Positions } from '@/layout';
-import type { Center, OverviewModel, Store } from '@/state';
+import { type Center, createStore, type OverviewModel, type Store } from '@/state';
 import { demoStore } from './fixtures.test-helper';
 import {
   CANCELLED_NOTE,
@@ -70,9 +71,9 @@ vi.mock('./canvas/OverviewCanvas', () => ({
   ),
 }));
 
-const COMMERCE = 'repository=acme/commerce';
-const PLATFORM_CORE = 'repository=acme/platform-core';
-const ORDER_SERVICE: Center = { kind: 'application', id: 'acme/commerce/order-service' };
+const COMMERCE = 'repository=ATT-IDP4/commerce';
+const PLATFORM_CORE = 'repository=ATT-IDP5/platform-core';
+const ORDER_SERVICE: Center = { kind: 'application', id: 'ATT-IDP4/commerce/order-service' };
 
 function expanded(mutate: (store: Store) => void = () => undefined): {
   store: Store;
@@ -96,7 +97,7 @@ describe('overviewRenderOf', () => {
     expect(result.elements.nodes.every((node) => node.kind === 'collapsed')).toBe(true);
     expect(result.elements.nodes.find((node) => node.sourceId === COMMERCE)).toMatchObject({
       id: `group:${COMMERCE}`,
-      label: 'acme/commerce · 8',
+      label: 'ATT-IDP4/commerce · 8',
       kind: 'collapsed',
       width: COLLAPSED_WIDTH,
       height: COLLAPSED_HEIGHT,
@@ -158,7 +159,7 @@ describe('overviewRenderOf', () => {
     expect(chip).toMatchObject({
       id: `label:${COMMERCE}`,
       sourceId: COMMERCE,
-      label: 'acme/commerce · 8',
+      label: 'ATT-IDP4/commerce · 8',
       parent: `group:${COMMERCE}`,
       width: LABEL_WIDTH,
       height: LABEL_HEIGHT,
@@ -222,6 +223,70 @@ describe('overviewRenderOf', () => {
     // "opens none": every highlighted Group is still drawn collapsed.
     expect(highlighted.every((node) => node.kind === 'collapsed')).toBe(true);
   });
+
+  /**
+   * Issue #40, on the same small hand-built Catalog `derived.test.ts` proves `neighborhood` and
+   * `reachedGroupEdges` against: a member glows only within Depth of the Center, and a `group` edge
+   * glows when the Neighborhood's own walk actually crosses it -- both narrower than, and independent
+   * of, the whole-Group glow `model.highlighted` still carries.
+   */
+  describe('the Depth-scoped Neighborhood highlight', () => {
+    const NEIGHBORHOOD_CATALOG = {
+      schemaVersion: 1,
+      applications: [
+        { repository: 'a', project: 'center', dependsOn: ['a/a2'] },
+        { repository: 'a', project: 'a2', dependsOn: ['b/b1'] },
+        { repository: 'a', project: 'a3' },
+        { repository: 'b', project: 'b1' },
+        { repository: 'd', project: 'd1', dependsOn: ['a/center'] },
+        { repository: 'e', project: 'e1' },
+      ],
+    };
+    const CENTER: Center = { kind: 'application', id: 'a/center' };
+
+    function neighborhoodModel(): OverviewModel {
+      const { catalog } = validateCatalog(NEIGHBORHOOD_CATALOG);
+      if (catalog === undefined) {
+        throw new Error('the Neighborhood-highlight fixture must validate');
+      }
+      const store = createStore({ catalog });
+      store.actions.select(CENTER);
+      store.actions.expandOverview(true);
+      return store.derived.overviewModel.value;
+    }
+
+    it('glows a member only within Depth of the Center, not every member of its open Group', () => {
+      const model = neighborhoodModel();
+      const result = overviewRenderOf(model, CENTER);
+
+      const members = result.elements.nodes.filter((node) => node.kind === 'member');
+      expect(members.map((node) => node.sourceId).sort()).toEqual(['a/a2', 'a/a3', 'a/center']);
+      expect(members.find((node) => node.sourceId === 'a/center')).toMatchObject({
+        highlighted: true,
+      });
+      expect(members.find((node) => node.sourceId === 'a/a2')).toMatchObject({ highlighted: true });
+      // a3 shares the open Group with the Center but carries no Dependency to or from anything.
+      expect(members.find((node) => node.sourceId === 'a/a3')).toMatchObject({
+        highlighted: false,
+      });
+    });
+
+    it('glows a Group Dependency the Neighborhood reaches into a collapsed Group past the Center’s own', () => {
+      const model = neighborhoodModel();
+      const result = overviewRenderOf(model, CENTER);
+
+      // Neither Group b nor Group d holds the Center, so neither is in `model.highlighted`.
+      expect(model.highlighted).toEqual(['repository=a']);
+      const intoB = result.elements.edges.find(
+        (edge) => edge.source === 'group:repository=a' && edge.target === 'group:repository=b',
+      );
+      const fromD = result.elements.edges.find(
+        (edge) => edge.source === 'group:repository=d' && edge.target === 'group:repository=a',
+      );
+      expect(intoB).toMatchObject({ highlighted: true });
+      expect(fromD).toMatchObject({ highlighted: true });
+    });
+  });
 });
 
 // ---------------------------------------------------------------- header controls
@@ -233,6 +298,8 @@ const OVER_ENVELOPE: OverviewModel = {
   open: new Set(),
   edges: [],
   highlighted: [],
+  neighborhood: new Set(),
+  reachedGroupEdges: new Set(),
   expandAllDisabled: true,
   overviewDisabled: false,
   notice: null,

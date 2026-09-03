@@ -4,7 +4,7 @@ import { buildGraph, type Graph } from '@/graph';
 import { demoStore, fetchServing, readSampleText, validatedSample } from './fixtures.test-helper';
 import { createStore, DEFAULT_DEPTH, DEFAULT_GROUP } from './index';
 
-const ORDER_SERVICE = { kind: 'application', id: 'acme/commerce/order-service' } as const;
+const ORDER_SERVICE = { kind: 'application', id: 'ATT-IDP4/commerce/order-service' } as const;
 const REDIS = { kind: 'external', id: 'redis' } as const;
 
 describe('createStore: the initial state', () => {
@@ -136,7 +136,7 @@ describe('load: the Center is re-validated (docs/url-state.md, 5)', () => {
     expect(store.center.value).toEqual(ORDER_SERVICE);
     expect(store.notice.value).toBeNull();
     // The kept Center's Group is auto-opened against the new Graph.
-    expect(store.openGroups.value.has('repository=acme/commerce')).toBe(true);
+    expect(store.openGroups.value.has('repository=ATT-IDP4/commerce')).toBe(true);
   });
 
   it('clears a Center the new Catalog lacks and raises the notice, without the sample hint', async () => {
@@ -182,11 +182,11 @@ describe('select', () => {
     const store = demoStore();
     store.actions.select(ORDER_SERVICE);
     expect(store.center.value).toEqual(ORDER_SERVICE);
-    expect([...store.openGroups.value]).toEqual(['repository=acme/commerce']);
+    expect([...store.openGroups.value]).toEqual(['repository=ATT-IDP4/commerce']);
     store.actions.select(REDIS);
     expect(store.center.value).toEqual(REDIS);
     // An External belongs to no Group, so nothing more opens (docs/center.md, 7).
-    expect([...store.openGroups.value]).toEqual(['repository=acme/commerce']);
+    expect([...store.openGroups.value]).toEqual(['repository=ATT-IDP4/commerce']);
     store.actions.select(null);
     expect(store.center.value).toBeNull();
   });
@@ -197,7 +197,7 @@ describe('select', () => {
     store.actions.select(ORDER_SERVICE);
     expect([...store.openGroups.value]).toEqual(['tier=1']);
     store.actions.setGroupBy('none');
-    expect([...store.openGroups.value]).toEqual(['repository=acme/commerce']);
+    expect([...store.openGroups.value]).toEqual(['repository=ATT-IDP4/commerce']);
     store.actions.setGroupBy('team');
     store.actions.select({ kind: 'application', id: 'legacy-monolith/monolith' });
     // No team: the synthetic Group's id is the Attribute alone.
@@ -207,12 +207,12 @@ describe('select', () => {
   it('clears the Center and raises the notice with the sample hint for an unknown one', () => {
     const store = demoStore();
     store.actions.select(ORDER_SERVICE);
-    store.actions.select({ kind: 'application', id: 'acme/x/y' });
+    store.actions.select({ kind: 'application', id: 'example/x/y' });
     expect(store.center.value).toBeNull();
     expect(store.notice.value).toEqual({
       kind: 'missing-center',
-      center: { kind: 'application', id: 'acme/x/y' },
-      text: 'acme/x/y is not in this Catalog. Load your Catalog to open it.',
+      center: { kind: 'application', id: 'example/x/y' },
+      text: 'example/x/y is not in this Catalog. Load your Catalog to open it.',
     });
     store.actions.dismissNotice();
     expect(store.notice.value).toBeNull();
@@ -264,7 +264,7 @@ describe('setDepth and setGroupBy', () => {
 
   it('resets the open set when the grouping changes', () => {
     const store = demoStore();
-    store.actions.toggleGroup('repository=acme/commerce');
+    store.actions.toggleGroup('repository=ATT-IDP4/commerce');
     store.actions.setGroupBy('team');
     expect(store.openGroups.value.size).toBe(0);
   });
@@ -273,10 +273,10 @@ describe('setDepth and setGroupBy', () => {
 describe('Groups and the Overview', () => {
   it('toggles, expands all and collapses all', () => {
     const store = demoStore();
-    store.actions.toggleGroup('repository=acme/commerce');
-    expect(store.openGroups.value.has('repository=acme/commerce')).toBe(true);
-    store.actions.toggleGroup('repository=acme/commerce');
-    expect(store.openGroups.value.has('repository=acme/commerce')).toBe(false);
+    store.actions.toggleGroup('repository=ATT-IDP4/commerce');
+    expect(store.openGroups.value.has('repository=ATT-IDP4/commerce')).toBe(true);
+    store.actions.toggleGroup('repository=ATT-IDP4/commerce');
+    expect(store.openGroups.value.has('repository=ATT-IDP4/commerce')).toBe(false);
     store.actions.expandAll();
     // Ten Repositories in the demo Catalog (samples/README.md).
     expect(store.openGroups.value.size).toBe(10);

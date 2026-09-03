@@ -1,5 +1,5 @@
 {
   "schemaVersion": 1,
   "source": "E_TOO_LARGE fixture: a valid Catalog that the load tests serve with an oversize Content-Length, and open as a File with maxBytes below its size, so it is refused before parsing",
-  "applications": [{ "repository": "acme/platform-core", "project": "api-gateway" }]
+  "applications": [{ "repository": "ATT-IDP5/platform-core", "project": "api-gateway" }]
 }

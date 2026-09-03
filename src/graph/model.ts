@@ -159,7 +159,7 @@ interface TeamBuilder extends Team {
 /**
  * What to render for a node, so no view has to branch on whether the producer supplied a `name`.
  *
- * An id is only a name by luck. `acme/commerce/order-service` reads as one; the same Application
+ * An id is only a name by luck. `ATT-IDP4/commerce/order-service` reads as one; the same Application
  * under an APM scheme is `ATT-IDP3/billing-core/apm10064`, which names nothing a reader recognises
  * (docs/schema-v1.md, "When the id names nothing"). So `name` wins where it exists, and the fallback
  * is the narrowest part of the id that still identifies the node: the Project for an Application,

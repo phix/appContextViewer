@@ -32,7 +32,7 @@ No other keys are allowed at the Application level. Custom data goes in `attribu
 
 ## Identity and references
 
-- An Application's **id** is `repository + "/" + project`, for example `acme/platform-core/auth-service`.
+- An Application's **id** is `repository + "/" + project`, for example `ATT-IDP5/platform-core/auth-service`.
 - The id is the Application's identity, **not necessarily its name** — see below.
 - Ids split at the **last** slash. That is why `project` may not contain one.
 - Ids are compared **exactly** (case-sensitive, no trimming).
@@ -41,7 +41,7 @@ No other keys are allowed at the Application level. Custom data goes in `attribu
 
 ## When the id names nothing
 
-`acme/platform-core/auth-service` is an id that doubles as a name: a reader knows what it is without
+`ATT-IDP5/platform-core/auth-service` is an id that doubles as a name: a reader knows what it is without
 looking anything up. That is a property of the *producer's* naming, not of this schema, and it does
 not survive contact with an estate that identifies systems by number. In
 [`samples/att/`](../samples/att/README.md) the same Application is

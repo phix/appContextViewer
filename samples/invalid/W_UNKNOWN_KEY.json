@@ -3,14 +3,14 @@
   "generator": "catalog-tool 2.3",
   "applications": [
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "auth-service",
       "owner": "platform",
       "tier": 1,
       "attributes": { "owner": "platform" }
     },
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "user-service",
       "dependsOn": ["external:redis"]
     }

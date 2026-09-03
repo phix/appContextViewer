@@ -18,35 +18,38 @@ const nodeCount = (n: Neighborhood) => n.applications.length + n.externals.lengt
 
 describe('neighborhood: Applications, Externals and Channels within a Depth of the Center', () => {
   it('holds the Center alone at Depth 0', () => {
-    const n = neighborhood(demo, 'acme/commerce/product-service', { depth: 0, direction: 'both' });
-    expect(n.applications).toEqual([{ id: 'acme/commerce/product-service', depth: 0 }]);
+    const n = neighborhood(demo, 'ATT-IDP4/commerce/product-service', {
+      depth: 0,
+      direction: 'both',
+    });
+    expect(n.applications).toEqual([{ id: 'ATT-IDP4/commerce/product-service', depth: 0 }]);
     expect(n.externals).toEqual([]);
     expect(n.channels).toEqual([]);
     expect(n.dependencies).toEqual([]);
     expect(n.flows).toEqual([]);
-    expect(n.center).toEqual({ kind: 'application', id: 'acme/commerce/product-service' });
+    expect(n.center).toEqual({ kind: 'application', id: 'ATT-IDP4/commerce/product-service' });
   });
 
   it('follows Dependents only in the dependents direction', () => {
-    const n = neighborhood(demo, 'acme/commerce/product-service', {
+    const n = neighborhood(demo, 'ATT-IDP4/commerce/product-service', {
       depth: 1,
       direction: 'dependents',
     });
     expect(ids(n.applications)).toEqual([
-      'acme/commerce/product-service',
-      'acme/platform-core/api-gateway',
-      'acme/commerce/pricing-service',
-      'acme/commerce/cart-service',
-      'acme/data/ml-recommender',
-      'acme/search/search-indexer',
+      'ATT-IDP4/commerce/product-service',
+      'ATT-IDP5/platform-core/api-gateway',
+      'ATT-IDP4/commerce/pricing-service',
+      'ATT-IDP4/commerce/cart-service',
+      'ATT-IDP5/data/ml-recommender',
+      'ATT-IDP5/search/search-indexer',
     ]);
     expect(n.applications.map((member) => member.depth)).toEqual([0, 1, 1, 1, 1, 1]);
     expect(n.externals).toEqual([]);
     // Every Dependency among the shown nodes is an edge, spokes and cross edges alike.
     expect(n.dependencies).toHaveLength(7);
     expect(n.dependencies).toContainEqual({
-      from: 'acme/platform-core/api-gateway',
-      to: { kind: 'application', id: 'acme/commerce/cart-service' },
+      from: 'ATT-IDP5/platform-core/api-gateway',
+      to: { kind: 'application', id: 'ATT-IDP4/commerce/cart-service' },
     });
     for (const edge of n.dependencies) {
       expect(ids(n.applications)).toContain(edge.from);
@@ -56,34 +59,37 @@ describe('neighborhood: Applications, Externals and Channels within a Depth of t
   });
 
   it('follows Dependencies only in the dependencies direction, with Externals as nodes', () => {
-    const n = neighborhood(demo, 'acme/commerce/product-service', {
+    const n = neighborhood(demo, 'ATT-IDP4/commerce/product-service', {
       depth: 1,
       direction: 'dependencies',
     });
-    expect(ids(n.applications)).toEqual(['acme/commerce/product-service']);
+    expect(ids(n.applications)).toEqual(['ATT-IDP4/commerce/product-service']);
     expect(n.externals).toEqual([
       { id: 'postgres-commerce', depth: 1 },
       { id: 's3-assets', depth: 1 },
     ]);
     expect(n.dependencies).toEqual([
-      { from: 'acme/commerce/product-service', to: { kind: 'external', id: 'postgres-commerce' } },
-      { from: 'acme/commerce/product-service', to: { kind: 'external', id: 's3-assets' } },
+      {
+        from: 'ATT-IDP4/commerce/product-service',
+        to: { kind: 'external', id: 'postgres-commerce' },
+      },
+      { from: 'ATT-IDP4/commerce/product-service', to: { kind: 'external', id: 's3-assets' } },
     ]);
   });
 
   it('follows both directions hop by hop, but never expands an External it reaches', () => {
-    const n = neighborhood(demo, 'acme/commerce/promotions', { depth: 2, direction: 'both' });
+    const n = neighborhood(demo, 'ATT-IDP4/commerce/promotions', { depth: 2, direction: 'both' });
     expect(n.applications).toEqual([
-      { id: 'acme/commerce/promotions', depth: 0 },
-      { id: 'acme/commerce/pricing-service', depth: 1 },
-      { id: 'acme/commerce/product-service', depth: 2 },
-      { id: 'acme/platform-infra/feature-flags', depth: 2 },
-      { id: 'acme/commerce/cart-service', depth: 2 },
-      { id: 'acme/commerce/order-service', depth: 2 },
+      { id: 'ATT-IDP4/commerce/promotions', depth: 0 },
+      { id: 'ATT-IDP4/commerce/pricing-service', depth: 1 },
+      { id: 'ATT-IDP4/commerce/product-service', depth: 2 },
+      { id: 'ATT-IDP5/platform-infra/feature-flags', depth: 2 },
+      { id: 'ATT-IDP4/commerce/cart-service', depth: 2 },
+      { id: 'ATT-IDP4/commerce/order-service', depth: 2 },
     ]);
     expect(n.externals).toEqual([{ id: 'redis', depth: 1 }]);
     // redis has ten Dependents; the other nine are siblings, not neighbours, so they stay out.
-    expect(ids(n.applications)).not.toContain('acme/platform-core/api-gateway');
+    expect(ids(n.applications)).not.toContain('ATT-IDP5/platform-core/api-gateway');
   });
 
   it('gives an External Center its Dependents at Depth 1 and nothing on the Dependencies side', () => {
@@ -100,19 +106,19 @@ describe('neighborhood: Applications, Externals and Channels within a Depth of t
   });
 
   it('attaches Channels one Flow away from an included Application, without traversing them', () => {
-    const n = neighborhood(demo, 'acme/commerce/product-service', {
+    const n = neighborhood(demo, 'ATT-IDP4/commerce/product-service', {
       depth: 1,
       direction: 'dependents',
     });
     expect(n.channels).toEqual([{ id: 'products.changed', depth: 1 }]);
     expect(n.flows).toEqual([
       {
-        application: 'acme/commerce/product-service',
+        application: 'ATT-IDP4/commerce/product-service',
         channel: 'products.changed',
         direction: 'publishes',
       },
       {
-        application: 'acme/search/search-indexer',
+        application: 'ATT-IDP5/search/search-indexer',
         channel: 'products.changed',
         direction: 'subscribes',
       },
@@ -125,19 +131,19 @@ describe('neighborhood: Applications, Externals and Channels within a Depth of t
   it('never lets a Flow into the Dependency edges', () => {
     // events-pipeline subscribes to nine Channels and has two External Dependencies and one
     // Dependent, warehouse-loader, which also depends on one of those Externals: four edges.
-    const n = neighborhood(demo, 'acme/data/events-pipeline', { depth: 1, direction: 'both' });
+    const n = neighborhood(demo, 'ATT-IDP5/data/events-pipeline', { depth: 1, direction: 'both' });
     expect(n.channels).toHaveLength(9);
     expect(n.flows).toHaveLength(9);
     expect(n.dependencies).toHaveLength(4);
     expect(ids(n.applications)).toEqual([
-      'acme/data/events-pipeline',
-      'acme/data/warehouse-loader',
+      'ATT-IDP5/data/events-pipeline',
+      'ATT-IDP5/data/warehouse-loader',
     ]);
     expect(ids(n.externals)).toEqual(['kafka', 's3-events']);
   });
 
   it('runs to exhaustion when the Depth is unbounded', () => {
-    const n = neighborhood(demo, 'acme/mobile/ios-app', {
+    const n = neighborhood(demo, 'ATT-IDP4/mobile/ios-app', {
       depth: Number.POSITIVE_INFINITY,
       direction: 'dependencies',
     });
@@ -154,8 +160,8 @@ describe('neighborhood: Applications, Externals and Channels within a Depth of t
 
 describe('paneNeighborhood: the 150-node cap and its Depth fallback', () => {
   it('draws the asked Depth when it fits', () => {
-    const pane = paneNeighborhood(demo, 'acme/commerce/product-service', 2);
-    const full = neighborhood(demo, 'acme/commerce/product-service', {
+    const pane = paneNeighborhood(demo, 'ATT-IDP4/commerce/product-service', 2);
+    const full = neighborhood(demo, 'ATT-IDP4/commerce/product-service', {
       depth: 2,
       direction: 'both',
     });
@@ -168,13 +174,13 @@ describe('paneNeighborhood: the 150-node cap and its Depth fallback', () => {
     expect(pane.direction).toBe('both');
   });
 
-  it('falls back to Depth 1 of 2 for acme/billing-platform/auth-service and counts the hidden nodes', () => {
-    const pane = paneNeighborhood(thousand, 'acme/billing-platform/auth-service', 2);
-    const depth1 = neighborhood(thousand, 'acme/billing-platform/auth-service', {
+  it('falls back to Depth 1 of 2 for billing/auth-service and counts the hidden nodes', () => {
+    const pane = paneNeighborhood(thousand, 'billing/auth-service', 2);
+    const depth1 = neighborhood(thousand, 'billing/auth-service', {
       depth: 1,
       direction: 'both',
     });
-    const depth2 = neighborhood(thousand, 'acme/billing-platform/auth-service', {
+    const depth2 = neighborhood(thousand, 'billing/auth-service', {
       depth: 2,
       direction: 'both',
     });
@@ -189,21 +195,21 @@ describe('paneNeighborhood: the 150-node cap and its Depth fallback', () => {
     expect(pane.hiddenApplications).toBe(depth2.applications.length - depth1.applications.length);
     expect(pane.hiddenExternals).toBe(depth2.externals.length - depth1.externals.length);
     expect(pane.hiddenApplications + pane.hiddenExternals).toBe(pane.hidden);
-    expect(pane).toMatchObject({ hidden: 564, hiddenApplications: 544, hiddenExternals: 20 });
+    expect(pane).toMatchObject({ hidden: 516, hiddenApplications: 497, hiddenExternals: 19 });
   });
 
-  it('draws mysql-legacy alone when its 197 Dependents exceed the cap at Depth 1', () => {
-    const pane = paneNeighborhood(thousand, 'mysql-legacy', 1);
+  it('draws sendgrid alone when its 151 Dependents exceed the cap at Depth 1', () => {
+    const pane = paneNeighborhood(thousand, 'sendgrid', 1);
     expect(pane.depthShown).toBe(0);
-    expect(pane.hidden).toBe(197);
-    expect(pane.hiddenApplications).toBe(197);
+    expect(pane.hidden).toBe(151);
+    expect(pane.hiddenApplications).toBe(151);
     expect(pane.hiddenExternals).toBe(0);
     expect(pane.applications).toEqual([]);
-    expect(pane.externals).toEqual([{ id: 'mysql-legacy', depth: 0 }]);
+    expect(pane.externals).toEqual([{ id: 'sendgrid', depth: 0 }]);
     expect(pane.dependencies).toEqual([]);
 
-    const deeper = paneNeighborhood(thousand, 'mysql-legacy', 2);
-    const full = neighborhood(thousand, 'mysql-legacy', { depth: 2, direction: 'both' });
+    const deeper = paneNeighborhood(thousand, 'sendgrid', 2);
+    const full = neighborhood(thousand, 'sendgrid', { depth: 2, direction: 'both' });
     expect(deeper.depthShown).toBe(0);
     expect(deeper.hidden).toBe(nodeCount(full) - 1);
   });
@@ -238,7 +244,7 @@ describe('paneNeighborhood: the 150-node cap and its Depth fallback', () => {
     // docs/performance-budgets.md, "Pane cap": "At 1,000 Applications roughly 45% of Depth-2
     // Neighborhoods fall back to Depth 1 this way". That figure is the node cap's alone -- it was
     // 60.6% while the Dependency cap was wrongly binding the Depth, which is what gave this band
-    // away. Measured here: 459 / 1,025 = 44.8%.
+    // away. Measured here: 450 / 1,025 = 43.9%.
     expect(fallbacks / centers.length).toBeGreaterThan(0.35);
     expect(fallbacks / centers.length).toBeLessThan(0.55);
   });
@@ -254,10 +260,10 @@ describe('paneNeighborhood: the 150-node cap and its Depth fallback', () => {
       const full = neighborhood(thousand, candidate, { depth: 2, direction: 'both' });
       return nodeCount(full) <= PANE_CAP && full.dependencies.length > PANE_DEPENDENCY_CAP;
     });
-    // 162 Centers of the fixture are in exactly this position (160 Applications and 2 Externals);
-    // every one is drawn at Depth 2. Under the defect they all fell to Depth 1, which is what took
-    // the Depth-2 fallback rate from the doc's 45% to 60.6%.
-    expect(dense).toHaveLength(162);
+    // 154 Centers of the fixture are in exactly this position (151 Applications and 3 Externals);
+    // every one is drawn at Depth 2. Under the defect they all fell to a shallower Depth, which is
+    // what took the Depth-2 fallback rate from the doc's roughly-45% figure toward 60%.
+    expect(dense).toHaveLength(154);
     for (const center of dense) {
       const pane = paneNeighborhood(thousand, center, 2);
       expect(pane.depthShown, center.id).toBe(2);
@@ -267,18 +273,19 @@ describe('paneNeighborhood: the 150-node cap and its Depth fallback', () => {
     }
 
     // One of them, named, so the case survives a change in the fixture's iteration order.
-    const pinned = paneNeighborhood(thousand, 'acme-labs/billing/admin-service', 2);
+    const pinned = paneNeighborhood(thousand, 'ATT-IDP1/assurance/kpi', 2);
     expect(pinned.depthShown).toBe(2);
     expect(pinned.groupsDrawn).toBe(false);
   });
 
   it('keeps the Groups whenever the drawn Neighborhood is at or under the Dependency cap', () => {
-    // acme/video/config-service falls back on the NODE cap (its Depth-2 reach is 638 nodes), and
-    // what is left -- 111 nodes, 325 Dependencies -- is under the Dependency cap, so it keeps them.
-    const pane = paneNeighborhood(thousand, 'acme/video/config-service', 2);
+    // ATT-IDP2/auth-core/audit-service falls back on the NODE cap (its Depth-2 reach is 616
+    // nodes), and what is left -- 83 nodes, 334 Dependencies -- is under the Dependency cap, so it
+    // keeps them.
+    const pane = paneNeighborhood(thousand, 'ATT-IDP2/auth-core/audit-service', 2);
     expect(pane.depthShown).toBe(1);
-    expect(nodeCount(pane)).toBe(111);
-    expect(pane.dependencies).toHaveLength(325);
+    expect(nodeCount(pane)).toBe(83);
+    expect(pane.dependencies).toHaveLength(334);
     expect(pane.groupsDrawn).toBe(true);
   });
 
@@ -367,7 +374,7 @@ describe('paneNeighborhood: the 150-node cap and its Depth fallback', () => {
   });
 
   it('keeps hidden plus shown equal to the full Neighborhood', () => {
-    for (const id of ['acme/video/config-service', 'acme/localization-tools/feature-flags']) {
+    for (const id of ['ATT-IDP2/auth-core/audit-service', 'billing/auth-service']) {
       const pane = paneNeighborhood(thousand, id, 3);
       const full = neighborhood(thousand, id, { depth: 3, direction: 'both' });
       expect(nodeCount(pane) + pane.hidden).toBe(nodeCount(full));
@@ -376,23 +383,19 @@ describe('paneNeighborhood: the 150-node cap and its Depth fallback', () => {
 
   it('shows the asked Depth, unbounded included, whenever everything fits', () => {
     // A leaf: doc-site has no Dependencies and no Dependents, so nothing lies beyond Depth 0.
-    const leaf = paneNeighborhood(demo, 'acme/tools/doc-site', 2);
+    const leaf = paneNeighborhood(demo, 'ATT-IDP5/tools/doc-site', 2);
     expect(leaf.depthShown).toBe(2);
     expect(leaf).toMatchObject({ hidden: 0, hiddenApplications: 0, hiddenExternals: 0 });
     expect(nodeCount(leaf)).toBe(1);
 
-    const whole = paneNeighborhood(demo, 'acme/mobile/ios-app', Number.POSITIVE_INFINITY);
+    const whole = paneNeighborhood(demo, 'ATT-IDP4/mobile/ios-app', Number.POSITIVE_INFINITY);
     expect(whole.depthShown).toBe(Number.POSITIVE_INFINITY);
     expect(whole.hidden).toBe(0);
     expect(nodeCount(whole)).toBeGreaterThan(30);
   });
 
   it('settles on a finite Depth when the asked Depth is unbounded and the reach exceeds the cap', () => {
-    const pane = paneNeighborhood(
-      thousand,
-      'acme/billing-platform/auth-service',
-      Number.POSITIVE_INFINITY,
-    );
+    const pane = paneNeighborhood(thousand, 'billing/auth-service', Number.POSITIVE_INFINITY);
     expect(pane.depthShown).toBe(1);
     expect(nodeCount(pane)).toBeLessThanOrEqual(PANE_CAP);
     expect(pane.hidden).toBeGreaterThan(500);

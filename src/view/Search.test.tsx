@@ -59,12 +59,12 @@ describe('Search', () => {
 
     const row = screen
       .getAllByTestId('search-result')
-      .find((candidate) => candidate.dataset.id === 'acme/commerce/order-service');
+      .find((candidate) => candidate.dataset.id === 'ATT-IDP4/commerce/order-service');
     fireEvent.click(row?.querySelector('[data-testid="search-choose"]') as Element);
 
     expect(onSelect).toHaveBeenCalledWith({
       kind: 'application',
-      id: 'acme/commerce/order-service',
+      id: 'ATT-IDP4/commerce/order-service',
     });
     // Choosing clears the box, so the dropdown is not left over the board.
     expect((screen.getByTestId('search-input') as HTMLInputElement).value).toBe('');
@@ -146,7 +146,7 @@ describe('Search', () => {
 
   it('caps the dropdown at its limit', () => {
     renderSearch({ limit: 3 });
-    type('acme');
+    type('att-idp');
     expect(resultIds()).toHaveLength(3);
   });
 

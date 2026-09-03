@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { validateCatalog } from '@/catalog';
 import {
   blastRadius,
   groupableAttributes,
@@ -8,9 +9,15 @@ import {
   tagToken,
 } from '@/graph';
 import { demoStore, validatedSample } from './fixtures.test-helper';
-import { createStore, EXTERNAL_NEEDS_NOTE, overviewCapNotice, paneNotice } from './index';
+import {
+  createStore,
+  EXTERNAL_NEEDS_NOTE,
+  overviewCapNotice,
+  paneNotice,
+  type Store,
+} from './index';
 
-const ORDER_SERVICE = { kind: 'application', id: 'acme/commerce/order-service' } as const;
+const ORDER_SERVICE = { kind: 'application', id: 'ATT-IDP4/commerce/order-service' } as const;
 const REDIS = { kind: 'external', id: 'redis' } as const;
 
 describe('ranked: the default screen', () => {
@@ -38,14 +45,14 @@ describe('ranked: the default screen', () => {
     expect(model.rows.every((row) => row.kind === 'application')).toBe(true);
     expect(model.rows[0]).toEqual({
       kind: 'application',
-      id: 'acme/commerce/product-service',
+      id: 'ATT-IDP4/commerce/product-service',
       label: 'product-service',
       size: 12,
     });
   });
 });
 
-describe('board: acme/commerce/order-service on the demo Catalog', () => {
+describe('board: ATT-IDP4/commerce/order-service on the demo Catalog', () => {
   it('is null without a Center', () => {
     expect(demoStore().derived.board.value).toBeNull();
   });
@@ -56,12 +63,12 @@ describe('board: acme/commerce/order-service on the demo Catalog', () => {
     const board = store.derived.board.value;
     expect(board?.center).toMatchObject({
       kind: 'application',
-      id: 'acme/commerce/order-service',
+      id: 'ATT-IDP4/commerce/order-service',
       label: 'order-service',
-      repository: 'acme/commerce',
+      repository: 'ATT-IDP4/commerce',
       team: 'commerce',
       recordKind: 'service',
-      url: 'https://github.com/acme/commerce/tree/main/order-service',
+      url: 'https://github.com/ATT-IDP4/commerce/tree/main/order-service',
       publishes: ['orders.placed'],
       subscribes: ['payments.captured'],
     });
@@ -77,28 +84,28 @@ describe('board: acme/commerce/order-service on the demo Catalog', () => {
     expect(needs?.bands.map((band) => band.depth)).toEqual([1, 2]);
     const depth1 = needs?.bands[0]?.rows ?? [];
     expect(depth1.map((row) => row.id)).toEqual([
-      'acme/commerce/cart-service',
-      'acme/commerce/inventory-service',
-      'acme/commerce/pricing-service',
-      'acme/platform-core/user-service',
-      'acme/payments/payment-service',
+      'ATT-IDP4/commerce/cart-service',
+      'ATT-IDP4/commerce/inventory-service',
+      'ATT-IDP4/commerce/pricing-service',
+      'ATT-IDP5/platform-core/user-service',
+      'ATT-IDP3/payments/payment-service',
       'postgres-commerce',
       'kafka',
     ]);
     expect(depth1[0]).toEqual({
       kind: 'application',
-      id: 'acme/commerce/cart-service',
+      id: 'ATT-IDP4/commerce/cart-service',
       label: 'cart-service',
-      repository: 'acme/commerce',
+      repository: 'ATT-IDP4/commerce',
       team: 'commerce',
     });
     expect(depth1[6]).toMatchObject({ kind: 'external', id: 'kafka', externalKind: 'queue' });
     const depth2 = needs?.bands[1]?.rows ?? [];
     expect(depth2.map((row) => row.id)).toEqual([
-      'acme/commerce/product-service',
-      'acme/platform-infra/feature-flags',
-      'acme/payments/ledger-service',
-      'acme/payments/fraud-scorer',
+      'ATT-IDP4/commerce/product-service',
+      'ATT-IDP5/platform-infra/feature-flags',
+      'ATT-IDP3/payments/ledger-service',
+      'ATT-IDP3/payments/fraud-scorer',
       'redis',
       'postgres-main',
       'stripe',
@@ -111,16 +118,16 @@ describe('board: acme/commerce/order-service on the demo Catalog', () => {
     store.actions.select(ORDER_SERVICE);
     const breaks = store.derived.board.value?.breaks;
     expect(breaks?.bands.map((band) => band.rows.map((row) => row.id))).toEqual([
-      ['acme/platform-core/api-gateway', 'acme/commerce/checkout-worker'],
+      ['ATT-IDP5/platform-core/api-gateway', 'ATT-IDP4/commerce/checkout-worker'],
       [
-        'acme/web/storefront',
-        'acme/web/admin-console',
-        'acme/mobile/ios-app',
-        'acme/mobile/android-app',
+        'ATT-IDP4/web/storefront',
+        'ATT-IDP4/web/admin-console',
+        'ATT-IDP4/mobile/ios-app',
+        'ATT-IDP4/mobile/android-app',
       ],
     ]);
     expect(breaks?.bands[0]?.rows[0]).toMatchObject({
-      repository: 'acme/platform-core',
+      repository: 'ATT-IDP5/platform-core',
       team: 'platform',
     });
     expect(breaks?.total).toBe(6);
@@ -179,32 +186,34 @@ describe('paneModel', () => {
     expect(pane?.nodes.find((node) => node.id === ORDER_SERVICE.id)).toMatchObject({
       label: 'order-service',
       depth: 0,
-      group: 'repository=acme/commerce',
+      group: 'repository=ATT-IDP4/commerce',
     });
-    expect(pane?.groups.find((group) => group.id === 'repository=acme/commerce')).toMatchObject({
-      label: 'acme/commerce',
-    });
+    expect(pane?.groups.find((group) => group.id === 'repository=ATT-IDP4/commerce')).toMatchObject(
+      {
+        label: 'ATT-IDP4/commerce',
+      },
+    );
   });
 
   it('says how many more appear in the Overview when a Depth falls back', () => {
     const { catalog } = validatedSample('catalog-1000.json');
     const store = createStore({ catalog });
-    store.actions.select({ kind: 'application', id: 'acme/billing-platform/auth-service' });
+    store.actions.select({ kind: 'application', id: 'billing/auth-service' });
     const pane = store.derived.paneModel.value;
     expect(pane?.depthShown).toBe(1);
     expect(pane?.notice).toBe(
-      'Showing Depth 1 of 2; 544 more in the Overview, and 20 Externals not drawn',
+      'Showing Depth 1 of 2; 497 more in the Overview, and 19 Externals not drawn',
     );
   });
 
-  it('draws mysql-legacy alone and points at the Breaks column', () => {
+  it('draws sendgrid alone and points at the Breaks column', () => {
     const { catalog } = validatedSample('catalog-1000.json');
     const store = createStore({ catalog });
-    store.actions.select({ kind: 'external', id: 'mysql-legacy' });
+    store.actions.select({ kind: 'external', id: 'sendgrid' });
     store.actions.setDepth(1);
     const pane = store.derived.paneModel.value;
     expect(pane?.depthShown).toBe(0);
-    expect(pane?.notice).toBe('197 Dependents, more than the pane can draw; see the Breaks column');
+    expect(pane?.notice).toBe('151 Dependents, more than the pane can draw; see the Breaks column');
   });
 
   it("drops the Groups, and the nodes' parents, when the pane is drawn flat", () => {
@@ -214,7 +223,7 @@ describe('paneModel', () => {
     // ~40% saving comes from dagre not being handed a compound graph.
     const { catalog } = validatedSample('catalog-1000.json');
     const store = createStore({ catalog });
-    store.actions.select({ kind: 'application', id: 'acme/legal-3/export-service' });
+    store.actions.select({ kind: 'application', id: 'ATT-IDP1/assurance/kpi' });
     const flat = store.derived.paneModel.value;
     expect(flat?.groupsDrawn).toBe(false);
     expect(flat?.depthShown).toBe(2); // flat, NOT shallower
@@ -225,7 +234,7 @@ describe('paneModel', () => {
     expect(flat?.grouping).toBe('repository');
 
     // The same store, a Center under the Dependency cap: Groups and parents are back.
-    store.actions.select({ kind: 'application', id: 'acme-labs/data-core/index-android' });
+    store.actions.select({ kind: 'application', id: 'ATT-IDP2/auth-core/audit-service' });
     const grouped = store.derived.paneModel.value;
     expect(grouped?.groupsDrawn).toBe(true);
     expect(grouped?.groups.length).toBeGreaterThan(0);
@@ -305,8 +314,8 @@ describe('overviewModel', () => {
     store.actions.select(ORDER_SERVICE);
     const model = store.derived.overviewModel.value;
     expect(model.groups.map((group) => group.label)).toHaveLength(10);
-    expect([...model.open]).toEqual(['repository=acme/commerce']);
-    expect(model.highlighted).toEqual(['repository=acme/commerce']);
+    expect([...model.open]).toEqual(['repository=ATT-IDP4/commerce']);
+    expect(model.highlighted).toEqual(['repository=ATT-IDP4/commerce']);
     expect(model.edges.some((edge) => edge.kind === 'group')).toBe(true);
     expect(model.edges.some((edge) => edge.kind === 'member')).toBe(true);
     // A 34-Application Catalog is nowhere near the cap, so it is drawn whole and says nothing.
@@ -316,22 +325,22 @@ describe('overviewModel', () => {
 
   /**
    * The Overview cap reaching the view (docs/performance-budgets.md, "Overview cap"). The numbers
-   * are the fixture's real ones, not the constant's: 1,498 Group Dependencies over 123 Repositories
+   * are the fixture's real ones, not the constant's: 1,308 Group Dependencies over 123 Repositories
    * is what budget 9 was unknowingly written against, and 700 of them is what it now draws.
    */
-  it('caps the 1,000-Application Overview at 700 Group Dependencies, with a notice naming 798', () => {
+  it('caps the 1,000-Application Overview at 700 Group Dependencies, with a notice naming 608', () => {
     const { catalog, warnings } = validatedSample('catalog-1000.json');
     const store = createStore({ catalog, warnings });
     store.actions.expandOverview(true);
     const model = store.derived.overviewModel.value;
 
     expect(model.groups).toHaveLength(123);
-    expect(model.groupDependencies).toBe(1498);
+    expect(model.groupDependencies).toBe(1308);
     expect(model.edges).toHaveLength(700);
     expect(model.edges.every((edge) => edge.kind === 'group')).toBe(true);
-    expect(model.hiddenGroupDependencies).toBe(798);
+    expect(model.hiddenGroupDependencies).toBe(608);
     expect(model.capNotice).toBe(
-      'Showing the heaviest 700 Group Dependencies of 1,498; 798 not drawn',
+      'Showing the heaviest 700 Group Dependencies of 1,308; 608 not drawn',
     );
   });
 
@@ -359,13 +368,74 @@ describe('overviewModel', () => {
     store.actions.select(REDIS);
     const model = store.derived.overviewModel.value;
     expect(model.highlighted).toEqual([
-      'repository=acme/platform-core',
-      'repository=acme/platform-infra',
-      'repository=acme/commerce',
-      'repository=acme/payments',
-      'repository=acme/data',
+      'repository=ATT-IDP5/platform-core',
+      'repository=ATT-IDP5/platform-infra',
+      'repository=ATT-IDP4/commerce',
+      'repository=ATT-IDP3/payments',
+      'repository=ATT-IDP5/data',
     ]);
     expect(store.openGroups.value.size).toBe(0);
+  });
+
+  /**
+   * Issue #40: `highlighted` glows the Center's whole Group regardless of Depth; `neighborhood` and
+   * `reachedGroupEdges` are the Depth-scoped fields the Overview's member-level highlight needs, on
+   * a hand-built Catalog small enough that every hop is checkable by eye. Both directions, Depth 2
+   * (the default): Center `a/center` depends on `a/a2`, which depends on `b/b1` (two hops on);
+   * `d/d1` depends on the Center (one hop back). `a/a3` shares the Center's Group but carries no
+   * Dependency to or from anything, so it is never reached; `e/e1` is wholly isolated.
+   */
+  describe('the Depth-scoped Neighborhood highlight', () => {
+    const NEIGHBORHOOD_CATALOG = {
+      schemaVersion: 1,
+      applications: [
+        { repository: 'a', project: 'center', dependsOn: ['a/a2'] },
+        { repository: 'a', project: 'a2', dependsOn: ['b/b1'] },
+        { repository: 'a', project: 'a3' },
+        { repository: 'b', project: 'b1' },
+        { repository: 'd', project: 'd1', dependsOn: ['a/center'] },
+        { repository: 'e', project: 'e1' },
+      ],
+    };
+    const CENTER = { kind: 'application', id: 'a/center' } as const;
+
+    function neighborhoodStore(): Store {
+      const { catalog } = validateCatalog(NEIGHBORHOOD_CATALOG);
+      if (catalog === undefined) {
+        throw new Error('the Neighborhood-highlight fixture must validate');
+      }
+      const store = createStore({ catalog });
+      store.actions.select(CENTER);
+      store.actions.expandOverview(true);
+      return store;
+    }
+
+    it('member-level: the Applications within Depth of the Center, not the whole open Group', () => {
+      const model = neighborhoodStore().derived.overviewModel.value;
+      expect([...model.open]).toEqual(['repository=a']);
+      expect(model.neighborhood).toEqual(new Set(['a/center', 'a/a2', 'd/d1', 'b/b1']));
+      // a3 shares the Center's open Group but has no Dependency in either direction.
+      expect(model.neighborhood.has('a/a3')).toBe(false);
+    });
+
+    it('names the ordered Group pairs a real Dependency inside the Neighborhood crosses', () => {
+      const model = neighborhoodStore().derived.overviewModel.value;
+      expect(model.reachedGroupEdges).toEqual(
+        new Set(['repository=a->repository=b', 'repository=d->repository=a']),
+      );
+    });
+
+    it('is empty while the Overview is collapsed, even with a Center selected', () => {
+      const { catalog } = validateCatalog(NEIGHBORHOOD_CATALOG);
+      if (catalog === undefined) {
+        throw new Error('the Neighborhood-highlight fixture must validate');
+      }
+      const store = createStore({ catalog });
+      store.actions.select(CENTER);
+      const model = store.derived.overviewModel.value;
+      expect(model.neighborhood.size).toBe(0);
+      expect(model.reachedGroupEdges.size).toBe(0);
+    });
   });
 });
 
@@ -384,14 +454,17 @@ describe('warningsCount and channelCardModel', () => {
     store.actions.openChannel('orders.placed');
     const card = store.derived.channelCardModel.value;
     expect(card?.name).toBe('orders.placed');
-    expect(card?.publishers.map((row) => row.id)).toEqual(['acme/commerce/order-service']);
+    expect(card?.publishers.map((row) => row.id)).toEqual(['ATT-IDP4/commerce/order-service']);
     expect(card?.subscribers.map((row) => row.id)).toEqual([
-      'acme/platform-core/notification-service',
-      'acme/commerce/inventory-service',
-      'acme/commerce/checkout-worker',
-      'acme/data/events-pipeline',
+      'ATT-IDP5/platform-core/notification-service',
+      'ATT-IDP4/commerce/inventory-service',
+      'ATT-IDP4/commerce/checkout-worker',
+      'ATT-IDP5/data/events-pipeline',
     ]);
-    expect(card?.publishers[0]).toMatchObject({ repository: 'acme/commerce', team: 'commerce' });
+    expect(card?.publishers[0]).toMatchObject({
+      repository: 'ATT-IDP4/commerce',
+      team: 'commerce',
+    });
   });
 
   it('shows a one-sided Channel with an empty side', () => {
@@ -468,24 +541,24 @@ describe('the Center card carries an Applicationâ€™s name, not only an Externalâ
 
   it('leaves `name` undefined when the producer supplied none, rather than inventing one', () => {
     const demo = demoStore();
-    demo.actions.select({ kind: 'application', id: 'acme/commerce/order-service' });
+    demo.actions.select({ kind: 'application', id: 'ATT-IDP4/commerce/order-service' });
     const card = demo.derived.board.value?.center;
 
     expect(card?.name).toBeUndefined();
     expect(card?.label).toBe('order-service');
-    expect(card?.id).toBe('acme/commerce/order-service');
+    expect(card?.id).toBe('ATT-IDP4/commerce/order-service');
   });
 });
 
 describe('overviewCapNotice: the Overview cap notice (docs/performance-budgets.md, "Overview cap")', () => {
   it('says nothing when every Group Dependency is drawn', () => {
-    expect(overviewCapNotice(1498, 0)).toBeNull();
+    expect(overviewCapNotice(1308, 0)).toBeNull();
     expect(overviewCapNotice(0, 0)).toBeNull();
   });
 
   it('names what is drawn and what is not, in the pane cap notice shape', () => {
-    expect(overviewCapNotice(1498, 798)).toBe(
-      'Showing the heaviest 700 Group Dependencies of 1,498; 798 not drawn',
+    expect(overviewCapNotice(1308, 608)).toBe(
+      'Showing the heaviest 700 Group Dependencies of 1,308; 608 not drawn',
     );
   });
 });

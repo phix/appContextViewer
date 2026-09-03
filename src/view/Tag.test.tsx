@@ -118,7 +118,7 @@ describe('what a screen reader is given', () => {
     // The demo Catalog opens grouped by Repository (docs/url-state.md).
     expect(tags.grouping).toBe('repository');
 
-    renderTag({ attribute: 'repository', value: 'acme/commerce', text: 'acme/commerce' });
+    renderTag({ attribute: 'repository', value: 'ATT-IDP4/commerce', text: 'ATT-IDP4/commerce' });
     expect(screen.getByTestId('tag').getAttribute('aria-pressed')).toBe('true');
 
     screen.getByTestId('tag').remove();
@@ -150,9 +150,9 @@ describe('what a screen reader is given', () => {
 describe('a Highlight changes nothing it is not allowed to change', () => {
   it('leaves the Center exactly where it was', () => {
     const store = demoStore();
-    store.actions.select({ kind: 'application', id: 'acme/commerce/order-service' });
+    store.actions.select({ kind: 'application', id: 'ATT-IDP4/commerce/order-service' });
     // The Center is really set, so "unchanged" is a claim about something rather than about null.
-    expect(store.center.value?.id).toBe('acme/commerce/order-service');
+    expect(store.center.value?.id).toBe('ATT-IDP4/commerce/order-service');
 
     render(
       <Tag
@@ -165,8 +165,8 @@ describe('a Highlight changes nothing it is not allowed to change', () => {
     fireEvent.mouseEnter(screen.getByTestId('tag'));
 
     expect(currentHighlight()?.members.size).toBe(9);
-    expect(store.center.value?.id).toBe('acme/commerce/order-service');
-    expect(store.derived.board.value?.center.id).toBe('acme/commerce/order-service');
+    expect(store.center.value?.id).toBe('ATT-IDP4/commerce/order-service');
+    expect(store.derived.board.value?.center.id).toBe('ATT-IDP4/commerce/order-service');
   });
 
   it('removes no row and reranks nothing', () => {

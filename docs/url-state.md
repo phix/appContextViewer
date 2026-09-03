@@ -5,7 +5,7 @@ Resolves [Decide URL state and deep links](https://github.com/phix/appContextVie
 ## Shape
 
 ```
-https://viewer.example.com/?src=./catalog.json#app=acme/commerce/order-service&depth=3&group=team&view=overview
+https://viewer.example.com/?src=./catalog.json#app=ATT-IDP4/commerce/order-service&depth=3&group=team&view=overview
                             \_______________/ \____________________________________________________________/
                               data (query)                            view (hash)
 ```
@@ -23,7 +23,7 @@ https://viewer.example.com/?src=./catalog.json#app=acme/commerce/order-service&d
 
 3. **Not in the URL:** open Groups (transient; the selection's Group auto-opens on arrival, per the grouping decision), search text, whether the report is open, scroll and hover. Filters, once the search-and-filter fog is resolved, join the hash under their own keys.
 4. **History.** A change of `app` pushes a history entry, so Back returns to the previous Application; changes of `depth`, `group` and `view` replace the current entry. `popstate` and `hashchange` apply the URL to the store, which makes the URL the source of truth for view state: the store writes it, and reads it back on navigation.
-5. **A deep link naming an Application that is not in the loaded Catalog** shows the default screen (the ranked table) with a dismissible inline notice, "`acme/x/y` is not in this Catalog", and strips `app` from the hash. When the current Catalog is the sample, the notice adds "Load your Catalog to open it." Loading a new Catalog re-validates the selection: kept if present, otherwise cleared with the same notice.
+5. **A deep link naming an Application that is not in the loaded Catalog** shows the default screen (the ranked table) with a dismissible inline notice, "`example/x/y` is not in this Catalog", and strips `app` from the hash. When the current Catalog is the sample, the notice adds "Load your Catalog to open it." Loading a new Catalog re-validates the selection: kept if present, otherwise cleared with the same notice.
 6. **Invalid values.** Unknown keys are ignored and dropped on the next write; an unparsable or out-of-range `depth` or an unknown `group` falls back to its default and is stripped.
 7. **Ordering at load.** `?src=` loads first; the hash is applied to whatever Catalog is current once loading settles. If `src` fails, the report dialog shows over the sample and the hash is applied to the sample.
 8. **A picker-loaded Catalog is never identified by the URL.** No persistence, so a copied link reproduces the view only for someone who loads the same file; rule 5 covers the mismatch. A reload after a picker load shows the sample with the notice.

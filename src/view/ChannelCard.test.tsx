@@ -35,12 +35,12 @@ describe('ChannelCard', () => {
     renderCard('orders.placed');
 
     expect(screen.getByTestId('channel-name').textContent).toBe('orders.placed');
-    expect(rowIds('Publishers')).toEqual(['acme/commerce/order-service']);
+    expect(rowIds('Publishers')).toEqual(['ATT-IDP4/commerce/order-service']);
     expect(rowIds('Subscribers')).toEqual([
-      'acme/platform-core/notification-service',
-      'acme/commerce/inventory-service',
-      'acme/commerce/checkout-worker',
-      'acme/data/events-pipeline',
+      'ATT-IDP5/platform-core/notification-service',
+      'ATT-IDP4/commerce/inventory-service',
+      'ATT-IDP4/commerce/checkout-worker',
+      'ATT-IDP5/data/events-pipeline',
     ]);
   });
 
@@ -50,10 +50,10 @@ describe('ChannelCard', () => {
 
     const link = screen
       .getAllByTestId('channel-link')
-      .find((candidate) => candidate.dataset.id === 'acme/data/events-pipeline');
+      .find((candidate) => candidate.dataset.id === 'ATT-IDP5/data/events-pipeline');
     fireEvent.click(link as HTMLElement);
 
-    expect(onSelectApplication).toHaveBeenCalledWith('acme/data/events-pipeline');
+    expect(onSelectApplication).toHaveBeenCalledWith('ATT-IDP5/data/events-pipeline');
   });
 
   it('says so plainly for a one-sided Channel (the demo Catalog warns about two)', () => {
@@ -63,8 +63,8 @@ describe('ChannelCard', () => {
     expect(screen.getByTestId('channel-publishers-none').textContent).toBe('None in this Catalog');
     expect(rowIds('Publishers')).toEqual([]);
     expect(rowIds('Subscribers')).toEqual([
-      'acme/platform-core/notification-service',
-      'acme/commerce/inventory-service',
+      'ATT-IDP5/platform-core/notification-service',
+      'ATT-IDP4/commerce/inventory-service',
     ]);
   });
 

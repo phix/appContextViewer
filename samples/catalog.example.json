@@ -4,17 +4,17 @@
   "source": "hand-written worked example",
   "applications": [
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "api-gateway",
       "kind": "service",
       "team": "platform",
       "description": "Public edge; routes to internal services.",
       "url": "https://gw.example.com",
-      "dependsOn": ["acme/platform-core/auth-service", "acme/platform-core/user-service", "acme/platform-infra/feature-flags"],
+      "dependsOn": ["ATT-IDP5/platform-core/auth-service", "ATT-IDP5/platform-core/user-service", "ATT-IDP5/platform-infra/feature-flags"],
       "attributes": { "language": "go", "tier": 1, "oncall": "#platform-oncall" }
     },
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "auth-service",
       "kind": "service",
       "team": "platform",
@@ -22,7 +22,7 @@
       "attributes": { "language": "go", "tier": 1 }
     },
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "user-service",
       "kind": "service",
       "team": "platform",
@@ -31,7 +31,7 @@
       "attributes": { "language": "java", "tier": 1 }
     },
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "notification-service",
       "kind": "service",
       "team": "growth",
@@ -40,7 +40,7 @@
       "attributes": { "language": "node", "tier": 2, "sla": "99.5%" }
     },
     {
-      "repository": "acme/platform-infra",
+      "repository": "ATT-IDP5/platform-infra",
       "project": "feature-flags",
       "kind": "service",
       "team": "platform",
@@ -48,32 +48,32 @@
       "attributes": { "language": "go", "tier": 2, "runtime": "k8s" }
     },
     {
-      "repository": "acme/commerce",
+      "repository": "ATT-IDP4/commerce",
       "project": "order-service",
       "kind": "service",
       "team": "commerce",
-      "dependsOn": ["acme/platform-core/user-service", "external:postgres-main"],
+      "dependsOn": ["ATT-IDP5/platform-core/user-service", "external:postgres-main"],
       "publishes": ["orders.placed"],
       "attributes": { "language": "java", "tier": 1 }
     },
     {
-      "repository": "acme/commerce",
+      "repository": "ATT-IDP4/commerce",
       "project": "shared-models",
       "kind": "library",
       "team": "commerce",
       "description": "Shared DTOs. Cataloged for lookup; nothing depends on it at runtime."
     },
     {
-      "repository": "acme/web",
+      "repository": "ATT-IDP4/web",
       "project": "storefront",
       "kind": "web-app",
       "team": "web",
       "url": "https://shop.example.com",
-      "dependsOn": ["acme/platform-core/api-gateway"],
+      "dependsOn": ["ATT-IDP5/platform-core/api-gateway"],
       "attributes": { "language": "typescript", "framework": "nextjs", "tier": 1 }
     },
     {
-      "repository": "acme/data",
+      "repository": "ATT-IDP5/data",
       "project": "events-pipeline",
       "kind": "pipeline",
       "team": "data",
@@ -85,7 +85,7 @@
   "externals": [
     { "id": "postgres-main", "kind": "database", "name": "Postgres (main cluster)" },
     { "id": "redis", "kind": "cache" },
-    { "id": "okta", "kind": "identity", "url": "https://acme.okta.com" },
+    { "id": "okta", "kind": "identity", "url": "https://example.okta.com" },
     { "id": "sendgrid", "kind": "saas" },
     { "id": "s3-events", "kind": "storage", "name": "S3 events bucket", "attributes": { "region": "us-east-1" } }
   ]

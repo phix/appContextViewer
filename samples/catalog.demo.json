@@ -4,21 +4,21 @@
   "source": "hand-written demo Catalog (samples/README.md)",
   "applications": [
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "api-gateway",
       "kind": "service",
       "team": "platform",
       "description": "Public edge. Terminates TLS, authenticates, routes to internal services.",
       "url": "https://gw.example.com",
       "dependsOn": [
-        "acme/platform-core/auth-service",
-        "acme/platform-core/user-service",
-        "acme/platform-infra/feature-flags",
-        "acme/commerce/order-service",
-        "acme/commerce/product-service",
-        "acme/commerce/cart-service",
-        "acme/payments/payment-service",
-        "acme/search/search-api",
+        "ATT-IDP5/platform-core/auth-service",
+        "ATT-IDP5/platform-core/user-service",
+        "ATT-IDP5/platform-infra/feature-flags",
+        "ATT-IDP4/commerce/order-service",
+        "ATT-IDP4/commerce/product-service",
+        "ATT-IDP4/commerce/cart-service",
+        "ATT-IDP3/payments/payment-service",
+        "ATT-IDP5/search/search-api",
         "external:cloudflare",
         "external:redis"
       ],
@@ -31,17 +31,17 @@
       }
     },
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "auth-service",
       "kind": "service",
       "team": "platform",
       "description": "Issues and verifies sessions and service tokens.",
-      "dependsOn": ["acme/platform-infra/config-service", "external:postgres-main", "external:redis", "external:okta"],
+      "dependsOn": ["ATT-IDP5/platform-infra/config-service", "external:postgres-main", "external:redis", "external:okta"],
       "publishes": ["sessions.created"],
       "attributes": { "language": "go", "tier": 1, "runtime": "k8s", "pci": false }
     },
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "user-service",
       "kind": "service",
       "team": "platform",
@@ -50,17 +50,17 @@
       "attributes": { "language": "java", "tier": 1, "runtime": "k8s" }
     },
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "notification-service",
       "kind": "service",
       "team": "growth",
       "description": "Email, SMS and push fan-out. Owned by growth although it lives in platform-core.",
-      "dependsOn": ["acme/platform-core/user-service", "external:sendgrid", "external:twilio", "external:kafka"],
+      "dependsOn": ["ATT-IDP5/platform-core/user-service", "external:sendgrid", "external:twilio", "external:kafka"],
       "subscribes": ["users.updated", "orders.placed", "orders.confirmed", "orders.shipped", "payments.captured"],
       "attributes": { "language": "node", "tier": 2, "runtime": "k8s", "sla": "99.5%" }
     },
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "session-reaper",
       "kind": "job",
       "team": "platform",
@@ -69,7 +69,7 @@
       "attributes": { "language": "go", "runtime": "k8s", "schedule": "0 3 * * *" }
     },
     {
-      "repository": "acme/platform-infra",
+      "repository": "ATT-IDP5/platform-infra",
       "project": "feature-flags",
       "kind": "service",
       "team": "platform",
@@ -77,24 +77,24 @@
       "attributes": { "language": "go", "tier": 2, "runtime": "k8s" }
     },
     {
-      "repository": "acme/platform-infra",
+      "repository": "ATT-IDP5/platform-infra",
       "project": "config-service",
       "kind": "service",
       "team": "platform",
       "description": "Serves per-environment configuration. Part of a Dependency cycle with auth-service and secrets-broker.",
-      "dependsOn": ["acme/platform-infra/secrets-broker", "external:postgres-main"],
+      "dependsOn": ["ATT-IDP5/platform-infra/secrets-broker", "external:postgres-main"],
       "attributes": { "language": "go", "tier": 1, "runtime": "k8s" }
     },
     {
-      "repository": "acme/platform-infra",
+      "repository": "ATT-IDP5/platform-infra",
       "project": "secrets-broker",
       "kind": "service",
       "team": "platform",
-      "dependsOn": ["acme/platform-core/auth-service", "external:vault"],
+      "dependsOn": ["ATT-IDP5/platform-core/auth-service", "external:vault"],
       "attributes": { "language": "go", "tier": 1, "runtime": "k8s" }
     },
     {
-      "repository": "acme/platform-infra",
+      "repository": "ATT-IDP5/platform-infra",
       "project": "rate-limiter",
       "kind": "library",
       "team": "platform",
@@ -102,7 +102,7 @@
       "attributes": { "language": "go" }
     },
     {
-      "repository": "acme/commerce",
+      "repository": "ATT-IDP4/commerce",
       "project": "product-service",
       "kind": "service",
       "team": "commerce",
@@ -111,16 +111,16 @@
       "attributes": { "language": "java", "tier": 1, "runtime": "k8s" }
     },
     {
-      "repository": "acme/commerce",
+      "repository": "ATT-IDP4/commerce",
       "project": "pricing-service",
       "kind": "service",
       "team": "commerce",
-      "dependsOn": ["acme/commerce/product-service", "acme/platform-infra/feature-flags", "external:redis"],
+      "dependsOn": ["ATT-IDP4/commerce/product-service", "ATT-IDP5/platform-infra/feature-flags", "external:redis"],
       "publishes": ["prices.changed"],
       "attributes": { "language": "kotlin", "tier": 2, "runtime": "k8s" }
     },
     {
-      "repository": "acme/commerce",
+      "repository": "ATT-IDP4/commerce",
       "project": "inventory-service",
       "kind": "service",
       "team": "commerce",
@@ -130,25 +130,25 @@
       "attributes": { "language": "java", "tier": 1, "runtime": "k8s" }
     },
     {
-      "repository": "acme/commerce",
+      "repository": "ATT-IDP4/commerce",
       "project": "cart-service",
       "kind": "service",
       "team": "commerce",
-      "dependsOn": ["acme/commerce/product-service", "acme/commerce/pricing-service", "acme/platform-core/user-service", "external:redis"],
+      "dependsOn": ["ATT-IDP4/commerce/product-service", "ATT-IDP4/commerce/pricing-service", "ATT-IDP5/platform-core/user-service", "external:redis"],
       "attributes": { "language": "node", "tier": 1, "runtime": "k8s" }
     },
     {
-      "repository": "acme/commerce",
+      "repository": "ATT-IDP4/commerce",
       "project": "order-service",
       "kind": "service",
       "team": "commerce",
-      "url": "https://github.com/acme/commerce/tree/main/order-service",
+      "url": "https://github.com/ATT-IDP4/commerce/tree/main/order-service",
       "dependsOn": [
-        "acme/commerce/cart-service",
-        "acme/commerce/inventory-service",
-        "acme/commerce/pricing-service",
-        "acme/platform-core/user-service",
-        "acme/payments/payment-service",
+        "ATT-IDP4/commerce/cart-service",
+        "ATT-IDP4/commerce/inventory-service",
+        "ATT-IDP4/commerce/pricing-service",
+        "ATT-IDP5/platform-core/user-service",
+        "ATT-IDP3/payments/payment-service",
         "external:postgres-commerce",
         "external:kafka"
       ],
@@ -157,43 +157,43 @@
       "attributes": { "language": "java", "tier": 1, "runtime": "k8s", "oncall": "#commerce-oncall", "sla": "99.9%" }
     },
     {
-      "repository": "acme/commerce",
+      "repository": "ATT-IDP4/commerce",
       "project": "checkout-worker",
       "kind": "job",
       "team": "commerce",
       "description": "Confirms orders once payment settles.",
-      "dependsOn": ["acme/commerce/order-service", "acme/payments/payment-service", "external:rabbitmq"],
+      "dependsOn": ["ATT-IDP4/commerce/order-service", "ATT-IDP3/payments/payment-service", "external:rabbitmq"],
       "publishes": ["orders.confirmed"],
       "subscribes": ["orders.placed"],
       "attributes": { "language": "java", "tier": 2, "runtime": "k8s" }
     },
     {
-      "repository": "acme/commerce",
+      "repository": "ATT-IDP4/commerce",
       "project": "shared-models",
       "kind": "library",
       "description": "Shared DTOs. No Team claims it."
     },
     {
-      "repository": "acme/commerce",
+      "repository": "ATT-IDP4/commerce",
       "project": "promotions",
       "kind": "service",
       "team": "growth",
       "description": "Coupon engine. Scheduled for removal.",
-      "dependsOn": ["acme/commerce/pricing-service", "external:redis"],
+      "dependsOn": ["ATT-IDP4/commerce/pricing-service", "external:redis"],
       "subscribes": ["users.updated"],
       "attributes": { "language": "node", "tier": 3, "runtime": "lambda", "deprecated": true }
     },
     {
-      "repository": "acme/payments",
+      "repository": "ATT-IDP3/payments",
       "project": "payment-service",
       "kind": "service",
       "team": "payments",
-      "dependsOn": ["acme/payments/ledger-service", "acme/payments/fraud-scorer", "external:stripe", "external:postgres-payments"],
+      "dependsOn": ["ATT-IDP3/payments/ledger-service", "ATT-IDP3/payments/fraud-scorer", "external:stripe", "external:postgres-payments"],
       "publishes": ["payments.captured"],
       "attributes": { "language": "kotlin", "tier": 1, "runtime": "k8s", "pci": true, "sla": "99.95%" }
     },
     {
-      "repository": "acme/payments",
+      "repository": "ATT-IDP3/payments",
       "project": "ledger-service",
       "kind": "service",
       "team": "payments",
@@ -201,7 +201,7 @@
       "attributes": { "language": "kotlin", "tier": 1, "runtime": "k8s", "pci": true }
     },
     {
-      "repository": "acme/payments",
+      "repository": "ATT-IDP3/payments",
       "project": "fraud-scorer",
       "kind": "service",
       "team": "payments",
@@ -211,41 +211,41 @@
       "attributes": { "language": "python", "tier": 2, "runtime": "k8s", "pci": true }
     },
     {
-      "repository": "acme/web",
+      "repository": "ATT-IDP4/web",
       "project": "storefront",
       "kind": "web-app",
       "team": "web",
       "url": "https://shop.example.com",
-      "dependsOn": ["acme/platform-core/api-gateway", "external:contentful"],
+      "dependsOn": ["ATT-IDP5/platform-core/api-gateway", "external:contentful"],
       "attributes": { "language": "typescript", "framework": "nextjs", "tier": 1, "runtime": "vercel" }
     },
     {
-      "repository": "acme/web",
+      "repository": "ATT-IDP4/web",
       "project": "admin-console",
       "kind": "web-app",
       "team": "web",
       "url": "https://admin.example.com",
-      "dependsOn": ["acme/platform-core/api-gateway", "acme/data/reporting-api"],
+      "dependsOn": ["ATT-IDP5/platform-core/api-gateway", "ATT-IDP5/data/reporting-api"],
       "attributes": { "language": "typescript", "framework": "react", "tier": 2, "runtime": "vercel" }
     },
     {
-      "repository": "acme/mobile",
+      "repository": "ATT-IDP4/mobile",
       "project": "ios-app",
       "kind": "mobile-app",
       "team": "mobile",
-      "dependsOn": ["acme/platform-core/api-gateway", "external:firebase"],
+      "dependsOn": ["ATT-IDP5/platform-core/api-gateway", "external:firebase"],
       "attributes": { "language": "swift", "tier": 1, "minOs": "iOS 17" }
     },
     {
-      "repository": "acme/mobile",
+      "repository": "ATT-IDP4/mobile",
       "project": "android-app",
       "kind": "mobile-app",
       "team": "mobile",
-      "dependsOn": ["acme/platform-core/api-gateway", "external:firebase"],
+      "dependsOn": ["ATT-IDP5/platform-core/api-gateway", "external:firebase"],
       "attributes": { "language": "kotlin", "tier": 1, "minOs": "Android 12" }
     },
     {
-      "repository": "acme/data",
+      "repository": "ATT-IDP5/data",
       "project": "events-pipeline",
       "kind": "pipeline",
       "team": "data",
@@ -265,40 +265,40 @@
       "attributes": { "language": "python", "runtime": "airflow" }
     },
     {
-      "repository": "acme/data",
+      "repository": "ATT-IDP5/data",
       "project": "warehouse-loader",
       "kind": "pipeline",
       "team": "data",
-      "dependsOn": ["acme/data/events-pipeline", "external:s3-events", "external:bigquery"],
+      "dependsOn": ["ATT-IDP5/data/events-pipeline", "external:s3-events", "external:bigquery"],
       "attributes": { "language": "python", "runtime": "airflow", "schedule": "hourly" }
     },
     {
-      "repository": "acme/data",
+      "repository": "ATT-IDP5/data",
       "project": "reporting-api",
       "kind": "service",
       "team": "data",
-      "dependsOn": ["acme/platform-core/auth-service", "external:bigquery"],
+      "dependsOn": ["ATT-IDP5/platform-core/auth-service", "external:bigquery"],
       "attributes": { "language": "python", "tier": 3, "runtime": "k8s" }
     },
     {
-      "repository": "acme/data",
+      "repository": "ATT-IDP5/data",
       "project": "ml-recommender",
       "kind": "service",
       "team": "data-science",
-      "dependsOn": ["acme/commerce/product-service", "external:bigquery", "external:redis"],
+      "dependsOn": ["ATT-IDP4/commerce/product-service", "external:bigquery", "external:redis"],
       "attributes": { "language": "python", "tier": 3, "runtime": "k8s", "gpu": true }
     },
     {
-      "repository": "acme/search",
+      "repository": "ATT-IDP5/search",
       "project": "search-indexer",
       "kind": "job",
       "team": "search",
-      "dependsOn": ["acme/commerce/product-service", "external:elasticsearch"],
+      "dependsOn": ["ATT-IDP4/commerce/product-service", "external:elasticsearch"],
       "subscribes": ["products.changed", "prices.changed"],
       "attributes": { "language": "go", "tier": 2, "runtime": "k8s" }
     },
     {
-      "repository": "acme/search",
+      "repository": "ATT-IDP5/search",
       "project": "search-api",
       "kind": "service",
       "team": "search",
@@ -309,7 +309,7 @@
       "repository": "legacy-monolith",
       "project": "monolith",
       "description": "Original PHP application, being strangled. Repository has no org prefix; no kind, no Team.",
-      "dependsOn": ["acme/platform-core/auth-service", "external:mysql-legacy"],
+      "dependsOn": ["ATT-IDP5/platform-core/auth-service", "external:mysql-legacy"],
       "publishes": ["legacy.events"],
       "attributes": { "language": "php", "tier": 2, "runtime": "vm", "deprecated": true, "tags": ["strangler", "php"] }
     },
@@ -321,14 +321,14 @@
       "attributes": { "schedule": "0 6 * * 1" }
     },
     {
-      "repository": "acme/tools",
+      "repository": "ATT-IDP5/tools",
       "project": "cli",
       "kind": "cli",
       "team": "platform",
       "description": "Developer CLI. Non-convention kind, no Dependencies, no attributes."
     },
     {
-      "repository": "acme/tools",
+      "repository": "ATT-IDP5/tools",
       "project": "doc-site"
     }
   ],
@@ -344,7 +344,7 @@
     { "id": "s3-events", "kind": "storage", "name": "S3 events bucket", "attributes": { "region": "us-east-1" } },
     { "id": "s3-assets", "kind": "storage", "name": "S3 product assets" },
     { "id": "elasticsearch", "kind": "search", "name": "Elasticsearch 8", "description": "Non-convention External kind." },
-    { "id": "okta", "kind": "identity", "url": "https://acme.okta.com" },
+    { "id": "okta", "kind": "identity", "url": "https://example.okta.com" },
     { "id": "vault", "kind": "secrets", "name": "HashiCorp Vault" },
     { "id": "stripe", "kind": "saas", "url": "https://dashboard.stripe.com" },
     { "id": "sendgrid", "kind": "saas" },

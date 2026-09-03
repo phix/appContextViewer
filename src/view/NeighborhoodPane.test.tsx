@@ -8,7 +8,7 @@ import type { CanvasProps } from './canvas/Canvas';
 import { demoStore } from './fixtures.test-helper';
 import { NeighborhoodPane, paneRenderOf } from './NeighborhoodPane';
 
-const ORDER_SERVICE = { kind: 'application', id: 'acme/commerce/order-service' } as const;
+const ORDER_SERVICE = { kind: 'application', id: 'ATT-IDP4/commerce/order-service' } as const;
 
 function paneOfDemo(): PaneModel {
   const store = demoStore();
@@ -46,11 +46,11 @@ describe('paneRenderOf', () => {
       kind: 'application',
       label: 'order-service',
       center: true,
-      parent: 'group:repository=acme/commerce',
+      parent: 'group:repository=ATT-IDP4/commerce',
     });
     expect(leaves.find((node) => node.kind === 'external')?.parent).toBeUndefined();
-    expect(groups.find((node) => node.sourceId === 'repository=acme/commerce')).toMatchObject({
-      label: 'acme/commerce',
+    expect(groups.find((node) => node.sourceId === 'repository=ATT-IDP4/commerce')).toMatchObject({
+      label: 'ATT-IDP4/commerce',
     });
   });
 });
@@ -58,7 +58,7 @@ describe('paneRenderOf', () => {
 describe('NeighborhoodPane notices', () => {
   it('links a Depth fallback notice to expanding the Overview', () => {
     const store = thousandStore();
-    store.actions.select({ kind: 'application', id: 'acme/billing-platform/auth-service' });
+    store.actions.select({ kind: 'application', id: 'billing/auth-service' });
     const model = store.derived.paneModel.value;
     if (model === null) throw new Error('expected pane model');
     const expand = vi.fn();
@@ -68,7 +68,7 @@ describe('NeighborhoodPane notices', () => {
     // The literal, not `model.notice`: asserting the component against the very model it was handed
     // passes for any notice text at all, and a mutated notice string survived exactly that.
     expect(screen.getByTestId('pane-notice').textContent).toBe(
-      'Showing Depth 1 of 2; 544 more in the Overview, and 20 Externals not drawn',
+      'Showing Depth 1 of 2; 497 more in the Overview, and 19 Externals not drawn',
     );
     fireEvent.click(screen.getByTestId('pane-overview-link'));
     expect(expand).toHaveBeenCalledOnce();
@@ -76,7 +76,7 @@ describe('NeighborhoodPane notices', () => {
 
   it('shows the Center-only notice without an Overview link', () => {
     const store = thousandStore();
-    store.actions.select({ kind: 'external', id: 'mysql-legacy' });
+    store.actions.select({ kind: 'external', id: 'sendgrid' });
     store.actions.setDepth(1);
     const model = store.derived.paneModel.value;
     if (model === null) throw new Error('expected pane model');
@@ -84,7 +84,7 @@ describe('NeighborhoodPane notices', () => {
     render(<NeighborhoodPane model={model} onSelect={vi.fn()} onExpandOverview={vi.fn()} />);
 
     expect(screen.getByTestId('pane-notice').textContent).toBe(
-      '197 Dependents, more than the pane can draw; see the Breaks column',
+      '151 Dependents, more than the pane can draw; see the Breaks column',
     );
     expect(screen.queryByTestId('pane-overview-link')).toBeNull();
   });

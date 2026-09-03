@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "applications": [
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "auth-service",
       "dependsOn": ["external:redis"]
     }

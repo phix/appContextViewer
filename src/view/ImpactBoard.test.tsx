@@ -22,7 +22,8 @@ function noop() {
 }
 
 function renderBoard(props: Partial<Parameters<typeof ImpactBoard>[0]>) {
-  const model = props.model ?? boardOf({ kind: 'application', id: 'acme/commerce/order-service' });
+  const model =
+    props.model ?? boardOf({ kind: 'application', id: 'ATT-IDP4/commerce/order-service' });
   return render(<ImpactBoard onSelect={noop} {...props} model={model} />);
 }
 
@@ -47,7 +48,7 @@ function afterPaint(): Promise<void> {
 
 describe('ImpactBoard', () => {
   it('bands Needs and Breaks by Depth for an Application Center', () => {
-    renderBoard({ model: boardOf({ kind: 'application', id: 'acme/commerce/order-service' }) });
+    renderBoard({ model: boardOf({ kind: 'application', id: 'ATT-IDP4/commerce/order-service' }) });
 
     // The demo Catalog at the default Depth 2: what order-service needs, and what breaks with it.
     expect(bandsOf('Needs')).toEqual(['1:7', '2:8']);
@@ -72,13 +73,13 @@ describe('ImpactBoard', () => {
     const row = rowsOf('Breaks').find(
       (candidate) =>
         candidate.querySelector('[data-testid="board-link"]')?.getAttribute('data-id') ===
-        'acme/platform-core/api-gateway',
+        'ATT-IDP5/platform-core/api-gateway',
     );
     expect(row).toBeTruthy();
     const chips = [...(row?.querySelectorAll('[data-testid="board-chip"]') ?? [])].map(
       (chip) => `${(chip as HTMLElement).dataset.chip}=${chip.textContent}`,
     );
-    expect(chips).toEqual(['repository=acme/platform-core', 'team=platform']);
+    expect(chips).toEqual(['repository=ATT-IDP5/platform-core', 'team=platform']);
   });
 
   it('gives an External in the Needs column its kind chip (docs/center.md, decision 3)', () => {
@@ -98,12 +99,12 @@ describe('ImpactBoard', () => {
 
     const link = screen
       .getAllByTestId('board-link')
-      .find((candidate) => candidate.dataset.id === 'acme/platform-core/api-gateway');
+      .find((candidate) => candidate.dataset.id === 'ATT-IDP5/platform-core/api-gateway');
     fireEvent.click(link as HTMLElement);
 
     expect(onSelect).toHaveBeenCalledWith({
       kind: 'application',
-      id: 'acme/platform-core/api-gateway',
+      id: 'ATT-IDP5/platform-core/api-gateway',
     });
   });
 
@@ -155,10 +156,10 @@ describe('ImpactBoard', () => {
     const row = rowsOf('Breaks').find(
       (candidate) =>
         candidate.querySelector('[data-testid="board-link"]')?.getAttribute('data-id') ===
-        'acme/platform-core/api-gateway',
+        'ATT-IDP5/platform-core/api-gateway',
     );
     const groups = (row?.dataset.groups ?? '').split(' ');
-    expect(groups).toContain(tagToken('repository', 'acme/platform-core'));
+    expect(groups).toContain(tagToken('repository', 'ATT-IDP5/platform-core'));
     expect(groups).toContain(tagToken('team', 'platform'));
     // One attribute, whatever the row count: this is what one injected CSS rule matches.
     expect(row?.getAttributeNames().filter((name) => name.startsWith('data-groups'))).toEqual([
@@ -206,7 +207,7 @@ describe('ImpactBoard', () => {
     markDepthStart();
     rerender(
       <ImpactBoard
-        model={boardOf({ kind: 'application', id: 'acme/commerce/order-service' }, 3)}
+        model={boardOf({ kind: 'application', id: 'ATT-IDP4/commerce/order-service' }, 3)}
         onSelect={noop}
       />,
     );

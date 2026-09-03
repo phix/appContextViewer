@@ -106,11 +106,11 @@ describe('App shell', () => {
     render(<App store={store} />);
 
     // A signal set outside an event handler repaints on its own schedule, so wait for the paint.
-    store.actions.select({ kind: 'application', id: 'acme/none/nothing' });
+    store.actions.select({ kind: 'application', id: 'example/none/nothing' });
     await waitFor(() => expect(screen.getByTestId('notice')).toBeTruthy());
 
     const notice = screen.getByTestId('notice');
-    expect(notice.textContent).toContain('acme/none/nothing is not in this Catalog.');
+    expect(notice.textContent).toContain('example/none/nothing is not in this Catalog.');
     // The sample is loaded, so the notice adds the hint.
     expect(notice.textContent).toContain('Load your Catalog to open it.');
     expect(screen.queryByTestId('center-panel')).toBeNull();

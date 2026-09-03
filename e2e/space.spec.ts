@@ -132,7 +132,7 @@ test('Space is lazy, draws the whole Catalog, stays responsive while settling, a
 
   await settled(page);
   await expect(canvas).toHaveAttribute('data-nodes', '1025');
-  await expect(canvas).toHaveAttribute('data-edges', '5395');
+  await expect(canvas).toHaveAttribute('data-edges', '5235');
   const first = await entryMs(page);
   expect(Number.isFinite(first)).toBe(true);
   const fps = await medianFps(page);

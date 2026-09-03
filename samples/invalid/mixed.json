@@ -4,24 +4,24 @@
   "generator": "catalog-tool 2.3",
   "applications": [
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "api-gateway",
       "owner": "platform",
       "dependsOn": [
-        "acme/platform-core/auth-service",
-        "acme/platform-core/auth-service",
-        "acme/platform-core/user-service",
+        "ATT-IDP5/platform-core/auth-service",
+        "ATT-IDP5/platform-core/auth-service",
+        "ATT-IDP5/platform-core/user-service",
         "external:okta"
       ],
       "publishes": ["requests.logged"]
     },
     {
-      "repository": "acme/platform-core",
+      "repository": "ATT-IDP5/platform-core",
       "project": "auth-service",
       "url": "auth.example.com",
-      "dependsOn": ["acme/platform-core/auth-service", "external:redis"]
+      "dependsOn": ["ATT-IDP5/platform-core/auth-service", "external:redis"]
     },
-    { "repository": "acme/platform-core", "project": "auth-service", "kind": "library" }
+    { "repository": "ATT-IDP5/platform-core", "project": "auth-service", "kind": "library" }
   ],
   "externals": [
     { "id": "redis", "kind": "cache" },

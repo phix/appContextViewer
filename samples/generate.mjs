@@ -43,23 +43,27 @@ function weighted(pairs) {
 const outDegree = (m, cap) => Math.min(cap, Math.round(-m * Math.log(1 - rnd())));
 
 // ---------------------------------------------------------------- vocabulary
-const DOMAINS = ['billing', 'identity', 'orders', 'shipping', 'search', 'notifications', 'analytics', 'fraud', 'payments',
-  'inventory', 'pricing', 'checkout', 'accounts', 'messaging', 'media', 'reporting', 'ledger', 'auth', 'gateway', 'content',
-  'support', 'marketing', 'growth', 'platform', 'infra', 'observability', 'compliance', 'risk', 'loyalty', 'reviews',
-  'recommendations', 'subscriptions', 'tax', 'warehouse', 'returns', 'fulfillment', 'carrier', 'geo', 'scheduling', 'catalog',
-  'customer', 'partner', 'vendor', 'procurement', 'finance', 'hr', 'legal', 'security', 'devex', 'mobile', 'web', 'data',
-  'ml', 'experiments', 'localization', 'imaging', 'video', 'ads', 'affiliate', 'storefront'];
+// Telecom-flavored, matching samples/att/ (ATT-IDP1..5): billing, network, identity, activation,
+// mediation, assurance, provisioning. A few generic platform terms stay — they fit any estate.
+const DOMAINS = ['billing', 'identity', 'network', 'provisioning', 'assurance', 'mediation', 'activation',
+  'fulfillment', 'care', 'commerce', 'accounts', 'messaging', 'media', 'reporting', 'ledger', 'auth', 'gateway',
+  'content', 'support', 'growth', 'platform', 'infra', 'observability', 'compliance', 'risk', 'roaming',
+  'topology', 'spectrum', 'inventory', 'transport', 'wireless', 'fiber', 'ran', 'geo', 'scheduling', 'catalog',
+  'customer', 'partner', 'vendor', 'procurement', 'finance', 'hr', 'legal', 'security', 'devex', 'mobile', 'web',
+  'data', 'ml', 'experiments', 'localization', 'imaging', 'video', 'oss', 'bss', 'affiliate', 'digital'];
 const REPO_SUFFIXES = [['', 40], ['-platform', 12], ['-services', 12], ['-core', 10], ['-tools', 8], ['-apps', 6], ['-jobs', 6], ['-monorepo', 6]];
-const ORGS = [['acme', 85], ['acme-labs', 10], [null, 5]]; // null: single-segment Repository with no org prefix
-const NOUNS = ['invoice', 'customer', 'session', 'token', 'order', 'cart', 'shipment', 'label', 'rate', 'quote', 'profile',
-  'avatar', 'email', 'sms', 'push', 'webhook', 'export', 'import', 'sync', 'audit', 'event', 'metric', 'trace', 'alert',
-  'report', 'dashboard', 'feed', 'ranking', 'index', 'crawler', 'parser', 'renderer', 'scheduler', 'dispatcher', 'router',
-  'proxy', 'cache', 'ledger', 'wallet', 'refund', 'dispute', 'kyc', 'consent', 'policy', 'tenant', 'org', 'team', 'role',
-  'permission', 'license', 'plan', 'coupon', 'promo', 'bundle', 'sku', 'price', 'stock', 'picker', 'packer', 'carrier',
-  'tracking', 'review', 'rating', 'suggest', 'recommend', 'translate', 'locale', 'currency', 'tax', 'score', 'model',
-  'feature', 'training', 'inference', 'image', 'video', 'thumbnail', 'upload', 'download', 'backup', 'archive', 'cleanup',
-  'migration', 'config', 'secret', 'flag', 'bff', 'graphql', 'grpc', 'admin', 'portal', 'onboarding', 'signup', 'login',
-  'settings', 'billing', 'payout', 'statement', 'reconcile', 'settlement', 'notify', 'digest', 'campaign', 'segment'];
+const ORGS = [['ATT-IDP1', 17], ['ATT-IDP2', 17], ['ATT-IDP3', 17], ['ATT-IDP4', 17], ['ATT-IDP5', 17], [null, 15]]; // null: single-segment Repository with no org prefix
+const NOUNS = ['alarm', 'fault', 'circuit', 'subscriber', 'sim', 'esim', 'port', 'trunk', 'route', 'coverage',
+  'tariff', 'cdr', 'ticket', 'incident', 'kpi', 'counter', 'threshold', 'dispatch', 'technician', 'appointment',
+  'session', 'token', 'profile', 'avatar', 'email', 'sms', 'push', 'webhook', 'export', 'import', 'sync', 'audit',
+  'event', 'metric', 'trace', 'alert', 'report', 'dashboard', 'feed', 'ranking', 'index', 'crawler', 'parser',
+  'renderer', 'scheduler', 'dispatcher', 'router', 'proxy', 'cache', 'ledger', 'wallet', 'refund', 'dispute',
+  'kyc', 'consent', 'policy', 'tenant', 'org', 'team', 'role', 'permission', 'license', 'plan', 'rate', 'quote',
+  'price', 'stock', 'topology', 'spectrum', 'tracking', 'translate', 'locale', 'currency', 'tax', 'score',
+  'model', 'feature', 'training', 'inference', 'image', 'video', 'thumbnail', 'upload', 'download', 'backup',
+  'archive', 'cleanup', 'migration', 'config', 'secret', 'flag', 'bff', 'graphql', 'grpc', 'admin', 'portal',
+  'onboarding', 'signup', 'login', 'settings', 'billing', 'payout', 'statement', 'reconcile', 'settlement',
+  'notify', 'digest', 'campaign', 'segment'];
 const KINDS = [['service', 53], ['library', 12], ['job', 10], ['pipeline', 8], ['web-app', 5], ['mobile-app', 3], ['cli', 1], ['function', 1], [null, 7]];
 const KIND_SUFFIX = {
   service: [['-service', 55], ['-api', 25], ['', 20]],
