@@ -22,7 +22,7 @@ import {
   type OverviewSpec,
   type Positions,
 } from '@/layout';
-import { type Center, EXPAND_ALL_LIMIT, type OverviewModel } from '@/state';
+import { type Center, EXPAND_ALL_LIMIT, groupEdgeKey, type OverviewModel } from '@/state';
 import { OverviewCanvas, type OverviewCanvasElements } from './canvas/OverviewCanvas';
 import { GroupByMenu } from './GroupByMenu';
 
@@ -77,6 +77,13 @@ export interface OverviewRender {
  * them when it opens. Externals and Channels are not in `OverviewModel.edges` at all, so they are
  * never drawn.
  *
+ * A member node glows only when it is in `model.neighborhood` -- the Depth-scoped Neighborhood
+ * (issue #40), narrower than the whole-Group glow an open Group and its label chip carry from
+ * `model.highlighted`. A `group`-kind edge glows when either its own Group is in `model.highlighted`
+ * or the exact ordered pair it draws is in `model.reachedGroupEdges`, so a Group Dependency the
+ * Neighborhood's own walk actually crosses lights up even into a collapsed Group well past the
+ * Center's own.
+ *
  * Member labels are Application ids: `OverviewModel` carries no display label for a Group member,
  * and looking one up would be a Graph traversal from the view.
  */
@@ -124,7 +131,7 @@ export function overviewRenderOf(model: OverviewModel, center: Center | null): O
           parent: id,
           width: MEMBER_WIDTH,
           height: MEMBER_HEIGHT,
-          highlighted: highlighted.has(group.id),
+          highlighted: model.neighborhood.has(member),
         });
         specNodes.push({ id: memberId, width: MEMBER_WIDTH, height: MEMBER_HEIGHT });
         parents.set(memberId, id);
@@ -151,7 +158,10 @@ export function overviewRenderOf(model: OverviewModel, center: Center | null): O
           target: nodeIdOf.group(edge.to),
           label: String(edge.count),
           kind: 'group' as const,
-          highlighted: highlighted.has(edge.from) || highlighted.has(edge.to),
+          highlighted:
+            highlighted.has(edge.from) ||
+            highlighted.has(edge.to) ||
+            model.reachedGroupEdges.has(groupEdgeKey(edge.from, edge.to)),
         }
       : {
           id: `member-edge:${edge.from}->${edge.to}`,
@@ -176,7 +186,7 @@ export function overviewRenderOf(model: OverviewModel, center: Center | null): O
 
 export interface OverviewControlsProps {
   readonly model: OverviewModel;
-  /** `groupableAttributes(graph)`: Repository, Team, Kind, then the discovered scalar keys. */
+  /** `groupingAttributes(graph)`: `groupableAttributes` filtered by the cardinality rule (N7). */
   readonly attributes: readonly string[];
   /** The store's `groupBy`, which may be `none`. */
   readonly groupBy: string;

@@ -6,6 +6,7 @@
 
 import { computed, type ReadonlySignal } from '@preact/signals';
 import type {
+  ApplicationId,
   Attributes,
   ChannelName,
   Graph,
@@ -153,6 +154,20 @@ export interface OverviewModel {
   readonly capNotice: string | null;
   /** The Center's Group, or the Groups of an External Center's direct Dependents (docs/center.md, 7). */
   readonly highlighted: readonly GroupId[];
+  /**
+   * Applications inside the Neighborhood at the header Depth (both directions), for the Overview's
+   * member-level highlight (issue #40) -- narrower than `highlighted`, which glows the Center's
+   * whole Group regardless of Depth.
+   */
+  readonly neighborhood: ReadonlySet<ApplicationId>;
+  /**
+   * Group Dependency edges the Neighborhood above reaches through a real, both-ends-included
+   * Dependency whose two Applications fall in different Groups -- keyed `${from}->${to}`, the same
+   * pair `overviewRenderOf` matches a drawn `group` edge's `from`/`to` against. A pair the cap left
+   * undrawn, or between two open Groups (drawn as member edges instead), never matches a rendered
+   * edge, which is harmless.
+   */
+  readonly reachedGroupEdges: ReadonlySet<string>;
   readonly expandAllDisabled: boolean;
   readonly overviewDisabled: boolean;
   /** Why the Overview is disabled, naming the counts and the limit; null otherwise. */
@@ -323,6 +338,9 @@ export function createDerived(s: StoreSignals): Derived {
     const active = expanded && !overviewDisabled;
     const groups = active ? groupsFor(graph, attribute) : [];
     const drawn = capGroupDependencies(active ? groupEdgesOf(graph, groups, open) : []);
+    // Gated by `active`, like `groups` above: while the Overview is collapsed or disabled this
+    // never reads `s.depth`, so a Depth change costs nothing until the Overview is actually open.
+    const highlight = active ? neighborhoodHighlight(s, graph, attribute) : NO_NEIGHBORHOOD;
     return {
       expanded,
       attribute,
@@ -333,6 +351,8 @@ export function createDerived(s: StoreSignals): Derived {
       hiddenGroupDependencies: drawn.hidden,
       capNotice: overviewCapNotice(drawn.total, drawn.hidden),
       highlighted: highlightedGroups(s, attribute),
+      neighborhood: highlight.applications,
+      reachedGroupEdges: highlight.reachedGroupEdges,
       expandAllDisabled,
       overviewDisabled,
       notice,
@@ -496,4 +516,56 @@ function highlightedGroups(s: StoreSignals, attribute: string): GroupId[] {
     }
   }
   return [...ids];
+}
+
+interface NeighborhoodHighlight {
+  readonly applications: ReadonlySet<ApplicationId>;
+  readonly reachedGroupEdges: ReadonlySet<string>;
+}
+
+const NO_NEIGHBORHOOD: NeighborhoodHighlight = {
+  applications: new Set(),
+  reachedGroupEdges: new Set(),
+};
+
+/** `OverviewModel.reachedGroupEdges`' key for the ordered Group pair a cross-Group Dependency spans. */
+export function groupEdgeKey(from: GroupId, to: GroupId): string {
+  return `${from}->${to}`;
+}
+
+/**
+ * The Depth-scoped Neighborhood for the Overview's member-level highlight (issue #40): every
+ * Application within `s.depth` of the Center, both directions -- the same reading `paneNeighborhood`
+ * uses -- plus the ordered Group pairs a real Dependency inside that Neighborhood spans, so the view
+ * can light up a collapsed Group's incoming or outgoing Group Dependency without re-deriving it from
+ * the aggregated counts in `OverviewModel.edges`, which carry no member ids.
+ */
+function neighborhoodHighlight(
+  s: StoreSignals,
+  graph: Graph,
+  attribute: string,
+): NeighborhoodHighlight {
+  const center = s.center.value;
+  if (center === null) {
+    return NO_NEIGHBORHOOD;
+  }
+  const reach = neighborhood(graph, center, { depth: s.depth.value, direction: 'both' });
+  const applications = new Set<ApplicationId>(reach.applications.map((member) => member.id));
+  const reachedGroupEdges = new Set<string>();
+  for (const edge of reach.dependencies) {
+    if (edge.to.kind !== 'application') {
+      continue;
+    }
+    const from = graph.applications.get(edge.from);
+    const to = graph.applications.get(edge.to.id);
+    if (from === undefined || to === undefined) {
+      continue;
+    }
+    const fromGroup = groupIdOf(from, attribute);
+    const toGroup = groupIdOf(to, attribute);
+    if (fromGroup !== toGroup) {
+      reachedGroupEdges.add(groupEdgeKey(fromGroup, toGroup));
+    }
+  }
+  return { applications, reachedGroupEdges };
 }

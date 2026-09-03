@@ -11,7 +11,7 @@
 
 import { useComputed } from '@preact/signals';
 import { useCallback, useRef } from 'preact/hooks';
-import { buildSearchIndex, groupableAttributes } from '@/graph';
+import { buildSearchIndex, groupingAttributes } from '@/graph';
 import type { Center, Store } from '@/state';
 import {
   ChannelCard,
@@ -88,8 +88,11 @@ export function App({ store }: AppProps) {
    */
   const searchIndex = useComputed(() => buildSearchIndex(store.graph.value));
 
-  /** The group-by menu's options, read the same way as `externalKinds` above: a query, not a walk. */
-  const groupable = useComputed(() => groupableAttributes(store.graph.value));
+  /**
+   * The group-by menu's options: `groupingAttributes`, not `groupableAttributes` — the cardinality
+   * rule (docs/tags.md, item N7) drops an Attribute here even though a Tag for it still Highlights.
+   */
+  const groupable = useComputed(() => groupingAttributes(store.graph.value));
 
   const load = (source: File | string) => {
     markLoadStart();

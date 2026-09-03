@@ -24,7 +24,7 @@ export function groupByLabel(attribute: string): string {
 }
 
 export interface GroupByMenuProps {
-  /** `groupableAttributes(graph)`: Repository, Team, Kind, then the discovered scalar keys. */
+  /** `groupingAttributes(graph)`: `groupableAttributes` filtered by the cardinality rule (N7). */
   readonly attributes: readonly string[];
   /** The store's `groupBy`: `none`, or one of `attributes`. */
   readonly value: string;
