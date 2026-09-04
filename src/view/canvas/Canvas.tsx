@@ -205,7 +205,7 @@ export function Canvas({ elements, positions, onHover, onSelect, onPainted }: Ca
       data-testid="canvas"
       role="application"
       aria-label="Neighborhood graph"
-      style="width:100%;height:min(58vh,620px);min-height:360px;border:1px solid #d8dee9;border-radius:10px;background:#fff"
+      style="width:100%;height:min(58vh,620px);min-height:360px;border:1px solid #313b4a;border-radius:10px;background:#0e131b"
     />
   );
 }

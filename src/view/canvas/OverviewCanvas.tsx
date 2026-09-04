@@ -205,7 +205,7 @@ export function OverviewCanvas({
       data-testid="overview-canvas"
       role="application"
       aria-label="Overview graph"
-      style="width:100%;height:min(70vh,760px);min-height:420px;border:1px solid #d8dee9;border-radius:10px;background:#fff"
+      style="width:100%;height:min(70vh,760px);min-height:420px;border:1px solid #313b4a;border-radius:10px;background:#0e131b"
     />
   );
 }
@@ -364,13 +364,13 @@ export const overviewStyle: cytoscape.StylesheetJson = [
     selector: 'node',
     style: {
       label: 'data(label)',
-      'font-family': 'ui-sans-serif, system-ui, sans-serif',
+      'font-family': 'IBM Plex Sans, ui-sans-serif, system-ui, sans-serif',
       'font-size': '12px',
       'text-wrap': 'ellipsis',
       'text-max-width': '160px',
-      color: '#172033',
-      'background-color': '#eef2ff',
-      'border-color': '#8b9bb4',
+      color: '#e7ecf3',
+      'background-color': '#1a212c',
+      'border-color': '#313b4a',
       'border-width': 1,
       'text-valign': 'center',
       'text-halign': 'center',
@@ -389,8 +389,8 @@ export const overviewStyle: cytoscape.StylesheetJson = [
     selector: 'node[kind = "collapsed"]',
     style: {
       shape: 'round-rectangle',
-      'background-color': '#e2e8f0',
-      'border-color': '#7c8aa0',
+      'background-color': '#202836',
+      'border-color': '#475063',
       'font-weight': 600,
     },
   },
@@ -398,9 +398,9 @@ export const overviewStyle: cytoscape.StylesheetJson = [
     selector: 'node[kind = "open"]',
     style: {
       shape: 'round-rectangle',
-      'background-color': '#f8fafc',
-      'background-opacity': 0.55,
-      'border-color': '#94a3b8',
+      'background-color': '#151b24',
+      'background-opacity': 0.65,
+      'border-color': '#475063',
       'border-style': 'dashed',
       'border-width': 1,
       // The text lives on the label chip; a second copy on the box would double every Group name.
@@ -412,8 +412,8 @@ export const overviewStyle: cytoscape.StylesheetJson = [
     selector: 'node[kind = "label"]',
     style: {
       shape: 'round-rectangle',
-      'background-color': '#e2e8f0',
-      'border-color': '#7c8aa0',
+      'background-color': '#202836',
+      'border-color': '#475063',
       'font-weight': 600,
       'text-max-width': '180px',
       'z-index': 25,
@@ -421,14 +421,14 @@ export const overviewStyle: cytoscape.StylesheetJson = [
   },
   {
     selector: 'node[kind = "member"]',
-    style: { shape: 'round-rectangle', 'background-color': '#ffffff', 'border-color': '#c7d2e0' },
+    style: { shape: 'round-rectangle', 'background-color': '#131924', 'border-color': '#313b4a' },
   },
   {
     selector: 'node[highlighted = "true"]',
     style: {
-      'border-color': '#2563eb',
+      'border-color': '#4fc3f7',
       'border-width': 3,
-      'background-color': '#dbeafe',
+      'background-color': '#0f2d3a',
       'z-index': 20,
     },
   },
@@ -438,12 +438,12 @@ export const overviewStyle: cytoscape.StylesheetJson = [
       width: 1.5,
       label: 'data(label)',
       'font-size': '10px',
-      color: '#475569',
-      'text-background-color': '#ffffff',
+      color: '#8a94a6',
+      'text-background-color': '#0e131b',
       'text-background-opacity': 0.85,
       'text-background-padding': '2px',
-      'line-color': '#94a3b8',
-      'target-arrow-color': '#64748b',
+      'line-color': '#3d4759',
+      'target-arrow-color': '#5c6577',
       'target-arrow-shape': 'triangle',
       'curve-style': 'bezier',
       'arrow-scale': 0.8,
@@ -461,8 +461,8 @@ export const overviewStyle: cytoscape.StylesheetJson = [
   {
     selector: 'edge[highlighted = "true"]',
     style: {
-      'line-color': '#2563eb',
-      'target-arrow-color': '#2563eb',
+      'line-color': '#4fc3f7',
+      'target-arrow-color': '#4fc3f7',
       opacity: 1,
       'z-index': 30,
     },
